@@ -1,12 +1,33 @@
 {
-  "name": "rainy-updates",
-  "module": "index.ts",
+  "name": "@rainy-updates/cli",
+  "version": "0.1.0",
+  "description": "Agentic CLI to check and upgrade npm/pnpm dependencies for CI workflows",
   "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "private": false,
+  "bin": {
+    "rainy-updates": "./dist/bin/cli.js"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "lint": "bunx biome check src tests",
+    "check": "bun run typecheck && bun test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.8.1"
   }
 }
