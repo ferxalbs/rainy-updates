@@ -1,6 +1,6 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.4.0",
+  "version": "0.4.4",
   "description": "Agentic CLI to check and upgrade npm/pnpm dependencies for CI workflows",
   "type": "module",
   "private": false,
@@ -36,7 +36,9 @@
     "dist",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md"
   ],
   "scripts": {
     "clean": "rm -rf dist",
@@ -60,7 +62,6 @@
     "typescript": "^5.9.3"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^12.6.2",
     "undici": "^7.22.0"
   }
 }

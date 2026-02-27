@@ -1,41 +1,55 @@
 # Contributing
 
-## Development
+Thanks for contributing to `@rainy-updates/cli`.
+
+## Development setup
 
 ```bash
 bun install
-bun run check
-bun run build
 ```
 
-## Production readiness checks
+## Local quality gates
 
 ```bash
-bun run prepublishOnly
+bun run check
+bun run build
+bun run test:prod
 ```
+
+`check` runs typecheck + tests. `test:prod` validates built CLI behavior (`--help`, `--version`).
+
+## Implementation standards
+
+- Keep CLI behavior backward compatible unless intentionally versioned.
+- Preserve deterministic exit codes:
+  - `0` success
+  - `1` CI update-detected condition
+  - `2` operational/runtime error
+- Add tests for any new flag, command, or output contract.
+- Keep machine outputs stable (`json`, `sarif`, GitHub output, PR report).
+
+## Docs standards
+
+When changing behavior, update:
+
+- `README.md` (user-facing usage and capabilities)
+- `CHANGELOG.md` (release-facing change summary)
+- `SECURITY.md` if security posture/reporting changes
 
 ## Release process
 
 1. Update `CHANGELOG.md`.
 2. Bump `package.json` version.
-3. Run `bun run prepublishOnly`.
-4. Ensure `NPM_TOKEN` is set in repository secrets.
-5. Create and push tag `vX.Y.Z`.
-6. GitHub Actions publish workflow will run preflight + publish.
+3. Run:
 
-## npm publishing troubleshooting
+```bash
+bun run prepublishOnly
+```
 
-If release fails with `404 Not Found` for scoped package or `Access token expired or revoked`:
-
-1. Regenerate npm automation token and update `NPM_TOKEN` secret.
-2. Verify token can run `npm whoami`.
-3. Ensure package scope ownership:
-   - package `@scope/name` can only be first-published by a user/org that owns `@scope`.
-   - if scope differs from your npm username, configure org membership and publish permissions.
-   - verify org membership with `npm org ls <scope>`.
-
-The release workflow includes `scripts/release-preflight.mjs` to validate auth and package scope before publishing.
+4. Push commit and tag (`vX.Y.Z`).
+5. Release workflow publishes to npm.
 
 ## Security
 
-If you discover a security issue, open a private security advisory in GitHub.
+Do not disclose vulnerabilities publicly before responsible disclosure.
+Use GitHub Security Advisories for private reporting.

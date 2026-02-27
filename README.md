@@ -1,6 +1,16 @@
 # @rainy-updates/cli
 
-Agentic OSS CLI for dependency updates focused on speed, CI automation, and workspace-scale maintenance.
+Agentic CLI to detect, control, and apply dependency updates across npm/pnpm projects and monorepos.
+
+`@rainy-updates/cli` is built for teams that need fast dependency intelligence, policy-aware upgrades, and automation-ready output for CI/CD and pull request workflows.
+
+## Why this package
+
+- Detects updates quickly across single-package repos and workspaces.
+- Applies updates safely with configurable targets (`patch`, `minor`, `major`, `latest`).
+- Enforces policy rules per package (ignore rules and max upgrade level).
+- Supports offline and cache-warmed execution for deterministic CI runs.
+- Produces machine-readable artifacts (JSON, SARIF, GitHub outputs, PR markdown report).
 
 ## Install
 
@@ -10,64 +20,53 @@ npm i -D @rainy-updates/cli
 pnpm add -D @rainy-updates/cli
 ```
 
-## Commands
+## Core commands
 
-- `check`: detect available dependency updates.
-- `upgrade`: rewrite dependency ranges (optional install + workspace sync).
-- `warm-cache`: pre-fetch package metadata into local cache for faster CI checks.
-- `init-ci`: scaffold `.github/workflows/rainy-updates.yml`.
+- `check`: analyze dependencies and report available updates.
+- `upgrade`: rewrite dependency ranges in manifests, optionally install lockfile updates.
+- `warm-cache`: prefetch package metadata for fast and offline checks.
 
-## Quick start
+## Quick usage
 
 ```bash
-# check and fail CI if updates are found
-npx @rainy-updates/cli check --ci --format json --json-file .artifacts/deps-report.json
+# 1) Detect updates
+npx @rainy-updates/cli check --format table
 
-# pre-warm cache before strict offline checks
-npx @rainy-updates/cli warm-cache --workspace --concurrency 32
-npx @rainy-updates/cli check --workspace --offline --ci
+# 2) Strict CI mode (non-zero when updates exist)
+npx @rainy-updates/cli check --workspace --ci --format json --json-file .artifacts/updates.json
 
-# upgrade ranges and install lockfiles
+# 3) Apply upgrades with workspace sync
 npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
 
-# scaffold GitHub Actions workflow
-npx @rainy-updates/cli init-ci
+# 4) Warm cache for deterministic offline checks
+npx @rainy-updates/cli warm-cache --workspace --concurrency 32
+npx @rainy-updates/cli check --workspace --offline --ci
 ```
 
-## Core options
+## What it does in production
 
-- `--target patch|minor|major|latest`
-- `--filter <pattern>`
-- `--reject <pattern>`
-- `--dep-kinds deps,dev,optional,peer`
-- `--workspace`
-- `--concurrency <n>`
-- `--cache-ttl <seconds>`
-- `--offline` (cache-only mode)
-- `--cwd <path>`
+### Update detection engine
 
-## Output options
+- Scans dependency groups: `dependencies`, `devDependencies`, `optionalDependencies`, `peerDependencies`.
+- Resolves versions per unique package to reduce duplicate network requests.
+- Uses network concurrency controls and resilient retries.
+- Supports stale-cache fallback when registry calls fail.
 
-- `--format table|json|minimal|github`
-- `--json-file <path>`
-- `--github-output <path>`
-- `--sarif-file <path>`
-- `--pr-report-file <path>` (generates markdown report for PR comments)
+### Workspace support
 
-## Upgrade options
+- Detects package workspaces from:
+  - `package.json` workspaces
+  - `pnpm-workspace.yaml`
+- Handles multi-manifest upgrade flows.
+- Graph-aware sync mode (`--sync`) avoids breaking `workspace:*` references.
 
-- `--install`
-- `--pm auto|npm|pnpm`
-- `--sync` (graph-aware version alignment across workspace packages)
+### Policy-aware control
 
-## Policy controls
+- Apply global ignore patterns.
+- Apply package-specific rules.
+- Enforce max upgrade target per package (for safer rollout).
 
-- `--policy-file <path>` to apply package-level policy rules.
-- default policy discovery:
-  - `.rainyupdates-policy.json`
-  - `rainy-updates.policy.json`
-
-Policy example:
+Example policy file:
 
 ```json
 {
@@ -79,6 +78,64 @@ Policy example:
 }
 ```
 
+Use it with:
+
+```bash
+npx @rainy-updates/cli check --policy-file .rainyupdates-policy.json
+```
+
+## Output and reporting
+
+### Human output
+
+- `--format table`
+- `--format minimal`
+
+### Automation output
+
+- `--format json`
+- `--json-file <path>`
+- `--sarif-file <path>`
+- `--github-output <path>`
+- `--pr-report-file <path>`
+
+These outputs are designed for CI pipelines, security tooling, and PR review automation.
+
+## Command options
+
+### Global
+
+- `--cwd <path>`
+- `--workspace`
+- `--target patch|minor|major|latest`
+- `--filter <pattern>`
+- `--reject <pattern>`
+- `--dep-kinds deps,dev,optional,peer`
+- `--concurrency <n>`
+- `--cache-ttl <seconds>`
+- `--offline`
+- `--policy-file <path>`
+- `--format table|json|minimal|github`
+- `--json-file <path>`
+- `--github-output <path>`
+- `--sarif-file <path>`
+- `--pr-report-file <path>`
+- `--ci`
+
+### Upgrade-only
+
+- `--install`
+- `--pm auto|npm|pnpm`
+- `--sync`
+
+## Config support
+
+Configuration can be loaded from:
+
+- `.rainyupdatesrc`
+- `.rainyupdatesrc.json`
+- `package.json` field: `rainyUpdates`
+
 ## CLI help
 
 ```bash
@@ -87,55 +144,13 @@ rainy-updates <command> --help
 rainy-updates --version
 ```
 
-## CI behavior
+## Reliability characteristics
 
-- `--ci`: returns exit code `1` when updates are found.
-- returns exit code `2` for operational errors (registry/IO/runtime failures).
+- Node.js 20+ runtime.
+- Works with npm and pnpm workflows.
+- Uses optional `undici` pool path for high-throughput HTTP.
+- Cache-first architecture for speed and resilience.
 
-## Config files
+## License
 
-Supported:
-
-- `.rainyupdatesrc`
-- `.rainyupdatesrc.json`
-- `package.json` -> `rainyUpdates`
-
-Example:
-
-```json
-{
-  "rainyUpdates": {
-    "target": "minor",
-    "workspace": true,
-    "concurrency": 24,
-    "offline": false,
-    "format": "json",
-    "cacheTtlSeconds": 1800,
-    "jsonFile": ".artifacts/deps.json",
-    "sarifFile": ".artifacts/deps.sarif",
-    "prReportFile": ".artifacts/deps.md",
-    "policyFile": ".rainyupdates-policy.json"
-  }
-}
-```
-
-## Production release
-
-```bash
-bun run prepublishOnly
-node scripts/release-preflight.mjs
-npm publish --provenance --access public
-```
-
-If publishing in GitHub Actions, set `NPM_TOKEN` in repository secrets.
-
-The repository includes:
-
-- `.github/workflows/ci.yml` for test/typecheck/build/smoke checks.
-- `.github/workflows/release.yml` for tag-driven npm publishing.
-
-## Performance and runtime notes
-
-- Resolves dependency metadata by unique package name to avoid duplicate network calls.
-- Uses `undici` pool with HTTP/2 when available; falls back to native `fetch` automatically.
-- Uses layered cache with stale fallback for resilient CI runs.
+MIT

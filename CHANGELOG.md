@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.4.4] - 2026-02-27
+
+### Changed
+
+- Version bump to `0.4.4` for production stabilization.
+- Simplified public documentation to focus on end-user CLI usage.
+- Removed user-facing instructions for GitHub Actions configuration from README.
+
+### Fixed
+
+- Removed optional `better-sqlite3` dependency to avoid deprecated native install warnings (`prebuild-install`).
+- Cache backend now uses `bun:sqlite` when available and falls back cleanly to file-based cache without native Node addons.
+
+### Added
+
+- `SECURITY.md` with vulnerability disclosure guidance.
+- `CODE_OF_CONDUCT.md` for OSS community standards.
+
 ## [0.4.0] - 2026-02-27
 
 ### Added
@@ -126,7 +144,7 @@ All notable changes to this project are documented in this file.
   - `--dep-kinds deps,dev,optional,peer`
 - Runtime controls:
   - `--concurrency` for parallel dependency checks.
-  - `--cache-ttl` for cache freshness tuning.
+- `--cache-ttl` for cache freshness tuning.
 - Cache layer improvements:
   - SQLite-first cache backend when available.
   - JSON fallback cache backend.

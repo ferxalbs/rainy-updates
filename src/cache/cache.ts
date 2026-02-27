@@ -136,15 +136,8 @@ async function tryCreateSqliteStore(dbPath: string): Promise<SqliteCacheStore | 
       return new SqliteCacheStore(db);
     }
   } catch {
-    // noop
-  }
-
-  try {
-    const maybeRequire = Function("return require")() as (id: string) => any;
-    const Database = maybeRequire("better-sqlite3");
-    const db = new Database(dbPath);
-    return new SqliteCacheStore(db);
-  } catch {
     return null;
   }
+
+  return null;
 }
