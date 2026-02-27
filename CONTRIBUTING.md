@@ -32,6 +32,7 @@ If release fails with `404 Not Found` for scoped package or `Access token expire
 3. Ensure package scope ownership:
    - package `@scope/name` can only be first-published by a user/org that owns `@scope`.
    - if scope differs from your npm username, configure org membership and publish permissions.
+   - verify org membership with `npm org ls <scope>`.
 
 The release workflow includes `scripts/release-preflight.mjs` to validate auth and package scope before publishing.
 

@@ -28,6 +28,14 @@ async function main() {
     if (scope.toLowerCase() !== whoami.toLowerCase()) {
       const exists = await packageExists(pkgName);
       if (!exists) {
+        const hasOrgMembership = await userIsOrgMember(scope, whoami);
+        if (hasOrgMembership) {
+          console.log(`Preflight: scope @${scope} detected and user ${whoami} is an org member.`);
+          console.log(`Preflight: first publish for ${pkgName} is allowed to proceed.`);
+          console.log(`Preflight OK: npm user=${whoami}, package=${pkgName}`);
+          return;
+        }
+
         fail(
           `Package ${pkgName} does not exist yet and scope "@${scope}" is not your npm user (${whoami}). ` +
             'Use a scope you own, create the npm org, or add your user/token with publish access to that org.',
@@ -63,6 +71,18 @@ async function packageExists(name) {
       timeout: 20000,
     });
     return true;
+  } catch {
+    return false;
+  }
+}
+
+async function userIsOrgMember(scope, username) {
+  try {
+    const { stdout } = await execFileAsync('npm', ['org', 'ls', scope], {
+      env: process.env,
+      timeout: 20000,
+    });
+    return stdout.toLowerCase().includes(username.toLowerCase());
   } catch {
     return false;
   }
