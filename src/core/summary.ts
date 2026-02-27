@@ -19,6 +19,10 @@ export function createSummary(input: {
   warnings: string[];
   durations: DurationInput;
 }): Summary {
+  const offlineCacheMiss = input.errors.filter((error) => isOfflineCacheMissError(error)).length;
+  const registryFailure = input.errors.filter((error) => isRegistryFailureError(error)).length;
+  const staleCache = input.warnings.filter((warning) => warning.includes("Using stale cache")).length;
+
   return {
     contractVersion: "2",
     scannedPackages: input.scannedPackages,
@@ -31,13 +35,13 @@ export function createSummary(input: {
     failReason: "none",
     errorCounts: {
       total: input.errors.length,
-      offlineCacheMiss: countPattern(input.errors, "Offline cache miss"),
-      registryFailure: countPattern(input.errors, "Unable to resolve"),
+      offlineCacheMiss,
+      registryFailure,
       other: 0,
     },
     warningCounts: {
       total: input.warnings.length,
-      staleCache: countPattern(input.warnings, "Using stale cache"),
+      staleCache,
       other: 0,
     },
     durationMs: {
@@ -47,6 +51,9 @@ export function createSummary(input: {
       cache: Math.max(0, Math.round(input.durations.cacheMs)),
       render: 0,
     },
+    fixPrApplied: false,
+    fixBranchName: "",
+    fixCommitSha: "",
   };
 }
 
@@ -65,10 +72,10 @@ export function resolveFailReason(
   maxUpdates: number | undefined,
   ciMode: boolean,
 ): FailReason {
-  if (errors.some((error) => error.includes("Offline cache miss"))) {
+  if (errors.some((error) => isOfflineCacheMissError(error))) {
     return "offline-cache-miss";
   }
-  if (errors.some((error) => error.includes("Unable to resolve"))) {
+  if (errors.some((error) => isRegistryFailureError(error))) {
     return "registry-failure";
   }
   if (typeof maxUpdates === "number" && updates.length > maxUpdates) {
@@ -88,6 +95,15 @@ export function shouldFailForUpdates(updates: PackageUpdate[], failOn: FailOnLev
   return updates.some((update) => update.diffType === "major");
 }
 
-function countPattern(values: string[], token: string): number {
-  return values.filter((value) => value.includes(token)).length;
+function isOfflineCacheMissError(value: string): boolean {
+  return value.includes("Offline cache miss");
+}
+
+function isRegistryFailureError(value: string): boolean {
+  return (
+    value.includes("Unable to resolve") ||
+    value.includes("Unable to warm") ||
+    value.includes("Registry request failed") ||
+    value.includes("Registry temporary error")
+  );
 }

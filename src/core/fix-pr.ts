@@ -14,7 +14,13 @@ export async function applyFixPr(
   extraFiles: string[],
 ): Promise<FixPrResult> {
   if (!options.fixPr) return { applied: false };
-  if (result.updates.length === 0) return { applied: false };
+  if (result.updates.length === 0) {
+    return {
+      applied: false,
+      branchName: options.fixBranch ?? "chore/rainy-updates",
+      commitSha: "",
+    };
+  }
 
   const status = await runGit(options.cwd, ["status", "--porcelain"]);
   if (status.stdout.trim().length > 0) {
@@ -40,11 +46,20 @@ export async function applyFixPr(
     return {
       applied: false,
       branchName: branch,
+      commitSha: "",
     };
   }
 
-  const manifestFiles = Array.from(new Set(result.packagePaths.map((pkgPath) => path.join(pkgPath, "package.json"))));
-  const filesToStage = Array.from(new Set([...manifestFiles, ...extraFiles]));
+  const manifestFiles = Array.from(
+    new Set(result.updates.map((update) => path.resolve(update.packagePath, "package.json"))),
+  );
+  const filesToStage = Array.from(
+    new Set(
+      [...manifestFiles, ...extraFiles]
+        .map((entry) => path.resolve(options.cwd, entry))
+        .filter((entry) => entry.startsWith(path.resolve(options.cwd) + path.sep) || entry === path.resolve(options.cwd)),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
   if (filesToStage.length > 0) {
     await runGit(options.cwd, ["add", "--", ...filesToStage]);
   }
@@ -54,6 +69,7 @@ export async function applyFixPr(
     return {
       applied: false,
       branchName: branch,
+      commitSha: "",
     };
   }
 

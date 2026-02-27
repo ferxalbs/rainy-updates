@@ -27,17 +27,22 @@ export async function writeGitHubOutput(filePath: string, result: CheckResult): 
 export function renderGitHubAnnotations(result: CheckResult): string {
   const lines: string[] = [];
 
-  for (const update of result.updates) {
+  const sortedUpdates = [...result.updates].sort((left, right) => {
+    const byName = left.name.localeCompare(right.name);
+    if (byName !== 0) return byName;
+    return left.packagePath.localeCompare(right.packagePath);
+  });
+  for (const update of sortedUpdates) {
     lines.push(
       `::notice title=Dependency Update::${update.name} ${update.fromRange} -> ${update.toRange} (${update.packagePath})`,
     );
   }
 
-  for (const warning of result.warnings) {
+  for (const warning of [...result.warnings].sort((a, b) => a.localeCompare(b))) {
     lines.push(`::warning title=Rainy Updates::${warning}`);
   }
 
-  for (const error of result.errors) {
+  for (const error of [...result.errors].sort((a, b) => a.localeCompare(b))) {
     lines.push(`::error title=Rainy Updates::${error}`);
   }
 

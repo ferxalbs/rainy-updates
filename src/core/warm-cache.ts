@@ -23,6 +23,9 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
 
   const errors: string[] = [];
   const warnings: string[] = [];
+  if (cache.degraded) {
+    warnings.push("SQLite cache backend unavailable in Bun runtime. Falling back to file cache backend.");
+  }
 
   let totalDependencies = 0;
   const packageNames = new Set<string>();
@@ -43,7 +46,7 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
     }
   }
 
-  const names = Array.from(packageNames);
+  const names = Array.from(packageNames).sort((a, b) => a.localeCompare(b));
   const needsFetch: string[] = [];
 
   const cacheLookupStartedAt = Date.now();
@@ -90,6 +93,9 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
     }
   }
 
+  const sortedErrors = [...errors].sort((a, b) => a.localeCompare(b));
+  const sortedWarnings = [...warnings].sort((a, b) => a.localeCompare(b));
+
   const summary: Summary = finalizeSummary(
     createSummary({
       scannedPackages: packageDirs.length,
@@ -99,8 +105,8 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
       upgraded: 0,
       skipped: 0,
       warmedPackages: warmed,
-      errors,
-      warnings,
+      errors: sortedErrors,
+      warnings: sortedWarnings,
       durations: {
         totalMs: Date.now() - startedAt,
         discoveryMs,
@@ -118,7 +124,7 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
     timestamp: new Date().toISOString(),
     summary,
     updates: [],
-    errors,
-    warnings,
+    errors: sortedErrors,
+    warnings: sortedWarnings,
   };
 }

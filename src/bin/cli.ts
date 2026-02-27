@@ -17,6 +17,7 @@ import { renderPrReport } from "../output/pr-report.js";
 import type { CheckOptions, CheckResult, FailReason, UpgradeOptions } from "../types/index.js";
 import { writeFileAtomic } from "../utils/io.js";
 import { resolveFailReason } from "../core/summary.js";
+import { stableStringify } from "../utils/stable-json.js";
 
 async function main(): Promise<void> {
   try {
@@ -84,14 +85,18 @@ async function main(): Promise<void> {
     }
 
     if (parsed.options.fixPr && (parsed.command === "check" || parsed.command === "upgrade")) {
+      result.summary.fixPrApplied = false;
+      result.summary.fixBranchName = parsed.options.fixBranch ?? "chore/rainy-updates";
+      result.summary.fixCommitSha = "";
+
       const fixResult = await applyFixPr(
         parsed.options,
         result,
         parsed.options.prReportFile ? [parsed.options.prReportFile] : [],
       );
       result.summary.fixPrApplied = fixResult.applied;
-      result.summary.fixBranchName = fixResult.branchName;
-      result.summary.fixCommitSha = fixResult.commitSha;
+      result.summary.fixBranchName = fixResult.branchName ?? "";
+      result.summary.fixCommitSha = fixResult.commitSha ?? "";
     }
 
     result.summary.failReason = resolveFailReason(
@@ -110,7 +115,7 @@ async function main(): Promise<void> {
     }
 
     if (parsed.options.jsonFile) {
-      await writeFileAtomic(parsed.options.jsonFile, JSON.stringify(result, null, 2) + "\n");
+      await writeFileAtomic(parsed.options.jsonFile, stableStringify(result, 2) + "\n");
     }
 
     if (parsed.options.githubOutputFile) {
@@ -119,7 +124,7 @@ async function main(): Promise<void> {
 
     if (parsed.options.sarifFile) {
       const sarif = createSarifReport(result);
-      await writeFileAtomic(parsed.options.sarifFile, JSON.stringify(sarif, null, 2) + "\n");
+      await writeFileAtomic(parsed.options.sarifFile, stableStringify(sarif, 2) + "\n");
     }
 
     process.stdout.write(rendered + "\n");

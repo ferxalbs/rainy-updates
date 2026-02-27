@@ -26,5 +26,8 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Performance smoke gate
+        run: bun run perf:smoke
+
       - name: Production smoke test
         run: bun run test:prod

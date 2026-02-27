@@ -205,6 +205,7 @@ rainy-updates --version
 This package ships with production CI/CD pipelines in the repository:
 
 - Continuous integration pipeline for typecheck, tests, build, and production smoke checks.
+- Performance smoke gate (`perf:smoke`) to catch startup/runtime regressions in CI.
 - Tag-driven release pipeline for npm publishing with provenance.
 - Release preflight validation for npm auth/scope checks before publishing.
 

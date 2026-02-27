@@ -22,6 +22,9 @@ test("renderPrReport includes markdown table", () => {
       errorCounts: { total: 0, offlineCacheMiss: 0, registryFailure: 0, other: 0 },
       warningCounts: { total: 0, staleCache: 0, other: 0 },
       durationMs: { total: 0, discovery: 0, registry: 0, cache: 0, render: 0 },
+      fixPrApplied: false,
+      fixBranchName: "",
+      fixCommitSha: "",
     },
     updates: [
       {

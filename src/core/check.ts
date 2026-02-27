@@ -38,6 +38,9 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   const updates: PackageUpdate[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
+  if (cache.degraded) {
+    warnings.push("SQLite cache backend unavailable in Bun runtime. Falling back to file cache backend.");
+  }
 
   let totalDependencies = 0;
   const tasks: DependencyTask[] = [];
@@ -74,7 +77,9 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     }
   }
 
-  const uniquePackageNames = Array.from(new Set(tasks.map((task) => task.dependency.name)));
+  const uniquePackageNames = Array.from(new Set(tasks.map((task) => task.dependency.name))).sort((a, b) =>
+    a.localeCompare(b),
+  );
   const resolvedVersions = new Map<string, ResolvedPackageMetadata>();
 
   const unresolvedPackages: string[] = [];
@@ -180,7 +185,9 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     });
   }
 
-  const limitedUpdates = applyRuleUpdateCaps(updates, policy);
+  const limitedUpdates = sortUpdates(applyRuleUpdateCaps(updates, policy));
+  const sortedErrors = [...errors].sort((a, b) => a.localeCompare(b));
+  const sortedWarnings = [...warnings].sort((a, b) => a.localeCompare(b));
   const summary: Summary = finalizeSummary(
     createSummary({
       scannedPackages: packageDirs.length,
@@ -190,8 +197,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       upgraded: 0,
       skipped,
       warmedPackages: 0,
-      errors,
-      warnings,
+      errors: sortedErrors,
+      warnings: sortedWarnings,
       durations: {
         totalMs: Date.now() - startedAt,
         discoveryMs,
@@ -209,8 +216,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     timestamp: new Date().toISOString(),
     summary,
     updates: limitedUpdates,
-    errors,
-    warnings,
+    errors: sortedErrors,
+    warnings: sortedWarnings,
   };
 }
 
@@ -234,4 +241,18 @@ function applyRuleUpdateCaps(updates: PackageUpdate[], policy: Awaited<ReturnTyp
   }
 
   return limited;
+}
+
+function sortUpdates(updates: PackageUpdate[]): PackageUpdate[] {
+  return [...updates].sort((left, right) => {
+    const byPath = left.packagePath.localeCompare(right.packagePath);
+    if (byPath !== 0) return byPath;
+    const byName = left.name.localeCompare(right.name);
+    if (byName !== 0) return byName;
+    const byKind = left.kind.localeCompare(right.kind);
+    if (byKind !== 0) return byKind;
+    const byFrom = left.fromRange.localeCompare(right.fromRange);
+    if (byFrom !== 0) return byFrom;
+    return left.toRange.localeCompare(right.toRange);
+  });
 }

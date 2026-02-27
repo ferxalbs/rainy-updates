@@ -7,7 +7,12 @@ export function createSarifReport(result: CheckResult): Record<string, unknown> 
   const dependencyRuleId = "rainy-updates/dependency-update";
   const runtimeRuleId = "rainy-updates/runtime-error";
 
-  const updateResults = result.updates.map((update) => ({
+  const sortedUpdates = [...result.updates].sort((left, right) => {
+    const byName = left.name.localeCompare(right.name);
+    if (byName !== 0) return byName;
+    return left.packagePath.localeCompare(right.packagePath);
+  });
+  const updateResults = sortedUpdates.map((update) => ({
     ruleId: dependencyRuleId,
     level: "warning",
     message: {
@@ -30,7 +35,7 @@ export function createSarifReport(result: CheckResult): Record<string, unknown> 
     },
   }));
 
-  const errorResults = result.errors.map((error) => ({
+  const errorResults = [...result.errors].sort((a, b) => a.localeCompare(b)).map((error) => ({
     ruleId: runtimeRuleId,
     level: "error",
     message: {

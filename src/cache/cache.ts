@@ -135,9 +135,13 @@ class SqliteCacheStore implements CacheStore {
 
 export class VersionCache {
   private readonly store: CacheStore;
+  readonly backend: "sqlite" | "file";
+  readonly degraded: boolean;
 
-  private constructor(store: CacheStore) {
+  private constructor(store: CacheStore, backend: "sqlite" | "file", degraded: boolean) {
     this.store = store;
+    this.backend = backend;
+    this.degraded = degraded;
   }
 
   static async create(customPath?: string): Promise<VersionCache> {
@@ -145,10 +149,11 @@ export class VersionCache {
     const sqlitePath = path.join(basePath, "cache.db");
 
     const sqliteStore = await tryCreateSqliteStore(sqlitePath);
-    if (sqliteStore) return new VersionCache(sqliteStore);
+    if (sqliteStore) return new VersionCache(sqliteStore, "sqlite", false);
 
     const jsonPath = path.join(basePath, "cache.json");
-    return new VersionCache(new FileCacheStore(jsonPath));
+    const degraded = typeof Bun !== "undefined";
+    return new VersionCache(new FileCacheStore(jsonPath), "file", degraded);
   }
 
   async getValid(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {

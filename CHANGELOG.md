@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.0-rc.4] - 2026-02-27
+
+### Changed
+
+- Hardened deterministic CI artifacts:
+  - stable key ordering for JSON and SARIF files,
+  - deterministic sorting for updates, warnings, and errors in output pipelines.
+- Improved fail-reason classification consistency for registry/runtime failures across commands.
+- Fix-PR metadata in summary now has stable defaults (`fixPrApplied`, `fixBranchName`, `fixCommitSha`) to reduce contract drift.
+- Fix-PR staging now includes only updated manifests plus explicit report files, with deterministic file ordering.
+- Added warning when Bun runtime falls back from SQLite cache backend to file cache backend.
+
+### Added
+
+- Added `perf:smoke` script and CI gate to enforce a basic performance regression threshold.
+- Added deterministic output and summary regression tests.
+
 ## [0.5.0-rc.2] - 2026-02-27
 
 ### Added

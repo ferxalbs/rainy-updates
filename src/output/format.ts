@@ -1,9 +1,10 @@
 import type { CheckResult, OutputFormat } from "../types/index.js";
 import { renderGitHubAnnotations } from "./github.js";
+import { stableStringify } from "../utils/stable-json.js";
 
 export function renderResult(result: CheckResult, format: OutputFormat): string {
   if (format === "json") {
-    return JSON.stringify(result, null, 2);
+    return stableStringify(result, 2);
   }
 
   if (format === "minimal") {

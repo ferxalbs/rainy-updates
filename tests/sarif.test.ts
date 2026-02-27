@@ -22,6 +22,9 @@ test("createSarifReport includes updates and errors", () => {
       errorCounts: { total: 1, offlineCacheMiss: 0, registryFailure: 0, other: 1 },
       warningCounts: { total: 0, staleCache: 0, other: 0 },
       durationMs: { total: 0, discovery: 0, registry: 0, cache: 0, render: 0 },
+      fixPrApplied: false,
+      fixBranchName: "",
+      fixCommitSha: "",
     },
     updates: [
       {

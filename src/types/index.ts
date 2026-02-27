@@ -107,9 +107,9 @@ export interface Summary {
     cache: number;
     render: number;
   };
-  fixPrApplied?: boolean;
-  fixBranchName?: string;
-  fixCommitSha?: string;
+  fixPrApplied: boolean;
+  fixBranchName: string;
+  fixCommitSha: string;
 }
 
 export interface CheckResult {

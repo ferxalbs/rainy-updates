@@ -24,7 +24,7 @@ Focus: CI automation power-up and safer rollout flows.
   - save current dependency state,
   - compare drift against baseline in CI.
 
-## v0.6.0
+## v0.X.X
 
 Focus: Monorepo intelligence and dependency graph safety.
 
@@ -39,7 +39,7 @@ Focus: Monorepo intelligence and dependency graph safety.
 - Add lockfile-aware diagnostics for npm/pnpm.
 - Improve peer dependency conflict reporting with remediation hints.
 
-## v0.7.0
+## v0.X.X
 
 Focus: Security and governance workflows.
 
@@ -52,7 +52,7 @@ Focus: Security and governance workflows.
   - centralized configuration inheritance.
 - Add SARIF rule expansion and mapping for update risk categories.
 
-## v0.8.0
+## v0.X.X
 
 Focus: Performance and scale.
 
@@ -64,7 +64,7 @@ Focus: Performance and scale.
 - Batched registry query optimization and fallback heuristics.
 - Improved memory and latency profiling output.
 
-## v0.9.0
+## v0.X.0
 
 Focus: Developer experience and ecosystem integration.
 
@@ -75,7 +75,7 @@ Focus: Developer experience and ecosystem integration.
 - Native integrations for common CI platforms and self-hosted runners.
 - Rich terminal UX improvements for long-running operations.
 
-## v1.0.0
+## vX.X.X
 
 Focus: Stable platform release.
 
