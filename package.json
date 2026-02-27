@@ -5,6 +5,14 @@
   "type": "module",
   "private": false,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ferxalbs/rainy-updates.git"
+  },
+  "homepage": "https://github.com/ferxalbs/rainy-updates#readme",
+  "bugs": {
+    "url": "https://github.com/ferxalbs/rainy-updates/issues"
+  },
   "keywords": [
     "dependencies",
     "updates",
