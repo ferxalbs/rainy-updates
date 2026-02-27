@@ -32,6 +32,12 @@ jobs:
       - name: Validate package
         run: bun run prepublishOnly
 
+      - name: Release preflight (npm auth + scope)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: node scripts/release-preflight.mjs
+
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

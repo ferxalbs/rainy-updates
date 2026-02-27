@@ -123,8 +123,11 @@ Example:
 
 ```bash
 bun run prepublishOnly
+node scripts/release-preflight.mjs
 npm publish --provenance --access public
 ```
+
+If publishing in GitHub Actions, set `NPM_TOKEN` in repository secrets.
 
 The repository includes:
 
