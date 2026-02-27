@@ -29,7 +29,10 @@ async function main(): Promise<void> {
     const parsed = await parseCliArgs(argv);
 
     if (parsed.command === "init-ci") {
-      const workflow = await initCiWorkflow(parsed.options.cwd, parsed.options.force);
+      const workflow = await initCiWorkflow(parsed.options.cwd, parsed.options.force, {
+        mode: parsed.options.mode,
+        schedule: parsed.options.schedule,
+      });
       process.stdout.write(
         workflow.created
           ? `Created CI workflow at ${workflow.path}\n`
@@ -125,10 +128,15 @@ Options:
   }
 
   if (isCommand && command === "init-ci") {
-    return `rainy-updates init-ci [--force]
+    return `rainy-updates init-ci [options]
 
 Create a GitHub Actions workflow template at:
-  .github/workflows/rainy-updates.yml`;
+  .github/workflows/rainy-updates.yml
+
+Options:
+  --force
+  --mode minimal|strict
+  --schedule weekly|daily|off`;
   }
 
   return `rainy-updates <command> [options]

@@ -2,6 +2,7 @@ import path from "node:path";
 import process from "node:process";
 import { loadConfig } from "../config/loader.js";
 import type { CheckOptions, DependencyKind, OutputFormat, TargetLevel, UpgradeOptions } from "../types/index.js";
+import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
 const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
   "dependencies",
@@ -15,7 +16,7 @@ export type ParsedCliArgs =
   | { command: "check"; options: CheckOptions }
   | { command: "upgrade"; options: UpgradeOptions }
   | { command: "warm-cache"; options: CheckOptions }
-  | { command: "init-ci"; options: CheckOptions & { force: boolean } };
+  | { command: "init-ci"; options: { cwd: string; force: boolean; mode: InitCiMode; schedule: InitCiSchedule } };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -47,6 +48,8 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   };
 
   let force = false;
+  let initCiMode: InitCiMode = "strict";
+  let initCiSchedule: InitCiSchedule = "weekly";
 
   let resolvedConfig = await loadConfig(base.cwd);
   applyConfig(base, resolvedConfig);
@@ -157,6 +160,18 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       continue;
     }
 
+    if (current === "--mode" && next) {
+      initCiMode = ensureInitCiMode(next);
+      index += 1;
+      continue;
+    }
+
+    if (current === "--schedule" && next) {
+      initCiSchedule = ensureInitCiSchedule(next);
+      index += 1;
+      continue;
+    }
+
     if (current === "--dep-kinds" && next) {
       base.includeKinds = parseDependencyKinds(next);
       index += 1;
@@ -182,7 +197,15 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   }
 
   if (command === "init-ci") {
-    return { command, options: { ...base, force } };
+    return {
+      command,
+      options: {
+        cwd: base.cwd,
+        force,
+        mode: initCiMode,
+        schedule: initCiSchedule,
+      },
+    };
   }
 
   return {
@@ -263,4 +286,18 @@ function parseDependencyKinds(value: string): DependencyKind[] {
   }
 
   return Array.from(new Set(mapped));
+}
+
+function ensureInitCiMode(value: string): InitCiMode {
+  if (value === "minimal" || value === "strict") {
+    return value;
+  }
+  throw new Error("--mode must be minimal or strict");
+}
+
+function ensureInitCiSchedule(value: string): InitCiSchedule {
+  if (value === "weekly" || value === "daily" || value === "off") {
+    return value;
+  }
+  throw new Error("--schedule must be weekly, daily or off");
 }

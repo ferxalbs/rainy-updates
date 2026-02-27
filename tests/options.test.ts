@@ -4,7 +4,9 @@ import { parseCliArgs } from "../src/core/options.js";
 test("parseCliArgs defaults to check command", async () => {
   const parsed = await parseCliArgs(["--format", "json"]);
   expect(parsed.command).toBe("check");
-  expect(parsed.options.format).toBe("json");
+  if (parsed.command === "check") {
+    expect(parsed.options.format).toBe("json");
+  }
 });
 
 test("parseCliArgs supports upgrade install and pm", async () => {
@@ -41,10 +43,12 @@ test("parseCliArgs supports warm-cache and init-ci", async () => {
     expect(warm.options.policyFile?.endsWith("policy.json")).toBe(true);
   }
 
-  const init = await parseCliArgs(["init-ci", "--force"]);
+  const init = await parseCliArgs(["init-ci", "--force", "--mode", "minimal", "--schedule", "daily"]);
   expect(init.command).toBe("init-ci");
   if (init.command === "init-ci") {
     expect(init.options.force).toBe(true);
+    expect(init.options.mode).toBe("minimal");
+    expect(init.options.schedule).toBe("daily");
   }
 });
 

@@ -19,6 +19,11 @@ All notable changes to this project are documented in this file.
 
 - `SECURITY.md` with vulnerability disclosure guidance.
 - `CODE_OF_CONDUCT.md` for OSS community standards.
+- Automatic CI bootstrap improvements in `init-ci`:
+  - `--mode minimal|strict`
+  - `--schedule weekly|daily|off`
+  - package-manager-aware install step generation (npm/pnpm)
+
 
 ## [0.4.0] - 2026-02-27
 

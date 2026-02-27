@@ -101,6 +101,32 @@ npx @rainy-updates/cli check --policy-file .rainyupdates-policy.json
 
 These outputs are designed for CI pipelines, security tooling, and PR review automation.
 
+
+## Automatic CI bootstrap
+
+Generate a workflow in the target project automatically:
+
+```bash
+# strict mode (recommended)
+npx @rainy-updates/cli init-ci --mode strict --schedule weekly
+
+# lightweight mode
+npx @rainy-updates/cli init-ci --mode minimal --schedule daily
+```
+
+Generated file:
+
+- `.github/workflows/rainy-updates.yml`
+
+Modes:
+
+- `strict`: warm-cache + offline check + artifacts + SARIF upload.
+- `minimal`: fast check-only workflow for quick adoption.
+
+Schedule:
+
+- `weekly`, `daily`, or `off` (manual dispatch only).
+
 ## Command options
 
 ### Global
@@ -150,6 +176,19 @@ rainy-updates --version
 - Works with npm and pnpm workflows.
 - Uses optional `undici` pool path for high-throughput HTTP.
 - Cache-first architecture for speed and resilience.
+
+## CI/CD included
+
+This package ships with production CI/CD pipelines in the repository:
+
+- Continuous integration pipeline for typecheck, tests, build, and production smoke checks.
+- Tag-driven release pipeline for npm publishing with provenance.
+- Release preflight validation for npm auth/scope checks before publishing.
+
+
+## Product roadmap
+
+The long-term roadmap is maintained in [`ROADMAP.md`](./ROADMAP.md).
 
 ## License
 
