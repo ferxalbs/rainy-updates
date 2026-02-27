@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.0] - 2026-02-27
+
+### Changed
+
+- Promoted `0.5.0-rc.4` to General Availability.
+- Stabilized deterministic CI artifact behavior for JSON, SARIF, and GitHub outputs.
+- Finalized fix-PR summary metadata contract defaults for automation pipelines.
+
+### Added
+
+- GA release gate includes `perf:smoke` CI check for regression protection.
+
 ## [0.5.0-rc.4] - 2026-02-27
 
 ### Changed
