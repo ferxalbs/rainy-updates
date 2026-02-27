@@ -33,6 +33,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     githubOutputFile: undefined,
     sarifFile: undefined,
     concurrency: 16,
+    offline: false,
   };
 
   let resolvedConfig = await loadConfig(base.cwd);
@@ -122,6 +123,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       continue;
     }
 
+    if (current === "--offline") {
+      base.offline = true;
+      continue;
+    }
+
     if (current === "--dep-kinds" && next) {
       base.includeKinds = parseDependencyKinds(next);
       index += 1;
@@ -166,6 +172,9 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   }
   if (typeof config.concurrency === "number" && Number.isInteger(config.concurrency) && config.concurrency > 0) {
     base.concurrency = config.concurrency;
+  }
+  if (typeof config.offline === "boolean") {
+    base.offline = config.offline;
   }
 }
 

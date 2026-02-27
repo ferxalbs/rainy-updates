@@ -34,6 +34,7 @@ npx @rainy-updates/cli upgrade --target latest --workspace --install
 - `--workspace`
 - `--concurrency <n>`
 - `--cache-ttl <seconds>`
+- `--offline` (cache-only mode)
 - `--cwd <path>`
 
 ## Output options
@@ -47,7 +48,7 @@ npx @rainy-updates/cli upgrade --target latest --workspace --install
 
 - `--install`
 - `--pm auto|npm|pnpm`
-- `--sync` (align versions across workspace packages)
+- `--sync` (graph-aware version alignment across workspace packages)
 
 ## CI behavior
 
@@ -70,6 +71,7 @@ Example:
     "target": "minor",
     "workspace": true,
     "concurrency": 24,
+    "offline": false,
     "format": "json",
     "cacheTtlSeconds": 1800,
     "jsonFile": ".artifacts/deps.json",
@@ -77,6 +79,12 @@ Example:
   }
 }
 ```
+
+## Performance and runtime notes
+
+- Uses batched unique-package resolution and configurable concurrency.
+- Uses `undici` pool with HTTP/2 when available; falls back to native `fetch` automatically.
+- Uses layered cache with stale fallback for resilient CI runs.
 
 ## GitHub Actions example
 
@@ -86,6 +94,7 @@ Example:
     npx @rainy-updates/cli check \
       --workspace \
       --ci \
+      --concurrency 32 \
       --format github \
       --json-file .artifacts/deps-report.json \
       --github-output $GITHUB_OUTPUT \

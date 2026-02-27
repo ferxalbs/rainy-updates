@@ -17,6 +17,7 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     "--sync",
     "--concurrency",
     "8",
+    "--offline",
     "--format",
     "github",
   ]);
@@ -27,6 +28,7 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.sync).toBe(true);
     expect(parsed.options.concurrency).toBe(8);
+    expect(parsed.options.offline).toBe(true);
     expect(parsed.options.format).toBe("github");
   }
 });

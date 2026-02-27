@@ -3,6 +3,7 @@ import { check } from "./check.js";
 import { readManifest, writeManifest } from "../parsers/package-json.js";
 import { installDependencies } from "../pm/install.js";
 import { applyRangeStyle, parseVersion, compareVersions } from "../utils/semver.js";
+import { buildWorkspaceGraph } from "../workspace/graph.js";
 
 export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
   const checkResult = await check(options);
@@ -27,7 +28,13 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
   }
 
   if (options.sync) {
-    applyWorkspaceSync(manifestsByPath, options.includeKinds, checkResult.updates);
+    const graph = buildWorkspaceGraph(manifestsByPath, options.includeKinds);
+    if (graph.cycles.length > 0) {
+      checkResult.warnings.push(
+        `Workspace graph contains cycle(s): ${graph.cycles.map((cycle) => cycle.join(" -> ")).join(" | ")}`,
+      );
+    }
+    applyWorkspaceSync(manifestsByPath, graph.orderedPaths, graph.localPackageNames, options.includeKinds, checkResult.updates);
   }
 
   for (const [manifestPath, manifest] of manifestsByPath) {
@@ -50,6 +57,8 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
 
 function applyWorkspaceSync(
   manifestsByPath: Map<string, PackageManifest>,
+  orderedPaths: string[],
+  localPackageNames: Set<string>,
   includeKinds: DependencyKind[],
   updates: UpgradeResult["updates"],
 ): void {
@@ -74,7 +83,10 @@ function applyWorkspaceSync(
     }
   }
 
-  for (const manifest of manifestsByPath.values()) {
+  for (const manifestPath of orderedPaths) {
+    const manifest = manifestsByPath.get(manifestPath);
+    if (!manifest) continue;
+
     for (const kind of includeKinds) {
       const section = manifest[kind] as Record<string, string> | undefined;
       if (!section) continue;
@@ -82,6 +94,7 @@ function applyWorkspaceSync(
       for (const [depName, depRange] of Object.entries(section)) {
         const desiredVersion = desiredByPackage.get(depName);
         if (!desiredVersion) continue;
+        if (localPackageNames.has(depName) && depRange.startsWith("workspace:")) continue;
         section[depName] = applyRangeStyle(depRange, desiredVersion);
       }
     }

@@ -4,10 +4,9 @@ import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { matchesPattern } from "../utils/pattern.js";
 import { applyRangeStyle, classifyDiff, pickTargetVersion } from "../utils/semver.js";
 import { VersionCache } from "../cache/cache.js";
-import { resolveLatestVersion } from "../registry/npm.js";
+import { NpmRegistryClient } from "../registry/npm.js";
 import { detectPackageManager } from "../pm/detect.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
-import { asyncPool } from "../utils/async-pool.js";
 
 interface DependencyTask {
   packageDir: string;
@@ -18,7 +17,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   const packageManager = await detectPackageManager(options.cwd);
   const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
   const cache = await VersionCache.create();
-  const resolutionMemo = new Map<string, Promise<string | null>>();
+  const registryClient = new NpmRegistryClient();
 
   const updates: PackageUpdate[] = [];
   const errors: string[] = [];
@@ -46,21 +45,74 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     }
   }
 
-  const results = await asyncPool(options.concurrency, tasks.map((task) => () => processDependency(task)));
+  const uniquePackageNames = Array.from(new Set(tasks.map((task) => task.dependency.name)));
+  const resolvedVersions = new Map<string, string | null>();
 
-  for (const result of results) {
-    if (result instanceof Error) {
-      errors.push(result.message);
-      continue;
-    }
-    if (!result) continue;
-    if (result.kind === "error") {
-      errors.push(result.error);
-    } else if (result.kind === "warning") {
-      warnings.push(result.warning);
+  const unresolvedPackages: string[] = [];
+  for (const packageName of uniquePackageNames) {
+    const cached = await cache.getValid(packageName, options.target);
+    if (cached) {
+      resolvedVersions.set(packageName, cached.latestVersion);
     } else {
-      updates.push(result.update);
+      unresolvedPackages.push(packageName);
     }
+  }
+
+  if (unresolvedPackages.length > 0) {
+    if (options.offline) {
+      for (const packageName of unresolvedPackages) {
+        const stale = await cache.getAny(packageName, options.target);
+        if (stale) {
+          resolvedVersions.set(packageName, stale.latestVersion);
+          warnings.push(`Using stale cache for ${packageName} because --offline is enabled.`);
+        } else {
+          errors.push(`Offline cache miss for ${packageName}. Run once without --offline to warm cache.`);
+        }
+      }
+    } else {
+      const fetched = await registryClient.resolveManyLatestVersions(unresolvedPackages, {
+        concurrency: options.concurrency,
+      });
+
+      for (const [packageName, version] of fetched.versions) {
+        resolvedVersions.set(packageName, version);
+        if (version) {
+          await cache.set(packageName, options.target, version, options.cacheTtlSeconds);
+        }
+      }
+
+      for (const [packageName, error] of fetched.errors) {
+        const stale = await cache.getAny(packageName, options.target);
+        if (stale) {
+          resolvedVersions.set(packageName, stale.latestVersion);
+          warnings.push(`Using stale cache for ${packageName} due to registry error: ${error}`);
+        } else {
+          errors.push(`Unable to resolve ${packageName}: ${error}`);
+        }
+      }
+    }
+  }
+
+  for (const task of tasks) {
+    const latestVersion = resolvedVersions.get(task.dependency.name);
+    if (!latestVersion) continue;
+
+    const picked = pickTargetVersion(task.dependency.range, latestVersion, options.target);
+    if (!picked) continue;
+
+    const nextRange = applyRangeStyle(task.dependency.range, picked);
+    if (nextRange === task.dependency.range) continue;
+
+    updates.push({
+      packagePath: path.resolve(task.packageDir),
+      name: task.dependency.name,
+      kind: task.dependency.kind,
+      fromRange: task.dependency.range,
+      toRange: nextRange,
+      toVersionResolved: picked,
+      diffType: classifyDiff(task.dependency.range, picked),
+      filtered: false,
+    });
   }
 
   const summary: Summary = {
@@ -83,73 +135,4 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     errors,
     warnings,
   };
-
-  async function processDependency(task: DependencyTask): Promise<
-    | { kind: "update"; update: PackageUpdate }
-    | { kind: "error"; error: string }
-    | { kind: "warning"; warning: string }
-    | null
-  > {
-    const dep = task.dependency;
-
-    try {
-      const latestVersion = await getResolvedVersion(dep.name, options.target);
-      if (!latestVersion) return null;
-
-      const picked = pickTargetVersion(dep.range, latestVersion, options.target);
-      if (!picked) return null;
-
-      const nextRange = applyRangeStyle(dep.range, picked);
-      if (nextRange === dep.range) return null;
-
-      return {
-        kind: "update",
-        update: {
-          packagePath: path.resolve(task.packageDir),
-          name: dep.name,
-          kind: dep.kind,
-          fromRange: dep.range,
-          toRange: nextRange,
-          toVersionResolved: picked,
-          diffType: classifyDiff(dep.range, picked),
-          filtered: false,
-        },
-      };
-    } catch (error) {
-      return {
-        kind: "error",
-        error: `Package ${path.resolve(task.packageDir)} dependency ${dep.name}: ${String(error)}`,
-      };
-    }
-  }
-
-  async function getResolvedVersion(packageName: string, target: CheckOptions["target"]): Promise<string | null> {
-    const memoKey = `${packageName}:${target}`;
-    const memoized = resolutionMemo.get(memoKey);
-    if (memoized) return memoized;
-
-    const pending = (async () => {
-      const validCached = await cache.getValid(packageName, target);
-      if (validCached) {
-        return validCached.latestVersion;
-      }
-
-      try {
-        const latest = await resolveLatestVersion(packageName);
-        if (latest) {
-          await cache.set(packageName, target, latest, options.cacheTtlSeconds);
-        }
-        return latest;
-      } catch (error) {
-        const stale = await cache.getAny(packageName, target);
-        if (stale) {
-          return stale.latestVersion;
-        }
-        throw error;
-      }
-    })();
-
-    resolutionMemo.set(memoKey, pending);
-    return pending;
-  }
 }

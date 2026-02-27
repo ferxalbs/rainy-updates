@@ -2,6 +2,41 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.0] - 2026-02-27
+
+### Added
+
+- High-throughput registry resolution architecture:
+  - batched unique package resolution,
+  - configurable concurrency with `--concurrency`,
+  - optional `undici` pool + HTTP/2 path when available,
+  - automatic fallback to native `fetch` when `undici` is unavailable.
+- Offline execution mode:
+  - `--offline` runs in cache-only mode,
+  - reports cache misses explicitly for deterministic CI behavior.
+- Workspace graph module:
+  - detects local package graph,
+  - computes topological order,
+  - detects simple cycle groups and surfaces warnings.
+- Graph-aware sync in upgrade flow:
+  - `--sync` now aligns versions following workspace graph order,
+  - preserves `workspace:*` protocol references.
+- Additional test coverage:
+  - workspace graph ordering,
+  - workspace protocol edge handling,
+  - offline cache miss behavior.
+
+### Changed
+
+- `check` pipeline now resolves versions by unique dependency name first, then applies results across all manifests.
+- stale cache fallback is applied after registry failures to reduce flaky CI checks.
+- options/config surface expanded with `offline` and stronger CI-oriented controls.
+
+### OSS Quality
+
+- README expanded with performance/runtime notes and complete options matrix.
+- Output and artifact model reinforced for CI systems (JSON, GitHub outputs, SARIF).
+
 ## [0.1.0] - 2026-02-27
 
 ### Added

@@ -15,6 +15,7 @@ export interface FileConfig {
   githubOutputFile?: string;
   sarifFile?: string;
   concurrency?: number;
+  offline?: boolean;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
   sync?: boolean;

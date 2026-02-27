@@ -22,6 +22,7 @@ export interface RunOptions {
   githubOutputFile?: string;
   sarifFile?: string;
   concurrency: number;
+  offline: boolean;
 }
 
 export interface CheckOptions extends RunOptions {}
