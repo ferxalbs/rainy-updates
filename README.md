@@ -25,6 +25,7 @@ pnpm add -D @rainy-updates/cli
 - `check`: analyze dependencies and report available updates.
 - `upgrade`: rewrite dependency ranges in manifests, optionally install lockfile updates.
 - `warm-cache`: prefetch package metadata for fast and offline checks.
+- `baseline`: save and compare dependency baseline snapshots.
 
 ## Quick usage
 
@@ -41,6 +42,10 @@ npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
 # 4) Warm cache for deterministic offline checks
 npx @rainy-updates/cli warm-cache --workspace --concurrency 32
 npx @rainy-updates/cli check --workspace --offline --ci
+
+# 5) Save and compare baseline drift in CI
+npx @rainy-updates/cli baseline --save --file .artifacts/deps-baseline.json --workspace
+npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --workspace --ci
 ```
 
 ## What it does in production
@@ -108,7 +113,7 @@ Generate a workflow in the target project automatically:
 
 ```bash
 # strict mode (recommended)
-npx @rainy-updates/cli init-ci --mode strict --schedule weekly
+npx @rainy-updates/cli init-ci --mode enterprise --schedule weekly
 
 # lightweight mode
 npx @rainy-updates/cli init-ci --mode minimal --schedule daily
@@ -121,6 +126,7 @@ Generated file:
 Modes:
 
 - `strict`: warm-cache + offline check + artifacts + SARIF upload.
+- `enterprise`: strict checks + runtime matrix + retention policy + rollout gates.
 - `minimal`: fast check-only workflow for quick adoption.
 
 Schedule:
@@ -140,6 +146,8 @@ Schedule:
 - `--concurrency <n>`
 - `--cache-ttl <seconds>`
 - `--offline`
+- `--fail-on none|patch|minor|major|any`
+- `--max-updates <n>`
 - `--policy-file <path>`
 - `--format table|json|minimal|github`
 - `--json-file <path>`
@@ -153,6 +161,12 @@ Schedule:
 - `--install`
 - `--pm auto|npm|pnpm`
 - `--sync`
+
+### Baseline-only
+
+- `--save`
+- `--check`
+- `--file <path>`
 
 ## Config support
 

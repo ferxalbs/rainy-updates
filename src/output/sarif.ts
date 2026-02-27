@@ -1,4 +1,7 @@
 import type { CheckResult } from "../types/index.js";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export function createSarifReport(result: CheckResult): Record<string, unknown> {
   const dependencyRuleId = "rainy-updates/dependency-update";
@@ -43,7 +46,7 @@ export function createSarifReport(result: CheckResult): Record<string, unknown> 
         tool: {
           driver: {
             name: "@rainy-updates/cli",
-            version: "0.1.0",
+            version: getToolVersion(),
             rules: [
               {
                 id: dependencyRuleId,
@@ -62,4 +65,22 @@ export function createSarifReport(result: CheckResult): Record<string, unknown> 
       },
     ],
   };
+}
+
+let TOOL_VERSION_CACHE: string | null = null;
+
+function getToolVersion(): string {
+  if (TOOL_VERSION_CACHE) return TOOL_VERSION_CACHE;
+
+  try {
+    const currentFile = fileURLToPath(import.meta.url);
+    const packageJsonPath = path.resolve(path.dirname(currentFile), "../../package.json");
+    const content = readFileSync(packageJsonPath, "utf8");
+    const parsed = JSON.parse(content) as { version?: string };
+    TOOL_VERSION_CACHE = parsed.version ?? "0.0.0";
+    return TOOL_VERSION_CACHE;
+  } catch {
+    TOOL_VERSION_CACHE = "0.0.0";
+    return TOOL_VERSION_CACHE;
+  }
 }

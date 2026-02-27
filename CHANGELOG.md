@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.0-rc.1] - 2026-02-27
+
+### Added
+
+- New CI rollout controls:
+  - `--fail-on none|patch|minor|major|any`
+  - `--max-updates <n>`
+- New baseline workflow command:
+  - `baseline --save --file <path>` to snapshot dependency state
+  - `baseline --check --file <path>` to detect dependency drift
+- New `init-ci --mode enterprise` template:
+  - Node runtime matrix (`20`, `22`)
+  - stricter default permissions
+  - artifact retention policy
+  - built-in rollout gate flags (`--fail-on`, `--max-updates`)
+
+### Changed
+
+- Dependency target selection now evaluates available package versions from registry metadata, improving `patch|minor|major` accuracy.
+- CLI parser now rejects unknown options and missing option values with explicit errors (safer CI behavior).
+- SARIF output now reports the actual package version dynamically.
+
+### Tests
+
+- Added baseline snapshot/diff tests.
+- Added enterprise workflow generation tests.
+- Added semver target selection tests using available version sets.
+- Added parser tests for baseline command, rollout flags, and unknown option rejection.
+
 ## [0.4.4] - 2026-02-27
 
 ### Changed

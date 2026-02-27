@@ -56,13 +56,13 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
         }
       }
     } else {
-      const fetched = await registryClient.resolveManyLatestVersions(needsFetch, {
+      const fetched = await registryClient.resolveManyPackageMetadata(needsFetch, {
         concurrency: options.concurrency,
       });
 
-      for (const [pkg, version] of fetched.versions) {
-        if (version) {
-          await cache.set(pkg, options.target, version, options.cacheTtlSeconds);
+      for (const [pkg, metadata] of fetched.metadata) {
+        if (metadata.latestVersion) {
+          await cache.set(pkg, options.target, metadata.latestVersion, metadata.versions, options.cacheTtlSeconds);
           warmed += 1;
         }
       }

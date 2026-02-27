@@ -18,7 +18,12 @@ class FileCacheStore implements CacheStore {
   async get(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {
     const entries = await this.readEntries();
     const key = this.getKey(packageName, target);
-    return entries[key] ?? null;
+    const entry = entries[key];
+    if (!entry) return null;
+    return {
+      ...entry,
+      availableVersions: Array.isArray(entry.availableVersions) ? entry.availableVersions : [entry.latestVersion],
+    };
   }
 
   async set(entry: CachedVersion): Promise<void> {
@@ -52,19 +57,30 @@ class SqliteCacheStore implements CacheStore {
         package_name TEXT NOT NULL,
         target TEXT NOT NULL,
         latest_version TEXT NOT NULL,
+        available_versions TEXT NOT NULL,
         fetched_at INTEGER NOT NULL,
         ttl_seconds INTEGER NOT NULL,
         PRIMARY KEY (package_name, target)
       );
     `);
+    this.ensureSchema();
   }
 
   async get(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {
-    const row = this.db
-      .prepare(
-        `SELECT package_name, target, latest_version, fetched_at, ttl_seconds FROM versions WHERE package_name = ? AND target = ?`,
-      )
-      .get(packageName, target);
+    let row: any;
+    try {
+      row = this.db
+        .prepare(
+          `SELECT package_name, target, latest_version, available_versions, fetched_at, ttl_seconds FROM versions WHERE package_name = ? AND target = ?`,
+        )
+        .get(packageName, target);
+    } catch {
+      row = this.db
+        .prepare(
+          `SELECT package_name, target, latest_version, fetched_at, ttl_seconds FROM versions WHERE package_name = ? AND target = ?`,
+        )
+        .get(packageName, target);
+    }
 
     if (!row) return null;
 
@@ -72,18 +88,48 @@ class SqliteCacheStore implements CacheStore {
       packageName: row.package_name,
       target: row.target,
       latestVersion: row.latest_version,
+      availableVersions: parseJsonArray(row.available_versions ?? row.latest_version, row.latest_version),
       fetchedAt: row.fetched_at,
       ttlSeconds: row.ttl_seconds,
     };
   }
 
   async set(entry: CachedVersion): Promise<void> {
-    this.db
-      .prepare(
-        `INSERT OR REPLACE INTO versions (package_name, target, latest_version, fetched_at, ttl_seconds)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .run(entry.packageName, entry.target, entry.latestVersion, entry.fetchedAt, entry.ttlSeconds);
+    try {
+      this.db
+        .prepare(
+          `INSERT OR REPLACE INTO versions (package_name, target, latest_version, available_versions, fetched_at, ttl_seconds)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          entry.packageName,
+          entry.target,
+          entry.latestVersion,
+          JSON.stringify(entry.availableVersions),
+          entry.fetchedAt,
+          entry.ttlSeconds,
+        );
+    } catch {
+      this.db
+        .prepare(
+          `INSERT OR REPLACE INTO versions (package_name, target, latest_version, fetched_at, ttl_seconds)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(entry.packageName, entry.target, entry.latestVersion, entry.fetchedAt, entry.ttlSeconds);
+    }
+  }
+
+  private ensureSchema(): void {
+    try {
+      const columns = this.db.prepare("PRAGMA table_info(versions);").all() as Array<{ name?: string }>;
+      const hasAvailableVersions = columns.some((column) => column.name === "available_versions");
+      if (!hasAvailableVersions) {
+        this.db.exec("ALTER TABLE versions ADD COLUMN available_versions TEXT;");
+      }
+      this.db.exec("UPDATE versions SET available_versions = latest_version WHERE available_versions IS NULL;");
+    } catch {
+      // Best-effort migration.
+    }
   }
 }
 
@@ -117,11 +163,18 @@ export class VersionCache {
     return this.store.get(packageName, target);
   }
 
-  async set(packageName: string, target: TargetLevel, latestVersion: string, ttlSeconds: number): Promise<void> {
+  async set(
+    packageName: string,
+    target: TargetLevel,
+    latestVersion: string,
+    availableVersions: string[],
+    ttlSeconds: number,
+  ): Promise<void> {
     await this.store.set({
       packageName,
       target,
       latestVersion,
+      availableVersions,
       fetchedAt: Date.now(),
       ttlSeconds,
     });
@@ -140,4 +193,16 @@ async function tryCreateSqliteStore(dbPath: string): Promise<SqliteCacheStore | 
   }
 
   return null;
+}
+
+function parseJsonArray(raw: unknown, fallback: string): string[] {
+  if (typeof raw !== "string") return [fallback];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [fallback];
+    const values = parsed.filter((value): value is string => typeof value === "string");
+    return values.length > 0 ? values : [fallback];
+  } catch {
+    return [fallback];
+  }
 }

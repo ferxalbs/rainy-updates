@@ -52,6 +52,36 @@ test("parseCliArgs supports warm-cache and init-ci", async () => {
   }
 });
 
+test("parseCliArgs supports baseline command and ci gating flags", async () => {
+  const parsed = await parseCliArgs([
+    "baseline",
+    "--save",
+    "--file",
+    ".cache/baseline.json",
+    "--workspace",
+    "--dep-kinds",
+    "deps,dev",
+  ]);
+  expect(parsed.command).toBe("baseline");
+  if (parsed.command === "baseline") {
+    expect(parsed.options.action).toBe("save");
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.includeKinds).toEqual(["dependencies", "devDependencies"]);
+    expect(parsed.options.filePath.endsWith(".cache/baseline.json")).toBe(true);
+  }
+
+  const checkParsed = await parseCliArgs(["check", "--fail-on", "minor", "--max-updates", "5"]);
+  expect(checkParsed.command).toBe("check");
+  if (checkParsed.command === "check") {
+    expect(checkParsed.options.failOn).toBe("minor");
+    expect(checkParsed.options.maxUpdates).toBe(5);
+  }
+});
+
 test("parseCliArgs rejects unknown command", async () => {
   await expect(parseCliArgs(["deploy-updates"])).rejects.toThrow("Unknown command");
+});
+
+test("parseCliArgs rejects unknown options", async () => {
+  await expect(parseCliArgs(["check", "--does-not-exist"])).rejects.toThrow("Unknown option");
 });

@@ -5,7 +5,7 @@ const USER_AGENT = "@rainy-updates/cli";
 
 type RequestLike = (packageName: string, timeoutMs: number) => Promise<{
   status: number;
-  data: { "dist-tags"?: { latest?: string } } | null;
+  data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> } | null;
 }>;
 
 export interface ResolveManyOptions {
@@ -14,7 +14,7 @@ export interface ResolveManyOptions {
 }
 
 export interface ResolveManyResult {
-  versions: Map<string, string | null>;
+  metadata: Map<string, { latestVersion: string | null; versions: string[] }>;
   errors: Map<string, string>;
 }
 
@@ -25,14 +25,19 @@ export class NpmRegistryClient {
     this.requesterPromise = createRequester();
   }
 
-  async resolveLatestVersion(packageName: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<string | null> {
+  async resolvePackageMetadata(
+    packageName: string,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  ): Promise<{ latestVersion: string | null; versions: string[] }> {
     const requester = await this.requesterPromise;
     let lastError: string | null = null;
 
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
         const response = await requester(packageName, timeoutMs);
-        if (response.status === 404) return null;
+        if (response.status === 404) {
+          return { latestVersion: null, versions: [] };
+        }
         if (response.status === 429 || response.status >= 500) {
           throw new Error(`Registry temporary error: ${response.status}`);
         }
@@ -40,7 +45,8 @@ export class NpmRegistryClient {
           throw new Error(`Registry request failed: ${response.status}`);
         }
 
-        return response.data?.["dist-tags"]?.latest ?? null;
+        const versions = Object.keys(response.data?.versions ?? {});
+        return { latestVersion: response.data?.["dist-tags"]?.latest ?? null, versions };
       } catch (error) {
         lastError = String(error);
         if (attempt < 3) {
@@ -52,12 +58,17 @@ export class NpmRegistryClient {
     throw new Error(`Unable to resolve ${packageName}: ${lastError ?? "unknown error"}`);
   }
 
-  async resolveManyLatestVersions(
+  async resolveLatestVersion(packageName: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<string | null> {
+    const metadata = await this.resolvePackageMetadata(packageName, timeoutMs);
+    return metadata.latestVersion;
+  }
+
+  async resolveManyPackageMetadata(
     packageNames: string[],
     options: ResolveManyOptions,
   ): Promise<ResolveManyResult> {
     const unique = Array.from(new Set(packageNames));
-    const versions = new Map<string, string | null>();
+    const metadata = new Map<string, { latestVersion: string | null; versions: string[] }>();
     const errors = new Map<string, string>();
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
@@ -65,10 +76,10 @@ export class NpmRegistryClient {
       options.concurrency,
       unique.map((pkg) => async () => {
         try {
-          const latest = await this.resolveLatestVersion(pkg, timeoutMs);
-          return { pkg, latest, error: null as string | null };
+          const packageMetadata = await this.resolvePackageMetadata(pkg, timeoutMs);
+          return { pkg, packageMetadata, error: null as string | null };
         } catch (error) {
-          return { pkg, latest: null, error: String(error) };
+          return { pkg, packageMetadata: null, error: String(error) };
         }
       }),
     );
@@ -79,12 +90,27 @@ export class NpmRegistryClient {
       }
       if (result.error) {
         errors.set(result.pkg, result.error);
-      } else {
-        versions.set(result.pkg, result.latest);
+      } else if (result.packageMetadata) {
+        metadata.set(result.pkg, result.packageMetadata);
       }
     }
 
-    return { versions, errors };
+    return { metadata, errors };
+  }
+
+  async resolveManyLatestVersions(
+    packageNames: string[],
+    options: ResolveManyOptions,
+  ): Promise<{ versions: Map<string, string | null>; errors: Map<string, string> }> {
+    const metadataResult = await this.resolveManyPackageMetadata(packageNames, options);
+    const versions = new Map<string, string | null>();
+    for (const [name, value] of metadataResult.metadata) {
+      versions.set(name, value.latestVersion);
+    }
+    return {
+      versions,
+      errors: metadataResult.errors,
+    };
   }
 }
 
@@ -109,7 +135,9 @@ async function createRequester(): Promise<RequestLike> {
         signal: controller.signal,
       });
 
-      const data = (await response.json().catch(() => null)) as { "dist-tags"?: { latest?: string } } | null;
+      const data = (await response.json().catch(() => null)) as
+        | { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> }
+        | null;
       return { status: response.status, data };
     } finally {
       clearTimeout(timeout);
@@ -143,9 +171,9 @@ async function tryCreateUndiciRequester(): Promise<RequestLike | null> {
         });
 
         const bodyText = await res.body.text();
-        let data: { "dist-tags"?: { latest?: string } } | null = null;
+        let data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> } | null = null;
         try {
-          data = JSON.parse(bodyText) as { "dist-tags"?: { latest?: string } };
+          data = JSON.parse(bodyText) as { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> };
         } catch {
           data = null;
         }

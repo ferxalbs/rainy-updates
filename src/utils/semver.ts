@@ -76,6 +76,42 @@ export function pickTargetVersion(
   return latestVersion;
 }
 
+export function pickTargetVersionFromAvailable(
+  currentRange: string,
+  availableVersions: string[],
+  latestVersion: string,
+  target: TargetLevel,
+): string | null {
+  const current = parseVersion(currentRange);
+  if (!current || target === "latest") return latestVersion;
+
+  const parsed = availableVersions
+    .map((version) => ({ raw: version, parsed: parseVersion(version) }))
+    .filter((item): item is { raw: string; parsed: ParsedVersion } => item.parsed !== null)
+    .filter((item) => compareVersions(item.parsed, current) > 0)
+    .sort((a, b) => compareVersions(a.parsed, b.parsed));
+
+  if (parsed.length === 0) return null;
+
+  if (target === "major") {
+    return parsed[parsed.length - 1]?.raw ?? null;
+  }
+
+  if (target === "minor") {
+    const sameMajor = parsed.filter((item) => item.parsed.major === current.major);
+    return sameMajor.length > 0 ? sameMajor[sameMajor.length - 1].raw : null;
+  }
+
+  if (target === "patch") {
+    const sameLine = parsed.filter(
+      (item) => item.parsed.major === current.major && item.parsed.minor === current.minor,
+    );
+    return sameLine.length > 0 ? sameLine[sameLine.length - 1].raw : null;
+  }
+
+  return latestVersion;
+}
+
 export function applyRangeStyle(previousRange: string, version: string): string {
   const prefix = normalizeRangePrefix(previousRange);
   return `${prefix}${version}`;

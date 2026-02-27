@@ -1,7 +1,15 @@
 import path from "node:path";
 import process from "node:process";
 import { loadConfig } from "../config/loader.js";
-import type { CheckOptions, DependencyKind, OutputFormat, TargetLevel, UpgradeOptions } from "../types/index.js";
+import type {
+  BaselineOptions,
+  CheckOptions,
+  DependencyKind,
+  FailOnLevel,
+  OutputFormat,
+  TargetLevel,
+  UpgradeOptions,
+} from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
 const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
@@ -10,13 +18,14 @@ const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
   "optionalDependencies",
   "peerDependencies",
 ];
-const KNOWN_COMMANDS = ["check", "upgrade", "warm-cache", "init-ci"] as const;
+const KNOWN_COMMANDS = ["check", "upgrade", "warm-cache", "init-ci", "baseline"] as const;
 
 export type ParsedCliArgs =
   | { command: "check"; options: CheckOptions }
   | { command: "upgrade"; options: UpgradeOptions }
   | { command: "warm-cache"; options: CheckOptions }
-  | { command: "init-ci"; options: { cwd: string; force: boolean; mode: InitCiMode; schedule: InitCiSchedule } };
+  | { command: "init-ci"; options: { cwd: string; force: boolean; mode: InitCiMode; schedule: InitCiSchedule } }
+  | { command: "baseline"; options: BaselineOptions & { action: "save" | "check" } };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -45,11 +54,15 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     offline: false,
     policyFile: undefined,
     prReportFile: undefined,
+    failOn: "none",
+    maxUpdates: undefined,
   };
 
   let force = false;
-  let initCiMode: InitCiMode = "strict";
+  let initCiMode: InitCiMode = "enterprise";
   let initCiSchedule: InitCiSchedule = "weekly";
+  let baselineAction: "save" | "check" = "check";
+  let baselineFilePath = path.resolve(base.cwd, ".rainy-updates-baseline.json");
 
   let resolvedConfig = await loadConfig(base.cwd);
   applyConfig(base, resolvedConfig);
@@ -63,11 +76,17 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       index += 1;
       continue;
     }
+    if (current === "--target") {
+      throw new Error("Missing value for --target");
+    }
 
     if (current === "--filter" && next) {
       base.filter = next;
       index += 1;
       continue;
+    }
+    if (current === "--filter") {
+      throw new Error("Missing value for --filter");
     }
 
     if (current === "--reject" && next) {
@@ -75,13 +94,20 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       index += 1;
       continue;
     }
+    if (current === "--reject") {
+      throw new Error("Missing value for --reject");
+    }
 
     if (current === "--cwd" && next) {
       base.cwd = path.resolve(next);
       resolvedConfig = await loadConfig(base.cwd);
       applyConfig(base, resolvedConfig);
+      baselineFilePath = path.resolve(base.cwd, ".rainy-updates-baseline.json");
       index += 1;
       continue;
+    }
+    if (current === "--cwd") {
+      throw new Error("Missing value for --cwd");
     }
 
     if (current === "--cache-ttl" && next) {
@@ -93,11 +119,17 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       index += 1;
       continue;
     }
+    if (current === "--cache-ttl") {
+      throw new Error("Missing value for --cache-ttl");
+    }
 
     if (current === "--format" && next) {
       base.format = ensureFormat(next);
       index += 1;
       continue;
+    }
+    if (current === "--format") {
+      throw new Error("Missing value for --format");
     }
 
     if (current === "--ci") {
@@ -115,17 +147,26 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       index += 1;
       continue;
     }
+    if (current === "--json-file") {
+      throw new Error("Missing value for --json-file");
+    }
 
     if (current === "--github-output" && next) {
       base.githubOutputFile = path.resolve(next);
       index += 1;
       continue;
     }
+    if (current === "--github-output") {
+      throw new Error("Missing value for --github-output");
+    }
 
     if (current === "--sarif-file" && next) {
       base.sarifFile = path.resolve(next);
       index += 1;
       continue;
+    }
+    if (current === "--sarif-file") {
+      throw new Error("Missing value for --sarif-file");
     }
 
     if (current === "--concurrency" && next) {
@@ -136,6 +177,9 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       base.concurrency = parsed;
       index += 1;
       continue;
+    }
+    if (current === "--concurrency") {
+      throw new Error("Missing value for --concurrency");
     }
 
     if (current === "--offline") {
@@ -148,11 +192,17 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       index += 1;
       continue;
     }
+    if (current === "--policy-file") {
+      throw new Error("Missing value for --policy-file");
+    }
 
     if (current === "--pr-report-file" && next) {
       base.prReportFile = path.resolve(next);
       index += 1;
       continue;
+    }
+    if (current === "--pr-report-file") {
+      throw new Error("Missing value for --pr-report-file");
     }
 
     if (current === "--force") {
@@ -160,10 +210,30 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       continue;
     }
 
+    if (current === "--install" && command === "upgrade") {
+      continue;
+    }
+
+    if (current === "--sync" && command === "upgrade") {
+      continue;
+    }
+
+    if (current === "--pm" && next && command === "upgrade") {
+      parsePackageManager(args);
+      index += 1;
+      continue;
+    }
+    if (current === "--pm" && command === "upgrade") {
+      throw new Error("Missing value for --pm");
+    }
+
     if (current === "--mode" && next) {
       initCiMode = ensureInitCiMode(next);
       index += 1;
       continue;
+    }
+    if (current === "--mode") {
+      throw new Error("Missing value for --mode");
     }
 
     if (current === "--schedule" && next) {
@@ -171,12 +241,65 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       index += 1;
       continue;
     }
+    if (current === "--schedule") {
+      throw new Error("Missing value for --schedule");
+    }
 
     if (current === "--dep-kinds" && next) {
       base.includeKinds = parseDependencyKinds(next);
       index += 1;
       continue;
     }
+    if (current === "--dep-kinds") {
+      throw new Error("Missing value for --dep-kinds");
+    }
+
+    if (current === "--fail-on" && next) {
+      base.failOn = ensureFailOn(next);
+      index += 1;
+      continue;
+    }
+    if (current === "--fail-on") {
+      throw new Error("Missing value for --fail-on");
+    }
+
+    if (current === "--max-updates" && next) {
+      const parsed = Number(next);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        throw new Error("--max-updates must be a non-negative integer");
+      }
+      base.maxUpdates = parsed;
+      index += 1;
+      continue;
+    }
+    if (current === "--max-updates") {
+      throw new Error("Missing value for --max-updates");
+    }
+
+    if (current === "--save") {
+      baselineAction = "save";
+      continue;
+    }
+
+    if (current === "--check") {
+      baselineAction = "check";
+      continue;
+    }
+
+    if (current === "--file" && next) {
+      baselineFilePath = path.resolve(base.cwd, next);
+      index += 1;
+      continue;
+    }
+    if (current === "--file") {
+      throw new Error("Missing value for --file");
+    }
+
+    if (current.startsWith("-")) {
+      throw new Error(`Unknown option: ${current}`);
+    }
+
+    throw new Error(`Unexpected argument: ${current}`);
   }
 
   if (command === "upgrade") {
@@ -204,6 +327,20 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
         force,
         mode: initCiMode,
         schedule: initCiSchedule,
+      },
+    };
+  }
+
+  if (command === "baseline") {
+    return {
+      command,
+      options: {
+        action: baselineAction,
+        cwd: base.cwd,
+        workspace: base.workspace,
+        includeKinds: base.includeKinds,
+        filePath: baselineFilePath,
+        ci: base.ci,
       },
     };
   }
@@ -241,6 +378,12 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   }
   if (typeof config.prReportFile === "string") {
     base.prReportFile = path.resolve(base.cwd, config.prReportFile);
+  }
+  if (typeof config.failOn === "string") {
+    base.failOn = ensureFailOn(config.failOn);
+  }
+  if (typeof config.maxUpdates === "number" && Number.isInteger(config.maxUpdates) && config.maxUpdates >= 0) {
+    base.maxUpdates = config.maxUpdates;
   }
 }
 
@@ -289,10 +432,10 @@ function parseDependencyKinds(value: string): DependencyKind[] {
 }
 
 function ensureInitCiMode(value: string): InitCiMode {
-  if (value === "minimal" || value === "strict") {
+  if (value === "minimal" || value === "strict" || value === "enterprise") {
     return value;
   }
-  throw new Error("--mode must be minimal or strict");
+  throw new Error("--mode must be minimal, strict or enterprise");
 }
 
 function ensureInitCiSchedule(value: string): InitCiSchedule {
@@ -300,4 +443,11 @@ function ensureInitCiSchedule(value: string): InitCiSchedule {
     return value;
   }
   throw new Error("--schedule must be weekly, daily or off");
+}
+
+function ensureFailOn(value: string): FailOnLevel {
+  if (value === "none" || value === "patch" || value === "minor" || value === "major" || value === "any") {
+    return value;
+  }
+  throw new Error("--fail-on must be none, patch, minor, major or any");
 }

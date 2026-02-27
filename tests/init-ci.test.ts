@@ -24,3 +24,15 @@ test("initCiWorkflow uses pnpm install when pnpm lockfile exists", async () => {
   expect(content.includes("pnpm install --frozen-lockfile")).toBe(true);
   expect(content.includes("workflow_dispatch")).toBe(true);
 });
+
+test("initCiWorkflow creates enterprise workflow matrix", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-enterprise-"));
+  const result = await initCiWorkflow(dir, true, { mode: "enterprise", schedule: "weekly" });
+  const content = await readFile(result.path, "utf8");
+
+  expect(content.includes("Rainy Updates Enterprise")).toBe(true);
+  expect(content.includes("matrix")).toBe(true);
+  expect(content.includes("retention-days: 14")).toBe(true);
+  expect(content.includes("--fail-on minor")).toBe(true);
+  expect(content.includes("--max-updates 50")).toBe(true);
+});

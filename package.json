@@ -1,6 +1,6 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.4.4",
+  "version": "0.5.0-rc.1",
   "description": "Agentic CLI to check and upgrade npm/pnpm dependencies for CI workflows",
   "type": "module",
   "private": false,

@@ -8,10 +8,12 @@ import { check } from "../core/check.js";
 import { upgrade } from "../core/upgrade.js";
 import { warmCache } from "../core/warm-cache.js";
 import { initCiWorkflow } from "../core/init-ci.js";
+import { diffBaseline, saveBaseline } from "../core/baseline.js";
 import { renderResult } from "../output/format.js";
 import { writeGitHubOutput } from "../output/github.js";
 import { createSarifReport } from "../output/sarif.js";
 import { renderPrReport } from "../output/pr-report.js";
+import type { CheckResult, FailOnLevel, PackageUpdate } from "../types/index.js";
 
 async function main(): Promise<void> {
   try {
@@ -38,6 +40,36 @@ async function main(): Promise<void> {
           ? `Created CI workflow at ${workflow.path}\n`
           : `CI workflow already exists at ${workflow.path}. Use --force to overwrite.\n`,
       );
+      return;
+    }
+
+    if (parsed.command === "baseline") {
+      if (parsed.options.action === "save") {
+        const saved = await saveBaseline(parsed.options);
+        process.stdout.write(`Saved baseline at ${saved.filePath} (${saved.entries} entries)\n`);
+        return;
+      }
+
+      const diff = await diffBaseline(parsed.options);
+      const changes = diff.added.length + diff.removed.length + diff.changed.length;
+
+      if (changes === 0) {
+        process.stdout.write(`No baseline drift detected (${diff.filePath}).\n`);
+        return;
+      }
+
+      process.stdout.write(`Baseline drift detected (${diff.filePath}).\n`);
+      if (diff.added.length > 0) {
+        process.stdout.write(`Added: ${diff.added.length}\n`);
+      }
+      if (diff.removed.length > 0) {
+        process.stdout.write(`Removed: ${diff.removed.length}\n`);
+      }
+      if (diff.changed.length > 0) {
+        process.stdout.write(`Changed: ${diff.changed.length}\n`);
+      }
+
+      process.exitCode = 1;
       return;
     }
 
@@ -72,14 +104,7 @@ async function main(): Promise<void> {
       await fs.writeFile(parsed.options.sarifFile, JSON.stringify(sarif, null, 2) + "\n", "utf8");
     }
 
-    if (parsed.options.ci && result.updates.length > 0) {
-      process.exitCode = 1;
-      return;
-    }
-
-    if (result.errors.length > 0) {
-      process.exitCode = 2;
-    }
+    process.exitCode = resolveExitCode(result, parsed.options.failOn, parsed.options.maxUpdates, parsed.options.ci);
   } catch (error) {
     process.stderr.write(`rainy-updates: ${String(error)}\n`);
     process.exitCode = 2;
@@ -135,8 +160,22 @@ Create a GitHub Actions workflow template at:
 
 Options:
   --force
-  --mode minimal|strict
+  --mode minimal|strict|enterprise
   --schedule weekly|daily|off`;
+  }
+
+  if (isCommand && command === "baseline") {
+    return `rainy-updates baseline [options]
+
+Save or compare dependency baseline snapshots.
+
+Options:
+  --save
+  --check
+  --file <path>
+  --workspace
+  --dep-kinds deps,dev,optional,peer
+  --ci`;
   }
 
   return `rainy-updates <command> [options]
@@ -146,6 +185,7 @@ Commands:
   upgrade     Apply updates to manifests
   warm-cache  Warm local cache for fast/offline checks
   init-ci     Scaffold GitHub Actions workflow
+  baseline    Save/check dependency baseline snapshots
 
 Global options:
   --cwd <path>
@@ -157,6 +197,8 @@ Global options:
   --sarif-file <path>
   --pr-report-file <path>
   --policy-file <path>
+  --fail-on none|patch|minor|major|any
+  --max-updates <n>
   --concurrency <n>
   --cache-ttl <seconds>
   --offline
@@ -171,4 +213,27 @@ async function readPackageVersion(): Promise<string> {
   const content = await fs.readFile(packageJsonPath, "utf8");
   const parsed = JSON.parse(content) as { version?: string };
   return parsed.version ?? "0.0.0";
+}
+
+function resolveExitCode(
+  result: CheckResult,
+  failOn: FailOnLevel | undefined,
+  maxUpdates: number | undefined,
+  ciMode: boolean,
+): number {
+  if (result.errors.length > 0) return 2;
+  if (typeof maxUpdates === "number" && result.updates.length > maxUpdates) return 1;
+
+  const effectiveFailOn: FailOnLevel =
+    failOn && failOn !== "none" ? failOn : ciMode ? "any" : "none";
+
+  if (!shouldFailForUpdates(result.updates, effectiveFailOn)) return 0;
+  return 1;
+}
+
+function shouldFailForUpdates(updates: PackageUpdate[], failOn: FailOnLevel): boolean {
+  if (failOn === "none") return false;
+  if (failOn === "any" || failOn === "patch") return updates.length > 0;
+  if (failOn === "minor") return updates.some((update) => update.diffType === "minor" || update.diffType === "major");
+  return updates.some((update) => update.diffType === "major");
 }

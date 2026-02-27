@@ -7,6 +7,7 @@ export type DependencyKind =
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github";
+export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
 
 export interface RunOptions {
   cwd: string;
@@ -25,6 +26,8 @@ export interface RunOptions {
   offline: boolean;
   policyFile?: string;
   prReportFile?: string;
+  failOn?: FailOnLevel;
+  maxUpdates?: number;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -33,6 +36,14 @@ export interface UpgradeOptions extends RunOptions {
   install: boolean;
   packageManager: "auto" | "npm" | "pnpm";
   sync: boolean;
+}
+
+export interface BaselineOptions {
+  cwd: string;
+  workspace: boolean;
+  includeKinds: DependencyKind[];
+  filePath: string;
+  ci: boolean;
 }
 
 export interface PackageDependency {
@@ -93,6 +104,7 @@ export interface CachedVersion {
   packageName: string;
   target: TargetLevel;
   latestVersion: string;
+  availableVersions: string[];
   fetchedAt: number;
   ttlSeconds: number;
 }

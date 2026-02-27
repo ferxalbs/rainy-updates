@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { DependencyKind, OutputFormat, TargetLevel } from "../types/index.js";
+import type { DependencyKind, FailOnLevel, OutputFormat, TargetLevel } from "../types/index.js";
 
 export interface FileConfig {
   target?: TargetLevel;
@@ -18,6 +18,8 @@ export interface FileConfig {
   offline?: boolean;
   policyFile?: string;
   prReportFile?: string;
+  failOn?: FailOnLevel;
+  maxUpdates?: number;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
   sync?: boolean;
