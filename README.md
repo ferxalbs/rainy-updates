@@ -40,6 +40,9 @@ npx @rainy-updates/cli check --workspace --ci --format json --json-file .artifac
 # 2b) CI orchestration mode
 npx @rainy-updates/cli ci --workspace --mode strict --format github --json-file .artifacts/updates.json
 
+# 2c) Batch fix branches by scope
+npx @rainy-updates/cli ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
+
 # 3) Apply upgrades with workspace sync
 npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
 
@@ -161,6 +164,7 @@ Schedule:
 - `--pr-limit <n>`
 - `--only-changed`
 - `--mode minimal|strict|enterprise` (for `ci`)
+- `--fix-pr-batch-size <n>` (for batched fix branches in `ci`)
 - `--policy-file <path>`
 - `--format table|json|minimal|github`
 - `--json-file <path>`

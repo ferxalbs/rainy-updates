@@ -25,6 +25,7 @@ export interface FileConfig {
   fixCommitMessage?: string;
   fixDryRun?: boolean;
   fixPrNoCheckout?: boolean;
+  fixPrBatchSize?: number;
   noPrReport?: boolean;
   logLevel?: LogLevel;
   groupBy?: GroupBy;

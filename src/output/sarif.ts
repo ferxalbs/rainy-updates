@@ -77,6 +77,7 @@ export function createSarifReport(result: CheckResult): Record<string, unknown> 
           warningsCount: result.summary.warningCounts.total,
           ciProfile: result.summary.ciProfile,
           prLimitHit: result.summary.prLimitHit,
+          fixPrBranchesCreated: result.summary.fixPrBranchesCreated,
           durationMs: result.summary.durationMs,
         },
       },

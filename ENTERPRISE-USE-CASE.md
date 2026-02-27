@@ -45,8 +45,10 @@ npx @rainy-updates/cli ci \
 ```bash
 npx @rainy-updates/cli ci \
   --workspace \
-  --mode strict \
+  --mode enterprise \
+  --group-by scope \
   --fix-pr \
+  --fix-pr-batch-size 2 \
   --fix-branch chore/rainy-updates \
   --fix-commit-message "chore(deps): apply rainy-updates"
 ```

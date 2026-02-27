@@ -43,6 +43,7 @@ export interface RunOptions {
   fixCommitMessage?: string;
   fixDryRun?: boolean;
   fixPrNoCheckout?: boolean;
+  fixPrBatchSize?: number;
   noPrReport?: boolean;
   logLevel: LogLevel;
   groupBy: GroupBy;
@@ -118,6 +119,7 @@ export interface Summary {
   fixPrApplied: boolean;
   fixBranchName: string;
   fixCommitSha: string;
+  fixPrBranchesCreated: number;
   groupedUpdates: number;
   cooldownSkipped: number;
   ciProfile: CiProfile;

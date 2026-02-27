@@ -11,6 +11,7 @@ import { runCi } from "../core/ci.js";
 import { initCiWorkflow } from "../core/init-ci.js";
 import { diffBaseline, saveBaseline } from "../core/baseline.js";
 import { applyFixPr } from "../core/fix-pr.js";
+import { applyFixPrBatches } from "../core/fix-pr-batch.js";
 import { renderResult } from "../output/format.js";
 import { writeGitHubOutput } from "../output/github.js";
 import { createSarifReport } from "../output/sarif.js";
@@ -89,15 +90,28 @@ async function main(): Promise<void> {
       result.summary.fixPrApplied = false;
       result.summary.fixBranchName = parsed.options.fixBranch ?? "chore/rainy-updates";
       result.summary.fixCommitSha = "";
+      result.summary.fixPrBranchesCreated = 0;
 
-      const fixResult = await applyFixPr(
-        parsed.options,
-        result,
-        parsed.options.prReportFile ? [parsed.options.prReportFile] : [],
-      );
-      result.summary.fixPrApplied = fixResult.applied;
-      result.summary.fixBranchName = fixResult.branchName ?? "";
-      result.summary.fixCommitSha = fixResult.commitSha ?? "";
+      if (parsed.command === "ci") {
+        const batched = await applyFixPrBatches(parsed.options, result);
+        result.summary.fixPrApplied = batched.applied;
+        result.summary.fixBranchName = batched.branches[0] ?? (parsed.options.fixBranch ?? "chore/rainy-updates");
+        result.summary.fixCommitSha = batched.commits[0] ?? "";
+        result.summary.fixPrBranchesCreated = batched.branches.length;
+        if (batched.branches.length > 1) {
+          result.warnings.push(`Created ${batched.branches.length} fix-pr batch branches.`);
+        }
+      } else {
+        const fixResult = await applyFixPr(
+          parsed.options,
+          result,
+          parsed.options.prReportFile ? [parsed.options.prReportFile] : [],
+        );
+        result.summary.fixPrApplied = fixResult.applied;
+        result.summary.fixBranchName = fixResult.branchName ?? "";
+        result.summary.fixCommitSha = fixResult.commitSha ?? "";
+        result.summary.fixPrBranchesCreated = fixResult.applied ? 1 : 0;
+      }
     }
 
     result.summary.failReason = resolveFailReason(
@@ -170,6 +184,7 @@ Options:
   --fix-commit-message <text>
   --fix-dry-run
   --fix-pr-no-checkout
+  --fix-pr-batch-size <n>
   --no-pr-report
   --json-file <path>
   --github-output <path>
@@ -224,6 +239,7 @@ Options:
   --fix-commit-message <text>
   --fix-dry-run
   --fix-pr-no-checkout
+  --fix-pr-batch-size <n>
   --no-pr-report
   --json-file <path>
   --pr-report-file <path>`;
@@ -249,6 +265,7 @@ Options:
   --fix-commit-message <text>
   --fix-dry-run
   --fix-pr-no-checkout
+  --fix-pr-batch-size <n>
   --no-pr-report
   --json-file <path>
   --github-output <path>
@@ -319,6 +336,7 @@ Global options:
   --fix-commit-message <text>
   --fix-dry-run
   --fix-pr-no-checkout
+  --fix-pr-batch-size <n>
   --no-pr-report
   --log-level error|warn|info|debug
   --concurrency <n>

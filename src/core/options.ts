@@ -65,6 +65,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     fixCommitMessage: undefined,
     fixDryRun: false,
     fixPrNoCheckout: false,
+    fixPrBatchSize: undefined,
     noPrReport: false,
     logLevel: "info",
     groupBy: "none",
@@ -268,6 +269,19 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     if (current === "--fix-pr-no-checkout") {
       base.fixPrNoCheckout = true;
       continue;
+    }
+
+    if (current === "--fix-pr-batch-size" && next) {
+      const parsed = Number(next);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error("--fix-pr-batch-size must be a positive integer");
+      }
+      base.fixPrBatchSize = parsed;
+      index += 1;
+      continue;
+    }
+    if (current === "--fix-pr-batch-size") {
+      throw new Error("Missing value for --fix-pr-batch-size");
     }
 
     if (current === "--log-level" && next) {
@@ -551,6 +565,9 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   }
   if (typeof config.fixPrNoCheckout === "boolean") {
     base.fixPrNoCheckout = config.fixPrNoCheckout;
+  }
+  if (typeof config.fixPrBatchSize === "number" && Number.isInteger(config.fixPrBatchSize) && config.fixPrBatchSize > 0) {
+    base.fixPrBatchSize = config.fixPrBatchSize;
   }
   if (typeof config.noPrReport === "boolean") {
     base.noPrReport = config.noPrReport;

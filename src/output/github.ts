@@ -21,6 +21,7 @@ export async function writeGitHubOutput(filePath: string, result: CheckResult): 
     `ci_profile=${result.summary.ciProfile}`,
     `pr_limit_hit=${result.summary.prLimitHit === true ? "1" : "0"}`,
     `fix_pr_applied=${result.summary.fixPrApplied === true ? "1" : "0"}`,
+    `fix_pr_branches_created=${result.summary.fixPrBranchesCreated}`,
     `fix_pr_branch=${result.summary.fixBranchName ?? ""}`,
     `fix_pr_commit=${result.summary.fixCommitSha ?? ""}`,
   ];

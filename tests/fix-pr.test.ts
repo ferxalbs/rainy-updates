@@ -53,6 +53,7 @@ test("applyFixPr supports dry-run branch preparation", async () => {
       fixPrApplied: false,
       fixBranchName: "",
       fixCommitSha: "",
+      fixPrBranchesCreated: 0,
       groupedUpdates: 0,
       cooldownSkipped: 0,
       ciProfile: "minimal",

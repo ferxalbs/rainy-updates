@@ -25,6 +25,7 @@ test("createSarifReport includes updates and errors", () => {
       fixPrApplied: false,
       fixBranchName: "",
       fixCommitSha: "",
+      fixPrBranchesCreated: 0,
       groupedUpdates: 0,
       cooldownSkipped: 0,
       ciProfile: "minimal",

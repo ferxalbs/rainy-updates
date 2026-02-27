@@ -25,6 +25,7 @@ test("renderPrReport includes markdown table", () => {
       fixPrApplied: false,
       fixBranchName: "",
       fixCommitSha: "",
+      fixPrBranchesCreated: 0,
       groupedUpdates: 0,
       cooldownSkipped: 0,
       ciProfile: "minimal",

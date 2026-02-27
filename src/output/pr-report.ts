@@ -13,6 +13,7 @@ export function renderPrReport(result: CheckResult): string {
   lines.push(`- Cooldown skipped: ${result.summary.cooldownSkipped}`);
   lines.push(`- CI profile: ${result.summary.ciProfile}`);
   lines.push(`- PR limit hit: ${result.summary.prLimitHit ? "yes" : "no"}`);
+  lines.push(`- Fix PR branches created: ${result.summary.fixPrBranchesCreated}`);
   lines.push("");
 
   if (result.updates.length > 0) {

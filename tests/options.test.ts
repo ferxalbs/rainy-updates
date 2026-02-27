@@ -94,6 +94,8 @@ test("parseCliArgs supports ci command orchestration flags", async () => {
     "7",
     "--pr-limit",
     "20",
+    "--fix-pr-batch-size",
+    "3",
     "--only-changed",
   ]);
   expect(parsed.command).toBe("ci");
@@ -103,6 +105,7 @@ test("parseCliArgs supports ci command orchestration flags", async () => {
     expect(parsed.options.groupMax).toBe(12);
     expect(parsed.options.cooldownDays).toBe(7);
     expect(parsed.options.prLimit).toBe(20);
+    expect(parsed.options.fixPrBatchSize).toBe(3);
     expect(parsed.options.onlyChanged).toBe(true);
   }
 });

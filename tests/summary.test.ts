@@ -31,6 +31,7 @@ test("createSummary includes fix-pr defaults", () => {
   expect(summary.fixPrApplied).toBe(false);
   expect(summary.fixBranchName).toBe("");
   expect(summary.fixCommitSha).toBe("");
+  expect(summary.fixPrBranchesCreated).toBe(0);
   expect(summary.groupedUpdates).toBe(0);
   expect(summary.cooldownSkipped).toBe(0);
   expect(summary.ciProfile).toBe("minimal");

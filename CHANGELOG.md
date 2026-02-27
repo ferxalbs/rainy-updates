@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.1-rc.2] - 2026-02-27
+
+### Added
+
+- CI fix-PR batch automation:
+  - `ci --fix-pr` now creates batched branches from a shared base ref using git worktrees.
+  - New flag: `--fix-pr-batch-size <n>` to control groups per branch batch.
+- New summary/output metadata:
+  - `fixPrBranchesCreated`
+  - `fix_pr_branches_created` GitHub output key.
+
+### Changed
+
+- `ci --fix-pr --group-by scope` now supports multi-branch batch creation for scoped dependency flows.
+- `runCi` now consistently performs CI analysis flow first, with fix-PR handled by dedicated batch automation.
+
+### Tests
+
+- Added batch planning tests for fix-PR branch creation.
+- Extended parser tests for `--fix-pr-batch-size`.
+
 ## [0.5.1-rc.1] - 2026-02-27
 
 ### Added

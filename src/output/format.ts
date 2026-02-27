@@ -40,6 +40,7 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
       `cooldown_skipped=${result.summary.cooldownSkipped}`,
       `ci_profile=${result.summary.ciProfile}`,
       `pr_limit_hit=${result.summary.prLimitHit ? "1" : "0"}`,
+      `fix_pr_branches_created=${result.summary.fixPrBranchesCreated}`,
     ].join("\n");
   }
 
@@ -93,6 +94,7 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   );
   if (result.summary.fixPrApplied) {
     lines.push(`Fix PR: applied on branch ${result.summary.fixBranchName ?? "unknown"} (${result.summary.fixCommitSha ?? "no-commit"})`);
+    lines.push(`Fix PR batches created: ${result.summary.fixPrBranchesCreated}`);
   }
 
   return lines.join("\n");

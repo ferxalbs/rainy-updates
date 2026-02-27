@@ -58,6 +58,7 @@ export function createSummary(input: {
     fixPrApplied: false,
     fixBranchName: "",
     fixCommitSha: "",
+    fixPrBranchesCreated: 0,
     groupedUpdates: Math.max(0, Math.round(input.groupedUpdates ?? 0)),
     cooldownSkipped: Math.max(0, Math.round(input.cooldownSkipped ?? 0)),
     ciProfile: input.ciProfile ?? "minimal",
