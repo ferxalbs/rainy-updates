@@ -81,11 +81,6 @@ async function main(): Promise<void> {
 
     const result = await runCommand(parsed);
 
-    if (parsed.options.prReportFile) {
-      const markdown = renderPrReport(result);
-      await writeFileAtomic(parsed.options.prReportFile, markdown + "\n");
-    }
-
     if (parsed.options.fixPr && (parsed.command === "check" || parsed.command === "upgrade" || parsed.command === "ci")) {
       result.summary.fixPrApplied = false;
       result.summary.fixBranchName = parsed.options.fixBranch ?? "chore/rainy-updates";
@@ -105,13 +100,18 @@ async function main(): Promise<void> {
         const fixResult = await applyFixPr(
           parsed.options,
           result,
-          parsed.options.prReportFile ? [parsed.options.prReportFile] : [],
+          [],
         );
         result.summary.fixPrApplied = fixResult.applied;
         result.summary.fixBranchName = fixResult.branchName ?? "";
         result.summary.fixCommitSha = fixResult.commitSha ?? "";
         result.summary.fixPrBranchesCreated = fixResult.applied ? 1 : 0;
       }
+    }
+
+    if (parsed.options.prReportFile) {
+      const markdown = renderPrReport(result);
+      await writeFileAtomic(parsed.options.prReportFile, markdown + "\n");
     }
 
     result.summary.failReason = resolveFailReason(
