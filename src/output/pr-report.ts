@@ -9,6 +9,10 @@ export function renderPrReport(result: CheckResult): string {
   lines.push(`- Updates found: ${result.summary.updatesFound}`);
   lines.push(`- Errors: ${result.errors.length}`);
   lines.push(`- Warnings: ${result.warnings.length}`);
+  lines.push(`- Grouped updates: ${result.summary.groupedUpdates}`);
+  lines.push(`- Cooldown skipped: ${result.summary.cooldownSkipped}`);
+  lines.push(`- CI profile: ${result.summary.ciProfile}`);
+  lines.push(`- PR limit hit: ${result.summary.prLimitHit ? "yes" : "no"}`);
   lines.push("");
 
   if (result.updates.length > 0) {

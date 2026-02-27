@@ -13,6 +13,8 @@ test("initCiWorkflow creates strict workflow file", async () => {
   expect(content.includes("Rainy Updates")).toBe(true);
   expect(content.includes("Warm cache")).toBe(true);
   expect(content.includes("Upload SARIF")).toBe(true);
+  expect(content.includes("@rainy-updates/cli ci")).toBe(true);
+  expect(content.includes("--mode strict")).toBe(true);
 });
 
 test("initCiWorkflow uses pnpm install when pnpm lockfile exists", async () => {
@@ -35,4 +37,5 @@ test("initCiWorkflow creates enterprise workflow matrix", async () => {
   expect(content.includes("retention-days: 14")).toBe(true);
   expect(content.includes("--fail-on minor")).toBe(true);
   expect(content.includes("--max-updates 50")).toBe(true);
+  expect(content.includes("--mode enterprise")).toBe(true);
 });

@@ -81,6 +81,32 @@ test("parseCliArgs supports baseline command and ci gating flags", async () => {
   }
 });
 
+test("parseCliArgs supports ci command orchestration flags", async () => {
+  const parsed = await parseCliArgs([
+    "ci",
+    "--mode",
+    "strict",
+    "--group-by",
+    "scope",
+    "--group-max",
+    "12",
+    "--cooldown-days",
+    "7",
+    "--pr-limit",
+    "20",
+    "--only-changed",
+  ]);
+  expect(parsed.command).toBe("ci");
+  if (parsed.command === "ci") {
+    expect(parsed.options.ciProfile).toBe("strict");
+    expect(parsed.options.groupBy).toBe("scope");
+    expect(parsed.options.groupMax).toBe(12);
+    expect(parsed.options.cooldownDays).toBe(7);
+    expect(parsed.options.prLimit).toBe(20);
+    expect(parsed.options.onlyChanged).toBe(true);
+  }
+});
+
 test("parseCliArgs rejects unknown command", async () => {
   await expect(parseCliArgs(["deploy-updates"])).rejects.toThrow("Unknown command");
 });

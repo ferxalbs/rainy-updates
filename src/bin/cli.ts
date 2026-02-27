@@ -7,6 +7,7 @@ import { parseCliArgs } from "../core/options.js";
 import { check } from "../core/check.js";
 import { upgrade } from "../core/upgrade.js";
 import { warmCache } from "../core/warm-cache.js";
+import { runCi } from "../core/ci.js";
 import { initCiWorkflow } from "../core/init-ci.js";
 import { diffBaseline, saveBaseline } from "../core/baseline.js";
 import { applyFixPr } from "../core/fix-pr.js";
@@ -84,7 +85,7 @@ async function main(): Promise<void> {
       await writeFileAtomic(parsed.options.prReportFile, markdown + "\n");
     }
 
-    if (parsed.options.fixPr && (parsed.command === "check" || parsed.command === "upgrade")) {
+    if (parsed.options.fixPr && (parsed.command === "check" || parsed.command === "upgrade" || parsed.command === "ci")) {
       result.summary.fixPrApplied = false;
       result.summary.fixBranchName = parsed.options.fixBranch ?? "chore/rainy-updates";
       result.summary.fixCommitSha = "";
@@ -112,6 +113,15 @@ async function main(): Promise<void> {
     result.summary.durationMs.render = Math.max(0, Date.now() - renderStartedAt);
     if (parsed.options.format === "json" || parsed.options.format === "metrics") {
       rendered = renderResult(result, parsed.options.format);
+    }
+    if (
+      parsed.options.onlyChanged &&
+      result.updates.length === 0 &&
+      result.errors.length === 0 &&
+      result.warnings.length === 0 &&
+      (parsed.options.format === "table" || parsed.options.format === "minimal" || parsed.options.format === "github")
+    ) {
+      rendered = "";
     }
 
     if (parsed.options.jsonFile) {
@@ -167,6 +177,11 @@ Options:
   --pr-report-file <path>
   --fail-on none|patch|minor|major|any
   --max-updates <n>
+  --group-by none|name|scope|kind|risk
+  --group-max <n>
+  --cooldown-days <n>
+  --pr-limit <n>
+  --only-changed
   --log-level error|warn|info|debug
   --ci`;
   }
@@ -214,6 +229,37 @@ Options:
   --pr-report-file <path>`;
   }
 
+  if (isCommand && command === "ci") {
+    return `rainy-updates ci [options]
+
+Run CI-oriented dependency automation pipeline.
+
+Options:
+  --workspace
+  --mode minimal|strict|enterprise
+  --group-by none|name|scope|kind|risk
+  --group-max <n>
+  --cooldown-days <n>
+  --pr-limit <n>
+  --only-changed
+  --offline
+  --concurrency <n>
+  --fix-pr
+  --fix-branch <name>
+  --fix-commit-message <text>
+  --fix-dry-run
+  --fix-pr-no-checkout
+  --no-pr-report
+  --json-file <path>
+  --github-output <path>
+  --sarif-file <path>
+  --pr-report-file <path>
+  --fail-on none|patch|minor|major|any
+  --max-updates <n>
+  --log-level error|warn|info|debug
+  --ci`;
+  }
+
   if (isCommand && command === "init-ci") {
     return `rainy-updates init-ci [options]
 
@@ -245,6 +291,7 @@ Options:
 Commands:
   check       Detect available updates
   upgrade     Apply updates to manifests
+  ci          Run CI-focused update pipeline
   warm-cache  Warm local cache for fast/offline checks
   init-ci     Scaffold GitHub Actions workflow
   baseline    Save/check dependency baseline snapshots
@@ -261,6 +308,12 @@ Global options:
   --policy-file <path>
   --fail-on none|patch|minor|major|any
   --max-updates <n>
+  --group-by none|name|scope|kind|risk
+  --group-max <n>
+  --cooldown-days <n>
+  --pr-limit <n>
+  --only-changed
+  --mode minimal|strict|enterprise
   --fix-pr
   --fix-branch <name>
   --fix-commit-message <text>
@@ -280,7 +333,8 @@ async function runCommand(
   parsed:
     | { command: "check"; options: CheckOptions }
     | { command: "upgrade"; options: UpgradeOptions }
-    | { command: "warm-cache"; options: CheckOptions },
+    | { command: "warm-cache"; options: CheckOptions }
+    | { command: "ci"; options: CheckOptions },
 ): Promise<CheckResult> {
   if (parsed.command === "upgrade") {
     return await upgrade(parsed.options);
@@ -288,6 +342,10 @@ async function runCommand(
 
   if (parsed.command === "warm-cache") {
     return await warmCache(parsed.options);
+  }
+
+  if (parsed.command === "ci") {
+    return await runCi(parsed.options);
   }
 
   if (parsed.options.fixPr) {

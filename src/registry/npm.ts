@@ -10,7 +10,7 @@ const DEFAULT_REGISTRY = "https://registry.npmjs.org/";
 
 type RequestLike = (packageName: string, timeoutMs: number) => Promise<{
   status: number;
-  data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> } | null;
+  data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown>; time?: Record<string, string> } | null;
   retryAfterMs: number | null;
 }>;
 
@@ -25,7 +25,7 @@ export interface ResolveManyOptions {
 }
 
 export interface ResolveManyResult {
-  metadata: Map<string, { latestVersion: string | null; versions: string[] }>;
+  metadata: Map<string, { latestVersion: string | null; versions: string[]; publishedAtByVersion: Record<string, number> }>;
   errors: Map<string, string>;
 }
 
@@ -39,7 +39,7 @@ export class NpmRegistryClient {
   async resolvePackageMetadata(
     packageName: string,
     timeoutMs = DEFAULT_TIMEOUT_MS,
-  ): Promise<{ latestVersion: string | null; versions: string[] }> {
+  ): Promise<{ latestVersion: string | null; versions: string[]; publishedAtByVersion: Record<string, number> }> {
     const requester = await this.requesterPromise;
     let lastError: string | null = null;
 
@@ -47,7 +47,7 @@ export class NpmRegistryClient {
       try {
         const response = await requester(packageName, timeoutMs);
         if (response.status === 404) {
-          return { latestVersion: null, versions: [] };
+          return { latestVersion: null, versions: [], publishedAtByVersion: {} };
         }
         if (response.status === 429 || response.status >= 500) {
           throw new RetryableRegistryError(
@@ -60,7 +60,11 @@ export class NpmRegistryClient {
         }
 
         const versions = Object.keys(response.data?.versions ?? {});
-        return { latestVersion: response.data?.["dist-tags"]?.latest ?? null, versions };
+        return {
+          latestVersion: response.data?.["dist-tags"]?.latest ?? null,
+          versions,
+          publishedAtByVersion: extractPublishTimes(response.data?.time),
+        };
       } catch (error) {
         lastError = String(error);
         if (attempt < 3) {
@@ -83,7 +87,7 @@ export class NpmRegistryClient {
     options: ResolveManyOptions,
   ): Promise<ResolveManyResult> {
     const unique = Array.from(new Set(packageNames));
-    const metadata = new Map<string, { latestVersion: string | null; versions: string[] }>();
+    const metadata = new Map<string, { latestVersion: string | null; versions: string[]; publishedAtByVersion: Record<string, number> }>();
     const errors = new Map<string, string>();
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
@@ -169,7 +173,7 @@ async function createRequester(cwd?: string): Promise<RequestLike> {
       });
 
       const data = (await response.json().catch(() => null)) as
-        | { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> }
+        | { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown>; time?: Record<string, string> }
         | null;
       return {
         status: response.status,
@@ -204,9 +208,13 @@ async function tryCreateUndiciRequester(registryConfig: RegistryConfig): Promise
         });
 
         const bodyText = await res.body.text();
-        let data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> } | null = null;
+        let data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown>; time?: Record<string, string> } | null = null;
         try {
-          data = JSON.parse(bodyText) as { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> };
+          data = JSON.parse(bodyText) as {
+            "dist-tags"?: { latest?: string };
+            versions?: Record<string, unknown>;
+            time?: Record<string, string>;
+          };
         } catch {
           data = null;
         }
@@ -317,4 +325,17 @@ function parseRetryAfterHeader(value: string | null): number | null {
   const delta = untilMs - Date.now();
   if (delta <= 0) return 0;
   return delta;
+}
+
+function extractPublishTimes(timeMap: Record<string, string> | undefined): Record<string, number> {
+  if (!timeMap) return {};
+  const publishedAtByVersion: Record<string, number> = {};
+  for (const [version, rawDate] of Object.entries(timeMap)) {
+    if (version === "created" || version === "modified") continue;
+    const timestamp = Date.parse(rawDate);
+    if (Number.isFinite(timestamp)) {
+      publishedAtByVersion[version] = timestamp;
+    }
+  }
+  return publishedAtByVersion;
 }

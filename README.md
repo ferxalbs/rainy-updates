@@ -24,6 +24,7 @@ pnpm add -D @rainy-updates/cli
 
 - `check`: analyze dependencies and report available updates.
 - `upgrade`: rewrite dependency ranges in manifests, optionally install lockfile updates.
+- `ci`: run CI-focused dependency automation (warm cache, check/upgrade, policy gates).
 - `warm-cache`: prefetch package metadata for fast and offline checks.
 - `baseline`: save and compare dependency baseline snapshots.
 
@@ -35,6 +36,9 @@ npx @rainy-updates/cli check --format table
 
 # 2) Strict CI mode (non-zero when updates exist)
 npx @rainy-updates/cli check --workspace --ci --format json --json-file .artifacts/updates.json
+
+# 2b) CI orchestration mode
+npx @rainy-updates/cli ci --workspace --mode strict --format github --json-file .artifacts/updates.json
 
 # 3) Apply upgrades with workspace sync
 npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
@@ -151,6 +155,12 @@ Schedule:
 - `--offline`
 - `--fail-on none|patch|minor|major|any`
 - `--max-updates <n>`
+- `--group-by none|name|scope|kind|risk`
+- `--group-max <n>`
+- `--cooldown-days <n>`
+- `--pr-limit <n>`
+- `--only-changed`
+- `--mode minimal|strict|enterprise` (for `ci`)
 - `--policy-file <path>`
 - `--format table|json|minimal|github`
 - `--json-file <path>`

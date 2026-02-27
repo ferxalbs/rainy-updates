@@ -38,6 +38,12 @@ test("warmCache reports misses in offline mode", async () => {
     fixDryRun: false,
     fixPrNoCheckout: false,
     noPrReport: false,
+    groupBy: "none",
+    groupMax: undefined,
+    cooldownDays: undefined,
+    prLimit: undefined,
+    onlyChanged: false,
+    ciProfile: "minimal",
   });
 
   expect(result.summary.warmedPackages).toBe(0);

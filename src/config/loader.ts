@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { DependencyKind, FailOnLevel, LogLevel, OutputFormat, TargetLevel } from "../types/index.js";
+import type { CiProfile, DependencyKind, FailOnLevel, GroupBy, LogLevel, OutputFormat, TargetLevel } from "../types/index.js";
 
 export interface FileConfig {
   target?: TargetLevel;
@@ -27,6 +27,12 @@ export interface FileConfig {
   fixPrNoCheckout?: boolean;
   noPrReport?: boolean;
   logLevel?: LogLevel;
+  groupBy?: GroupBy;
+  groupMax?: number;
+  cooldownDays?: number;
+  prLimit?: number;
+  onlyChanged?: boolean;
+  ciProfile?: CiProfile;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
   sync?: boolean;

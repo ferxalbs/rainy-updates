@@ -26,6 +26,9 @@ test("applyFixPr supports dry-run branch preparation", async () => {
     fixDryRun: true,
     fixPrNoCheckout: false,
     noPrReport: true,
+    groupBy: "none",
+    onlyChanged: false,
+    ciProfile: "minimal",
   };
 
   const result: CheckResult = {
@@ -50,6 +53,10 @@ test("applyFixPr supports dry-run branch preparation", async () => {
       fixPrApplied: false,
       fixBranchName: "",
       fixCommitSha: "",
+      groupedUpdates: 0,
+      cooldownSkipped: 0,
+      ciProfile: "minimal",
+      prLimitHit: false,
     },
     updates: [
       {

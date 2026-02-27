@@ -31,6 +31,10 @@ test("createSummary includes fix-pr defaults", () => {
   expect(summary.fixPrApplied).toBe(false);
   expect(summary.fixBranchName).toBe("");
   expect(summary.fixCommitSha).toBe("");
+  expect(summary.groupedUpdates).toBe(0);
+  expect(summary.cooldownSkipped).toBe(0);
+  expect(summary.ciProfile).toBe("minimal");
+  expect(summary.prLimitHit).toBe(false);
 });
 
 test("resolveFailReason applies severity threshold for minor", () => {

@@ -31,6 +31,10 @@ test("writeGitHubOutput writes key-value outputs", async () => {
       fixPrApplied: false,
       fixBranchName: "",
       fixCommitSha: "",
+      groupedUpdates: 0,
+      cooldownSkipped: 0,
+      ciProfile: "minimal",
+      prLimitHit: false,
     },
     updates: [],
     errors: ["x"],
@@ -43,6 +47,8 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   expect(content.includes("errors_count=1")).toBe(true);
   expect(content.includes("warnings_count=1")).toBe(true);
   expect(content.includes("fix_pr_applied=0")).toBe(true);
+  expect(content.includes("ci_profile=minimal")).toBe(true);
+  expect(content.includes("grouped_updates=0")).toBe(true);
 });
 
 test("renderGitHubAnnotations emits deterministic sorted output", () => {
@@ -68,6 +74,10 @@ test("renderGitHubAnnotations emits deterministic sorted output", () => {
       fixPrApplied: false,
       fixBranchName: "",
       fixCommitSha: "",
+      groupedUpdates: 0,
+      cooldownSkipped: 0,
+      ciProfile: "minimal",
+      prLimitHit: false,
     },
     updates: [
       {

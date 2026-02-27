@@ -113,6 +113,7 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
         registryMs,
         cacheMs,
       },
+      ciProfile: options.ciProfile,
     }),
   );
 

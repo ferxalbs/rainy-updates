@@ -5,6 +5,8 @@ export type DependencyKind =
   | "peerDependencies";
 
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
+export type GroupBy = "none" | "name" | "scope" | "kind" | "risk";
+export type CiProfile = "minimal" | "strict" | "enterprise";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
@@ -43,6 +45,12 @@ export interface RunOptions {
   fixPrNoCheckout?: boolean;
   noPrReport?: boolean;
   logLevel: LogLevel;
+  groupBy: GroupBy;
+  groupMax?: number;
+  cooldownDays?: number;
+  prLimit?: number;
+  onlyChanged: boolean;
+  ciProfile: CiProfile;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -110,6 +118,10 @@ export interface Summary {
   fixPrApplied: boolean;
   fixBranchName: string;
   fixCommitSha: string;
+  groupedUpdates: number;
+  cooldownSkipped: number;
+  ciProfile: CiProfile;
+  prLimitHit: boolean;
 }
 
 export interface CheckResult {

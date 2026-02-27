@@ -36,6 +36,10 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
       `duration_registry_ms=${result.summary.durationMs.registry}`,
       `duration_cache_ms=${result.summary.durationMs.cache}`,
       `duration_render_ms=${result.summary.durationMs.render}`,
+      `grouped_updates=${result.summary.groupedUpdates}`,
+      `cooldown_skipped=${result.summary.cooldownSkipped}`,
+      `ci_profile=${result.summary.ciProfile}`,
+      `pr_limit_hit=${result.summary.prLimitHit ? "1" : "0"}`,
     ].join("\n");
   }
 
@@ -80,6 +84,9 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   lines.push("");
   lines.push(
     `Summary: ${result.summary.updatesFound} updates, ${result.summary.checkedDependencies}/${result.summary.totalDependencies} checked, ${result.summary.warmedPackages} warmed`,
+  );
+  lines.push(
+    `Groups=${result.summary.groupedUpdates}, cooldownSkipped=${result.summary.cooldownSkipped}, ciProfile=${result.summary.ciProfile}, prLimitHit=${result.summary.prLimitHit ? "yes" : "no"}`,
   );
   lines.push(
     `Contract v${result.summary.contractVersion}, failReason=${result.summary.failReason}, duration=${result.summary.durationMs.total}ms`,

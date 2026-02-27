@@ -4,8 +4,10 @@ import { loadConfig } from "../config/loader.js";
 import type {
   BaselineOptions,
   CheckOptions,
+  CiProfile,
   DependencyKind,
   FailOnLevel,
+  GroupBy,
   OutputFormat,
   TargetLevel,
   UpgradeOptions,
@@ -19,12 +21,13 @@ const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
   "optionalDependencies",
   "peerDependencies",
 ];
-const KNOWN_COMMANDS = ["check", "upgrade", "warm-cache", "init-ci", "baseline"] as const;
+const KNOWN_COMMANDS = ["check", "upgrade", "warm-cache", "init-ci", "baseline", "ci"] as const;
 
 export type ParsedCliArgs =
   | { command: "check"; options: CheckOptions }
   | { command: "upgrade"; options: UpgradeOptions }
   | { command: "warm-cache"; options: CheckOptions }
+  | { command: "ci"; options: CheckOptions }
   | { command: "init-ci"; options: { cwd: string; force: boolean; mode: InitCiMode; schedule: InitCiSchedule } }
   | { command: "baseline"; options: BaselineOptions & { action: "save" | "check" } };
 
@@ -64,6 +67,12 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     fixPrNoCheckout: false,
     noPrReport: false,
     logLevel: "info",
+    groupBy: "none",
+    groupMax: undefined,
+    cooldownDays: undefined,
+    prLimit: undefined,
+    onlyChanged: false,
+    ciProfile: "minimal",
   };
 
   let force = false;
@@ -288,7 +297,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     }
 
     if (current === "--mode" && next) {
-      initCiMode = ensureInitCiMode(next);
+      if (command === "init-ci") {
+        initCiMode = ensureInitCiMode(next);
+      } else {
+        base.ciProfile = ensureCiProfile(next);
+      }
       index += 1;
       continue;
     }
@@ -334,6 +347,59 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     }
     if (current === "--max-updates") {
       throw new Error("Missing value for --max-updates");
+    }
+
+    if (current === "--group-by" && next) {
+      base.groupBy = ensureGroupBy(next);
+      index += 1;
+      continue;
+    }
+    if (current === "--group-by") {
+      throw new Error("Missing value for --group-by");
+    }
+
+    if (current === "--group-max" && next) {
+      const parsed = Number(next);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error("--group-max must be a positive integer");
+      }
+      base.groupMax = parsed;
+      index += 1;
+      continue;
+    }
+    if (current === "--group-max") {
+      throw new Error("Missing value for --group-max");
+    }
+
+    if (current === "--cooldown-days" && next) {
+      const parsed = Number(next);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        throw new Error("--cooldown-days must be a non-negative integer");
+      }
+      base.cooldownDays = parsed;
+      index += 1;
+      continue;
+    }
+    if (current === "--cooldown-days") {
+      throw new Error("Missing value for --cooldown-days");
+    }
+
+    if (current === "--pr-limit" && next) {
+      const parsed = Number(next);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error("--pr-limit must be a positive integer");
+      }
+      base.prLimit = parsed;
+      index += 1;
+      continue;
+    }
+    if (current === "--pr-limit") {
+      throw new Error("Missing value for --pr-limit");
+    }
+
+    if (current === "--only-changed") {
+      base.onlyChanged = true;
+      continue;
     }
 
     if (current === "--save") {
@@ -398,6 +464,10 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   }
 
   if (command === "warm-cache") {
+    return { command, options: base };
+  }
+
+  if (command === "ci") {
     return { command, options: base };
   }
 
@@ -488,6 +558,24 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   if (typeof config.logLevel === "string") {
     base.logLevel = ensureLogLevel(config.logLevel);
   }
+  if (typeof config.groupBy === "string") {
+    base.groupBy = ensureGroupBy(config.groupBy);
+  }
+  if (typeof config.groupMax === "number" && Number.isInteger(config.groupMax) && config.groupMax > 0) {
+    base.groupMax = config.groupMax;
+  }
+  if (typeof config.cooldownDays === "number" && Number.isInteger(config.cooldownDays) && config.cooldownDays >= 0) {
+    base.cooldownDays = config.cooldownDays;
+  }
+  if (typeof config.prLimit === "number" && Number.isInteger(config.prLimit) && config.prLimit > 0) {
+    base.prLimit = config.prLimit;
+  }
+  if (typeof config.onlyChanged === "boolean") {
+    base.onlyChanged = config.onlyChanged;
+  }
+  if (typeof config.ciProfile === "string") {
+    base.ciProfile = ensureCiProfile(config.ciProfile);
+  }
 }
 
 function parsePackageManager(args: string[]): "auto" | "npm" | "pnpm" {
@@ -560,4 +648,18 @@ function ensureFailOn(value: string): FailOnLevel {
     return value;
   }
   throw new Error("--fail-on must be none, patch, minor, major or any");
+}
+
+function ensureGroupBy(value: string): GroupBy {
+  if (value === "none" || value === "name" || value === "scope" || value === "kind" || value === "risk") {
+    return value;
+  }
+  throw new Error("--group-by must be none, name, scope, kind or risk");
+}
+
+function ensureCiProfile(value: string): CiProfile {
+  if (value === "minimal" || value === "strict" || value === "enterprise") {
+    return value;
+  }
+  throw new Error("--mode must be minimal, strict or enterprise");
 }

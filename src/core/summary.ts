@@ -18,6 +18,10 @@ export function createSummary(input: {
   errors: string[];
   warnings: string[];
   durations: DurationInput;
+  groupedUpdates?: number;
+  cooldownSkipped?: number;
+  ciProfile?: Summary["ciProfile"];
+  prLimitHit?: boolean;
 }): Summary {
   const offlineCacheMiss = input.errors.filter((error) => isOfflineCacheMissError(error)).length;
   const registryFailure = input.errors.filter((error) => isRegistryFailureError(error)).length;
@@ -54,6 +58,10 @@ export function createSummary(input: {
     fixPrApplied: false,
     fixBranchName: "",
     fixCommitSha: "",
+    groupedUpdates: Math.max(0, Math.round(input.groupedUpdates ?? 0)),
+    cooldownSkipped: Math.max(0, Math.round(input.cooldownSkipped ?? 0)),
+    ciProfile: input.ciProfile ?? "minimal",
+    prLimitHit: input.prLimitHit === true,
   };
 }
 

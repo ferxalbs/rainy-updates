@@ -4,6 +4,7 @@ import type { TargetLevel } from "../types/index.js";
 
 export interface PolicyConfig {
   ignore?: string[];
+  cooldownDays?: number;
   packageRules?: Record<
     string,
     {
@@ -13,6 +14,8 @@ export interface PolicyConfig {
       maxUpdatesPerRun?: number;
       cooldownDays?: number;
       allowPrerelease?: boolean;
+      group?: string;
+      priority?: number;
     }
   >;
 }
@@ -24,10 +27,13 @@ export interface PolicyRule {
   maxUpdatesPerRun?: number;
   cooldownDays?: number;
   allowPrerelease?: boolean;
+  group?: string;
+  priority?: number;
 }
 
 export interface ResolvedPolicy {
   ignorePatterns: string[];
+  cooldownDays?: number;
   packageRules: Map<string, PolicyRule>;
   matchRules: PolicyRule[];
 }
@@ -45,6 +51,7 @@ export async function loadPolicy(cwd: string, policyFile?: string): Promise<Reso
       const parsed = JSON.parse(content) as PolicyConfig;
       return {
         ignorePatterns: parsed.ignore ?? [],
+        cooldownDays: asNonNegativeInt(parsed.cooldownDays),
         packageRules: new Map(Object.entries(parsed.packageRules ?? {}).map(([pkg, rule]) => [pkg, normalizeRule(rule)])),
         matchRules: Object.values(parsed.packageRules ?? {})
           .map((rule) => normalizeRule(rule))
@@ -57,6 +64,7 @@ export async function loadPolicy(cwd: string, policyFile?: string): Promise<Reso
 
   return {
     ignorePatterns: [],
+    cooldownDays: undefined,
     packageRules: new Map(),
     matchRules: [],
   };
@@ -75,6 +83,8 @@ function normalizeRule(rule: {
   maxUpdatesPerRun?: number;
   cooldownDays?: number;
   allowPrerelease?: boolean;
+  group?: string;
+  priority?: number;
 }): PolicyRule {
   return {
     match: typeof rule.match === "string" ? rule.match : undefined,
@@ -83,6 +93,8 @@ function normalizeRule(rule: {
     maxUpdatesPerRun: asNonNegativeInt(rule.maxUpdatesPerRun),
     cooldownDays: asNonNegativeInt(rule.cooldownDays),
     allowPrerelease: rule.allowPrerelease === true,
+    group: typeof rule.group === "string" && rule.group.trim().length > 0 ? rule.group.trim() : undefined,
+    priority: asNonNegativeInt(rule.priority),
   };
 }
 

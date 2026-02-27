@@ -11,8 +11,9 @@ test("loadPolicy reads package rules and ignore patterns", async () => {
     policyPath,
     JSON.stringify({
       ignore: ["@types/*"],
+      cooldownDays: 14,
       packageRules: {
-        react: { maxTarget: "minor" },
+        react: { maxTarget: "minor", group: "frontend", priority: 10 },
       },
     }),
     "utf8",
@@ -20,5 +21,8 @@ test("loadPolicy reads package rules and ignore patterns", async () => {
 
   const policy = await loadPolicy(dir);
   expect(policy.ignorePatterns[0]).toBe("@types/*");
+  expect(policy.cooldownDays).toBe(14);
   expect(policy.packageRules.get("react")?.maxTarget).toBe("minor");
+  expect(policy.packageRules.get("react")?.group).toBe("frontend");
+  expect(policy.packageRules.get("react")?.priority).toBe(10);
 });

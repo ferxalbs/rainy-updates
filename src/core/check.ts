@@ -18,6 +18,7 @@ interface DependencyTask {
 interface ResolvedPackageMetadata {
   latestVersion: string | null;
   availableVersions: string[];
+  publishedAtByVersion: Record<string, number>;
 }
 
 export async function check(options: CheckOptions): Promise<CheckResult> {
@@ -45,6 +46,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   let totalDependencies = 0;
   const tasks: DependencyTask[] = [];
   let skipped = 0;
+  let cooldownSkipped = 0;
 
   for (const packageDir of packageDirs) {
     let manifest;
@@ -90,6 +92,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       resolvedVersions.set(packageName, {
         latestVersion: cached.latestVersion,
         availableVersions: cached.availableVersions,
+        publishedAtByVersion: {},
       });
     } else {
       unresolvedPackages.push(packageName);
@@ -106,6 +109,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
           resolvedVersions.set(packageName, {
             latestVersion: stale.latestVersion,
             availableVersions: stale.availableVersions,
+            publishedAtByVersion: {},
           });
           warnings.push(`Using stale cache for ${packageName} because --offline is enabled.`);
         } else {
@@ -125,6 +129,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
         resolvedVersions.set(packageName, {
           latestVersion: metadata.latestVersion,
           availableVersions: metadata.versions,
+          publishedAtByVersion: metadata.publishedAtByVersion,
         });
         if (metadata.latestVersion) {
           await cache.set(
@@ -145,6 +150,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
           resolvedVersions.set(packageName, {
             latestVersion: stale.latestVersion,
             availableVersions: stale.availableVersions,
+            publishedAtByVersion: {},
           });
           warnings.push(`Using stale cache for ${packageName} due to registry error: ${error}`);
         } else {
@@ -168,6 +174,10 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       effectiveTarget,
     );
     if (!picked) continue;
+    if (shouldSkipByCooldown(picked, metadata.publishedAtByVersion, options.cooldownDays, policy.cooldownDays, rule?.cooldownDays)) {
+      cooldownSkipped += 1;
+      continue;
+    }
 
     const nextRange = applyRangeStyle(task.dependency.range, picked);
     if (nextRange === task.dependency.range) continue;
@@ -185,7 +195,14 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     });
   }
 
-  const limitedUpdates = sortUpdates(applyRuleUpdateCaps(updates, policy));
+  const grouped = groupUpdates(updates, options.groupBy);
+  const groupedUpdates = grouped.length;
+  const groupedSorted = sortUpdates(grouped.flatMap((group) => group.items));
+  const groupedCapped = typeof options.groupMax === "number" ? groupedSorted.slice(0, options.groupMax) : groupedSorted;
+  const ruleLimited = applyRuleUpdateCaps(groupedCapped, policy);
+  const prLimited = typeof options.prLimit === "number" ? ruleLimited.slice(0, options.prLimit) : ruleLimited;
+  const limitedUpdates = sortUpdates(prLimited);
+  const prLimitHit = typeof options.prLimit === "number" && groupedSorted.length > options.prLimit;
   const sortedErrors = [...errors].sort((a, b) => a.localeCompare(b));
   const sortedWarnings = [...warnings].sort((a, b) => a.localeCompare(b));
   const summary: Summary = finalizeSummary(
@@ -205,6 +222,10 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
         registryMs,
         cacheMs,
       },
+      groupedUpdates,
+      cooldownSkipped,
+      ciProfile: options.ciProfile,
+      prLimitHit,
     }),
   );
 
@@ -219,6 +240,60 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     errors: sortedErrors,
     warnings: sortedWarnings,
   };
+}
+
+interface UpdateGroup {
+  key: string;
+  items: PackageUpdate[];
+}
+
+function groupUpdates(updates: PackageUpdate[], groupBy: CheckOptions["groupBy"]): UpdateGroup[] {
+  if (updates.length === 0) {
+    return [];
+  }
+  if (groupBy === "none") {
+    return [{ key: "all", items: [...updates] }];
+  }
+
+  const byGroup = new Map<string, PackageUpdate[]>();
+  for (const update of updates) {
+    const key = groupKey(update, groupBy);
+    const current = byGroup.get(key) ?? [];
+    current.push(update);
+    byGroup.set(key, current);
+  }
+  return Array.from(byGroup.entries())
+    .map(([key, items]) => ({ key, items: sortUpdates(items) }))
+    .sort((left, right) => left.key.localeCompare(right.key));
+}
+
+function groupKey(update: PackageUpdate, groupBy: CheckOptions["groupBy"]): string {
+  if (groupBy === "name") return update.name;
+  if (groupBy === "kind") return update.kind;
+  if (groupBy === "risk") return update.diffType;
+  if (groupBy === "scope") {
+    if (update.name.startsWith("@")) {
+      const slash = update.name.indexOf("/");
+      if (slash > 1) return update.name.slice(0, slash);
+    }
+    return "unscoped";
+  }
+  return "all";
+}
+
+function shouldSkipByCooldown(
+  pickedVersion: string,
+  publishedAtByVersion: Record<string, number>,
+  optionCooldownDays: number | undefined,
+  policyCooldownDays: number | undefined,
+  ruleCooldownDays: number | undefined,
+): boolean {
+  const cooldownDays = ruleCooldownDays ?? optionCooldownDays ?? policyCooldownDays;
+  if (typeof cooldownDays !== "number" || cooldownDays <= 0) return false;
+  const publishedAt = publishedAtByVersion[pickedVersion];
+  if (typeof publishedAt !== "number" || !Number.isFinite(publishedAt)) return false;
+  const threshold = Date.now() - cooldownDays * 24 * 60 * 60 * 1000;
+  return publishedAt > threshold;
 }
 
 function applyRuleUpdateCaps(updates: PackageUpdate[], policy: Awaited<ReturnType<typeof loadPolicy>>): PackageUpdate[] {
