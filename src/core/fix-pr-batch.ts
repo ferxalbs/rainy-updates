@@ -24,12 +24,13 @@ interface PlannedBatch {
 }
 
 export async function applyFixPrBatches(options: RunOptions, result: CheckResult): Promise<FixPrBatchResult> {
-  if (!options.fixPr || result.updates.length === 0) {
+  const autofixUpdates = result.updates.filter((update) => update.autofix !== false);
+  if (!options.fixPr || autofixUpdates.length === 0) {
     return { applied: false, branches: [], commits: [] };
   }
 
   const baseRef = await resolveBaseRef(options.cwd, options.fixPrNoCheckout);
-  const groups = groupUpdates(result.updates, options.groupBy);
+  const groups = groupUpdates(autofixUpdates, options.groupBy);
   const plans = planFixPrBatches(groups, options.fixBranch ?? "chore/rainy-updates", options.fixPrBatchSize ?? 1);
 
   if (options.fixDryRun) {

@@ -19,7 +19,7 @@ test("renderPrReport includes markdown table", () => {
       skipped: 0,
       warmedPackages: 0,
       failReason: "none",
-      errorCounts: { total: 0, offlineCacheMiss: 0, registryFailure: 0, other: 0 },
+      errorCounts: { total: 0, offlineCacheMiss: 0, registryFailure: 0, registryAuthFailure: 0, other: 0 },
       warningCounts: { total: 0, staleCache: 0, other: 0 },
       durationMs: { total: 0, discovery: 0, registry: 0, cache: 0, render: 0 },
       fixPrApplied: false,
@@ -30,6 +30,8 @@ test("renderPrReport includes markdown table", () => {
       cooldownSkipped: 0,
       ciProfile: "minimal",
       prLimitHit: false,
+      streamedEvents: 0,
+      policyOverridesApplied: 0,
     },
     updates: [
       {
@@ -41,6 +43,7 @@ test("renderPrReport includes markdown table", () => {
         toVersionResolved: "19.0.0",
         diffType: "major",
         filtered: false,
+        autofix: true,
       },
     ],
     errors: [],

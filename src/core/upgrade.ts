@@ -4,8 +4,11 @@ import { readManifest, writeManifest } from "../parsers/package-json.js";
 import { installDependencies } from "../pm/install.js";
 import { applyRangeStyle, parseVersion, compareVersions } from "../utils/semver.js";
 import { buildWorkspaceGraph } from "../workspace/graph.js";
+import { captureLockfileSnapshot, changedLockfiles, validateLockfileMode } from "../utils/lockfile.js";
 
 export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
+  validateLockfileMode(options.lockfileMode, options.install);
+  const lockfilesBefore = await captureLockfileSnapshot(options.cwd);
   const checkResult = await check(options);
   if (checkResult.updates.length === 0) {
     return {
@@ -43,6 +46,14 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
 
   if (options.install) {
     await installDependencies(options.cwd, options.packageManager, checkResult.packageManager);
+  }
+
+  const lockfileChanges = await changedLockfiles(options.cwd, lockfilesBefore);
+  if (lockfileChanges.length > 0 && (options.lockfileMode === "preserve" || options.lockfileMode === "error")) {
+    throw new Error(`Lockfile changes detected in ${options.lockfileMode} mode: ${lockfileChanges.join(", ")}`);
+  }
+  if (lockfileChanges.length > 0 && options.lockfileMode === "update") {
+    checkResult.warnings.push(`Lockfiles changed: ${lockfileChanges.map((item) => item.split("/").pop()).join(", ")}`);
   }
 
   return {

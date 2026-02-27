@@ -1,4 +1,5 @@
 import type { CheckOptions, CheckResult, Summary } from "../types/index.js";
+import process from "node:process";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { matchesPattern } from "../utils/pattern.js";
 import { VersionCache } from "../cache/cache.js";
@@ -19,7 +20,10 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
   discoveryMs += Date.now() - discoveryStartedAt;
 
   const cache = await VersionCache.create();
-  const registryClient = new NpmRegistryClient(options.cwd);
+  const registryClient = new NpmRegistryClient(options.cwd, {
+    timeoutMs: options.registryTimeoutMs,
+    retries: options.registryRetries,
+  });
 
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -29,6 +33,12 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
 
   let totalDependencies = 0;
   const packageNames = new Set<string>();
+  let streamedEvents = 0;
+  const emitStream = (message: string): void => {
+    if (!options.stream) return;
+    streamedEvents += 1;
+    process.stdout.write(`${message}\n`);
+  };
 
   for (const packageDir of packageDirs) {
     try {
@@ -65,9 +75,11 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
         const stale = await cache.getAny(pkg, options.target);
         if (stale) {
           warnings.push(`Using stale cache for ${pkg} in offline warm-cache mode.`);
+          emitStream(`[warm-cache-stale] ${pkg}`);
           warmed += 1;
         } else {
           errors.push(`Offline cache miss for ${pkg}. Cannot warm cache in --offline mode.`);
+          emitStream(`[error] Offline cache miss for ${pkg}`);
         }
       }
       cacheMs += Date.now() - cacheFallbackStartedAt;
@@ -75,6 +87,8 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
       const registryStartedAt = Date.now();
       const fetched = await registryClient.resolveManyPackageMetadata(needsFetch, {
         concurrency: options.concurrency,
+        retries: options.registryRetries,
+        timeoutMs: options.registryTimeoutMs,
       });
       registryMs += Date.now() - registryStartedAt;
 
@@ -83,12 +97,14 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
         if (metadata.latestVersion) {
           await cache.set(pkg, options.target, metadata.latestVersion, metadata.versions, options.cacheTtlSeconds);
           warmed += 1;
+          emitStream(`[warmed] ${pkg}@${metadata.latestVersion}`);
         }
       }
       cacheMs += Date.now() - cacheWriteStartedAt;
 
       for (const [pkg, error] of fetched.errors) {
         errors.push(`Unable to warm ${pkg}: ${error}`);
+        emitStream(`[error] Unable to warm ${pkg}: ${error}`);
       }
     }
   }
@@ -116,6 +132,7 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
       ciProfile: options.ciProfile,
     }),
   );
+  summary.streamedEvents = streamedEvents;
 
   return {
     projectPath: options.cwd,

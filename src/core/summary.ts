@@ -22,9 +22,11 @@ export function createSummary(input: {
   cooldownSkipped?: number;
   ciProfile?: Summary["ciProfile"];
   prLimitHit?: boolean;
+  policyOverridesApplied?: number;
 }): Summary {
   const offlineCacheMiss = input.errors.filter((error) => isOfflineCacheMissError(error)).length;
   const registryFailure = input.errors.filter((error) => isRegistryFailureError(error)).length;
+  const registryAuthFailure = input.errors.filter((error) => isRegistryAuthError(error)).length;
   const staleCache = input.warnings.filter((warning) => warning.includes("Using stale cache")).length;
 
   return {
@@ -41,6 +43,7 @@ export function createSummary(input: {
       total: input.errors.length,
       offlineCacheMiss,
       registryFailure,
+      registryAuthFailure,
       other: 0,
     },
     warningCounts: {
@@ -63,11 +66,17 @@ export function createSummary(input: {
     cooldownSkipped: Math.max(0, Math.round(input.cooldownSkipped ?? 0)),
     ciProfile: input.ciProfile ?? "minimal",
     prLimitHit: input.prLimitHit === true,
+    streamedEvents: 0,
+    policyOverridesApplied: Math.max(0, Math.round(input.policyOverridesApplied ?? 0)),
   };
 }
 
 export function finalizeSummary(summary: Summary): Summary {
-  const errorOther = summary.errorCounts.total - summary.errorCounts.offlineCacheMiss - summary.errorCounts.registryFailure;
+  const errorOther =
+    summary.errorCounts.total -
+    summary.errorCounts.offlineCacheMiss -
+    summary.errorCounts.registryFailure -
+    summary.errorCounts.registryAuthFailure;
   const warningOther = summary.warningCounts.total - summary.warningCounts.staleCache;
   summary.errorCounts.other = Math.max(0, errorOther);
   summary.warningCounts.other = Math.max(0, warningOther);
@@ -115,4 +124,8 @@ function isRegistryFailureError(value: string): boolean {
     value.includes("Registry request failed") ||
     value.includes("Registry temporary error")
   );
+}
+
+function isRegistryAuthError(value: string): boolean {
+  return value.includes("Registry authentication failed") || value.includes("401");
 }

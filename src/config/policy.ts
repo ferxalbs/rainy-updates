@@ -16,6 +16,8 @@ export interface PolicyConfig {
       allowPrerelease?: boolean;
       group?: string;
       priority?: number;
+      target?: TargetLevel;
+      autofix?: boolean;
     }
   >;
 }
@@ -29,6 +31,8 @@ export interface PolicyRule {
   allowPrerelease?: boolean;
   group?: string;
   priority?: number;
+  target?: TargetLevel;
+  autofix?: boolean;
 }
 
 export interface ResolvedPolicy {
@@ -85,6 +89,8 @@ function normalizeRule(rule: {
   allowPrerelease?: boolean;
   group?: string;
   priority?: number;
+  target?: TargetLevel;
+  autofix?: boolean;
 }): PolicyRule {
   return {
     match: typeof rule.match === "string" ? rule.match : undefined,
@@ -95,6 +101,8 @@ function normalizeRule(rule: {
     allowPrerelease: rule.allowPrerelease === true,
     group: typeof rule.group === "string" && rule.group.trim().length > 0 ? rule.group.trim() : undefined,
     priority: asNonNegativeInt(rule.priority),
+    target: rule.target,
+    autofix: rule.autofix !== false,
   };
 }
 

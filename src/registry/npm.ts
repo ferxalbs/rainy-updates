@@ -17,11 +17,24 @@ type RequestLike = (packageName: string, timeoutMs: number) => Promise<{
 interface RegistryConfig {
   defaultRegistry: string;
   scopedRegistries: Map<string, string>;
+  authByRegistry: Map<string, RegistryAuth>;
+}
+
+interface RegistryAuth {
+  token?: string;
+  basicAuth?: string;
+  alwaysAuth: boolean;
 }
 
 export interface ResolveManyOptions {
   concurrency: number;
   timeoutMs?: number;
+  retries?: number;
+}
+
+export interface RegistryClientOptions {
+  timeoutMs?: number;
+  retries?: number;
 }
 
 export interface ResolveManyResult {
@@ -31,19 +44,24 @@ export interface ResolveManyResult {
 
 export class NpmRegistryClient {
   private readonly requesterPromise: Promise<RequestLike>;
+  private readonly defaultTimeoutMs: number;
+  private readonly defaultRetries: number;
 
-  constructor(cwd?: string) {
+  constructor(cwd?: string, options?: RegistryClientOptions) {
     this.requesterPromise = createRequester(cwd);
+    this.defaultTimeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.defaultRetries = Math.max(1, options?.retries ?? 3);
   }
 
-  async resolvePackageMetadata(
-    packageName: string,
-    timeoutMs = DEFAULT_TIMEOUT_MS,
-  ): Promise<{ latestVersion: string | null; versions: string[]; publishedAtByVersion: Record<string, number> }> {
+  async resolvePackageMetadata(packageName: string, timeoutMs = this.defaultTimeoutMs, retries = this.defaultRetries): Promise<{
+    latestVersion: string | null;
+    versions: string[];
+    publishedAtByVersion: Record<string, number>;
+  }> {
     const requester = await this.requesterPromise;
     let lastError: string | null = null;
 
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
+    for (let attempt = 1; attempt <= retries; attempt += 1) {
       try {
         const response = await requester(packageName, timeoutMs);
         if (response.status === 404) {
@@ -67,7 +85,7 @@ export class NpmRegistryClient {
         };
       } catch (error) {
         lastError = String(error);
-        if (attempt < 3) {
+        if (attempt < retries) {
           const backoffMs = error instanceof RetryableRegistryError ? error.waitMs : computeBackoffMs(attempt);
           await sleep(backoffMs);
         }
@@ -77,8 +95,8 @@ export class NpmRegistryClient {
     throw new Error(`Unable to resolve ${packageName}: ${lastError ?? "unknown error"}`);
   }
 
-  async resolveLatestVersion(packageName: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<string | null> {
-    const metadata = await this.resolvePackageMetadata(packageName, timeoutMs);
+  async resolveLatestVersion(packageName: string, timeoutMs = this.defaultTimeoutMs): Promise<string | null> {
+    const metadata = await this.resolvePackageMetadata(packageName, timeoutMs, this.defaultRetries);
     return metadata.latestVersion;
   }
 
@@ -89,13 +107,14 @@ export class NpmRegistryClient {
     const unique = Array.from(new Set(packageNames));
     const metadata = new Map<string, { latestVersion: string | null; versions: string[]; publishedAtByVersion: Record<string, number> }>();
     const errors = new Map<string, string>();
-    const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const timeoutMs = options.timeoutMs ?? this.defaultTimeoutMs;
+    const retries = options.retries ?? this.defaultRetries;
 
     const results = await asyncPool(
       options.concurrency,
       unique.map((pkg) => async () => {
         try {
-          const packageMetadata = await this.resolvePackageMetadata(pkg, timeoutMs);
+          const packageMetadata = await this.resolvePackageMetadata(pkg, timeoutMs, retries);
           return { pkg, packageMetadata, error: null as string | null };
         } catch (error) {
           return { pkg, packageMetadata: null, error: String(error) };
@@ -160,17 +179,22 @@ async function createRequester(cwd?: string): Promise<RequestLike> {
   return async (packageName: string, timeoutMs: number) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    const registry = resolveRegistryForPackage(packageName, registryConfig);
-    const url = buildRegistryUrl(registry, packageName);
+      const registry = resolveRegistryForPackage(packageName, registryConfig);
+      const url = buildRegistryUrl(registry, packageName);
+      const authHeader = resolveAuthHeader(registry, registryConfig);
+      const headers: Record<string, string> = {
+        accept: "application/json",
+        "user-agent": USER_AGENT,
+      };
+      if (authHeader) {
+        headers.authorization = authHeader;
+      }
 
-    try {
-      const response = await fetch(url, {
-        headers: {
-          accept: "application/json",
-          "user-agent": USER_AGENT,
-        },
-        signal: controller.signal,
-      });
+      try {
+        const response = await fetch(url, {
+          headers,
+          signal: controller.signal,
+        });
 
       const data = (await response.json().catch(() => null)) as
         | { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown>; time?: Record<string, string> }
@@ -196,14 +220,19 @@ async function tryCreateUndiciRequester(registryConfig: RegistryConfig): Promise
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const registry = resolveRegistryForPackage(packageName, registryConfig);
       const url = buildRegistryUrl(registry, packageName);
+      const authHeader = resolveAuthHeader(registry, registryConfig);
+      const headers: Record<string, string> = {
+        accept: "application/json",
+        "user-agent": USER_AGENT,
+      };
+      if (authHeader) {
+        headers.authorization = authHeader;
+      }
 
       try {
         const res = await undici.request(url, {
           method: "GET",
-          headers: {
-            accept: "application/json",
-            "user-agent": USER_AGENT,
-          },
+          headers,
           signal: controller.signal,
         });
 
@@ -259,6 +288,7 @@ async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
 
   const defaultRegistry = normalizeRegistryUrl(merged.get("registry") ?? DEFAULT_REGISTRY);
   const scopedRegistries = new Map<string, string>();
+  const authByRegistry = new Map<string, RegistryAuth>();
   for (const [key, value] of merged) {
     if (!key.startsWith("@") || !key.endsWith(":registry")) continue;
     const scope = key.slice(0, key.indexOf(":registry"));
@@ -267,7 +297,30 @@ async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
     }
   }
 
-  return { defaultRegistry, scopedRegistries };
+  for (const [key, value] of merged) {
+    if (!key.startsWith("//")) continue;
+    const [registryKey, authKey] = key.split(/:(.+)/).filter(Boolean);
+    if (!registryKey || !authKey) continue;
+    const registry = normalizeRegistryUrl(`https:${registryKey}`);
+    const current = authByRegistry.get(registry) ?? { alwaysAuth: false };
+    const resolvedValue = substituteEnvValue(value);
+    if (authKey === "_authToken") {
+      current.token = resolvedValue;
+    } else if (authKey === "_auth") {
+      current.basicAuth = resolvedValue;
+    } else if (authKey === "always-auth") {
+      current.alwaysAuth = resolvedValue === "true";
+    }
+    authByRegistry.set(registry, current);
+  }
+
+  if (merged.get("always-auth") === "true") {
+    const current = authByRegistry.get(defaultRegistry) ?? { alwaysAuth: false };
+    current.alwaysAuth = true;
+    authByRegistry.set(defaultRegistry, current);
+  }
+
+  return { defaultRegistry, scopedRegistries, authByRegistry };
 }
 
 function parseNpmrc(content: string): Map<string, string> {
@@ -285,6 +338,10 @@ function parseNpmrc(content: string): Map<string, string> {
     }
   }
   return values;
+}
+
+function substituteEnvValue(value: string): string {
+  return value.replace(/\$\{([^}]+)\}/g, (_match, name: string) => process.env[name] ?? "");
 }
 
 function normalizeRegistryUrl(value: string): string {
@@ -311,6 +368,29 @@ function extractScope(packageName: string): string | null {
 function buildRegistryUrl(registry: string, packageName: string): string {
   const base = normalizeRegistryUrl(registry);
   return new URL(encodeURIComponent(packageName), base).toString();
+}
+
+function resolveAuthHeader(registry: string, config: RegistryConfig): string | undefined {
+  const registryUrl = normalizeRegistryUrl(registry);
+  const auth = findRegistryAuth(registryUrl, config.authByRegistry);
+  if (!auth) return undefined;
+  if (!auth.alwaysAuth && !registryUrl.startsWith("https://")) return undefined;
+  if (auth.token) return `Bearer ${auth.token}`;
+  if (auth.basicAuth) return `Basic ${auth.basicAuth}`;
+  return undefined;
+}
+
+function findRegistryAuth(registry: string, authByRegistry: Map<string, RegistryAuth>): RegistryAuth | undefined {
+  let matched: RegistryAuth | undefined;
+  let longest = -1;
+  for (const [candidate, auth] of authByRegistry) {
+    if (!registry.startsWith(candidate)) continue;
+    if (candidate.length > longest) {
+      matched = auth;
+      longest = candidate.length;
+    }
+  }
+  return matched;
 }
 
 function parseRetryAfterHeader(value: string | null): number | null {

@@ -27,7 +27,10 @@ test("warmCache reports misses in offline mode", async () => {
     githubOutputFile: undefined,
     sarifFile: undefined,
     concurrency: 4,
+    registryTimeoutMs: 8000,
+    registryRetries: 3,
     offline: true,
+    stream: false,
     policyFile: undefined,
     prReportFile: undefined,
     failOn: "none",
@@ -44,6 +47,7 @@ test("warmCache reports misses in offline mode", async () => {
     prLimit: undefined,
     onlyChanged: false,
     ciProfile: "minimal",
+    lockfileMode: "preserve",
   });
 
   expect(result.summary.warmedPackages).toBe(0);

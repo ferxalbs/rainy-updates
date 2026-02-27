@@ -176,7 +176,10 @@ Options:
   --reject <pattern>
   --dep-kinds deps,dev,optional,peer
   --concurrency <n>
+  --registry-timeout-ms <n>
+  --registry-retries <n>
   --cache-ttl <seconds>
+  --stream
   --policy-file <path>
   --offline
   --fix-pr
@@ -197,6 +200,7 @@ Options:
   --cooldown-days <n>
   --pr-limit <n>
   --only-changed
+  --lockfile-mode preserve|update|error
   --log-level error|warn|info|debug
   --ci`;
   }
@@ -213,8 +217,11 @@ Options:
   --reject <pattern>
   --dep-kinds deps,dev,optional,peer
   --concurrency <n>
+  --registry-timeout-ms <n>
+  --registry-retries <n>
   --cache-ttl <seconds>
   --offline
+  --stream
   --json-file <path>
   --github-output <path>
   --sarif-file <path>
@@ -234,12 +241,15 @@ Options:
   --target patch|minor|major|latest
   --policy-file <path>
   --concurrency <n>
+  --registry-timeout-ms <n>
+  --registry-retries <n>
   --fix-pr
   --fix-branch <name>
   --fix-commit-message <text>
   --fix-dry-run
   --fix-pr-no-checkout
   --fix-pr-batch-size <n>
+  --lockfile-mode preserve|update|error
   --no-pr-report
   --json-file <path>
   --pr-report-file <path>`;
@@ -260,6 +270,9 @@ Options:
   --only-changed
   --offline
   --concurrency <n>
+  --registry-timeout-ms <n>
+  --registry-retries <n>
+  --stream
   --fix-pr
   --fix-branch <name>
   --fix-commit-message <text>
@@ -273,6 +286,7 @@ Options:
   --pr-report-file <path>
   --fail-on none|patch|minor|major|any
   --max-updates <n>
+  --lockfile-mode preserve|update|error
   --log-level error|warn|info|debug
   --ci`;
   }
@@ -340,8 +354,12 @@ Global options:
   --no-pr-report
   --log-level error|warn|info|debug
   --concurrency <n>
+  --registry-timeout-ms <n>
+  --registry-retries <n>
   --cache-ttl <seconds>
   --offline
+  --stream
+  --lockfile-mode preserve|update|error
   --ci
   --help, -h
   --version, -v`;

@@ -1,6 +1,15 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { CiProfile, DependencyKind, FailOnLevel, GroupBy, LogLevel, OutputFormat, TargetLevel } from "../types/index.js";
+import type {
+  CiProfile,
+  DependencyKind,
+  FailOnLevel,
+  GroupBy,
+  LockfileMode,
+  LogLevel,
+  OutputFormat,
+  TargetLevel,
+} from "../types/index.js";
 
 export interface FileConfig {
   target?: TargetLevel;
@@ -15,7 +24,10 @@ export interface FileConfig {
   githubOutputFile?: string;
   sarifFile?: string;
   concurrency?: number;
+  registryTimeoutMs?: number;
+  registryRetries?: number;
   offline?: boolean;
+  stream?: boolean;
   policyFile?: string;
   prReportFile?: string;
   failOn?: FailOnLevel;
@@ -34,6 +46,7 @@ export interface FileConfig {
   prLimit?: number;
   onlyChanged?: boolean;
   ciProfile?: CiProfile;
+  lockfileMode?: LockfileMode;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
   sync?: boolean;

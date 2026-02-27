@@ -7,6 +7,7 @@ export type DependencyKind =
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
 export type GroupBy = "none" | "name" | "scope" | "kind" | "risk";
 export type CiProfile = "minimal" | "strict" | "enterprise";
+export type LockfileMode = "preserve" | "update" | "error";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
@@ -33,7 +34,10 @@ export interface RunOptions {
   githubOutputFile?: string;
   sarifFile?: string;
   concurrency: number;
+  registryTimeoutMs: number;
+  registryRetries: number;
   offline: boolean;
+  stream: boolean;
   policyFile?: string;
   prReportFile?: string;
   failOn?: FailOnLevel;
@@ -52,6 +56,7 @@ export interface RunOptions {
   prLimit?: number;
   onlyChanged: boolean;
   ciProfile: CiProfile;
+  lockfileMode: LockfileMode;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -85,6 +90,7 @@ export interface PackageUpdate {
   toVersionResolved: string;
   diffType: TargetLevel;
   filtered: boolean;
+  autofix: boolean;
   reason?: string;
 }
 
@@ -102,6 +108,7 @@ export interface Summary {
     total: number;
     offlineCacheMiss: number;
     registryFailure: number;
+    registryAuthFailure: number;
     other: number;
   };
   warningCounts: {
@@ -124,6 +131,8 @@ export interface Summary {
   cooldownSkipped: number;
   ciProfile: CiProfile;
   prLimitHit: boolean;
+  streamedEvents: number;
+  policyOverridesApplied: number;
 }
 
 export interface CheckResult {

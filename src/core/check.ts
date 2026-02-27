@@ -1,4 +1,5 @@
 import path from "node:path";
+import process from "node:process";
 import type { CheckOptions, CheckResult, PackageDependency, PackageUpdate, Summary } from "../types/index.js";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { matchesPattern } from "../utils/pattern.js";
@@ -33,7 +34,10 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   discoveryMs += Date.now() - discoveryStartedAt;
 
   const cache = await VersionCache.create();
-  const registryClient = new NpmRegistryClient(options.cwd);
+  const registryClient = new NpmRegistryClient(options.cwd, {
+    timeoutMs: options.registryTimeoutMs,
+    retries: options.registryRetries,
+  });
   const policy = await loadPolicy(options.cwd, options.policyFile);
 
   const updates: PackageUpdate[] = [];
@@ -47,6 +51,14 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   const tasks: DependencyTask[] = [];
   let skipped = 0;
   let cooldownSkipped = 0;
+  let streamedEvents = 0;
+  let policyOverridesApplied = 0;
+
+  const emitStream = (message: string): void => {
+    if (!options.stream) return;
+    streamedEvents += 1;
+    process.stdout.write(`${message}\n`);
+  };
 
   for (const packageDir of packageDirs) {
     let manifest;
@@ -67,11 +79,15 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       const rule = resolvePolicyRule(dep.name, policy);
       if (rule?.ignore === true) {
         skipped += 1;
+        policyOverridesApplied += 1;
+        emitStream(`[policy-ignore] ${dep.name}`);
         continue;
       }
 
       if (policy.ignorePatterns.some((pattern) => matchesPattern(dep.name, pattern))) {
         skipped += 1;
+        policyOverridesApplied += 1;
+        emitStream(`[policy-ignore-pattern] ${dep.name}`);
         continue;
       }
 
@@ -121,6 +137,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       const registryStartedAt = Date.now();
       const fetched = await registryClient.resolveManyPackageMetadata(unresolvedPackages, {
         concurrency: options.concurrency,
+        retries: options.registryRetries,
+        timeoutMs: options.registryTimeoutMs,
       });
       registryMs += Date.now() - registryStartedAt;
 
@@ -155,6 +173,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
           warnings.push(`Using stale cache for ${packageName} due to registry error: ${error}`);
         } else {
           errors.push(`Unable to resolve ${packageName}: ${error}`);
+          emitStream(`[error] Unable to resolve ${packageName}: ${error}`);
         }
       }
       cacheMs += Date.now() - cacheStaleStartedAt;
@@ -166,7 +185,11 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     if (!metadata?.latestVersion) continue;
 
     const rule = resolvePolicyRule(task.dependency.name, policy);
-    const effectiveTarget = clampTarget(options.target, rule?.maxTarget);
+    const baseTarget = rule?.target ?? options.target;
+    const effectiveTarget = clampTarget(baseTarget, rule?.maxTarget);
+    if (rule?.target || rule?.maxTarget || rule?.autofix === false) {
+      policyOverridesApplied += 1;
+    }
     const picked = pickTargetVersionFromAvailable(
       task.dependency.range,
       metadata.availableVersions,
@@ -176,6 +199,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     if (!picked) continue;
     if (shouldSkipByCooldown(picked, metadata.publishedAtByVersion, options.cooldownDays, policy.cooldownDays, rule?.cooldownDays)) {
       cooldownSkipped += 1;
+      emitStream(`[cooldown-skip] ${task.dependency.name}@${picked}`);
       continue;
     }
 
@@ -191,15 +215,20 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       toVersionResolved: picked,
       diffType: classifyDiff(task.dependency.range, picked),
       filtered: false,
+      autofix: rule?.autofix !== false,
       reason: rule?.maxTarget ? `policy maxTarget=${rule.maxTarget}` : undefined,
     });
+    emitStream(
+      `[update] ${task.dependency.name} ${task.dependency.range} -> ${nextRange} (${classifyDiff(task.dependency.range, picked)})`,
+    );
   }
 
   const grouped = groupUpdates(updates, options.groupBy);
   const groupedUpdates = grouped.length;
   const groupedSorted = sortUpdates(grouped.flatMap((group) => group.items));
   const groupedCapped = typeof options.groupMax === "number" ? groupedSorted.slice(0, options.groupMax) : groupedSorted;
-  const ruleLimited = applyRuleUpdateCaps(groupedCapped, policy);
+  const prioritized = applyPolicyPrioritySort(groupedCapped, policy);
+  const ruleLimited = applyRuleUpdateCaps(prioritized, policy);
   const prLimited = typeof options.prLimit === "number" ? ruleLimited.slice(0, options.prLimit) : ruleLimited;
   const limitedUpdates = sortUpdates(prLimited);
   const prLimitHit = typeof options.prLimit === "number" && groupedSorted.length > options.prLimit;
@@ -226,8 +255,10 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       cooldownSkipped,
       ciProfile: options.ciProfile,
       prLimitHit,
+      policyOverridesApplied,
     }),
   );
+  summary.streamedEvents = streamedEvents;
 
   return {
     projectPath: options.cwd,
@@ -316,6 +347,29 @@ function applyRuleUpdateCaps(updates: PackageUpdate[], policy: Awaited<ReturnTyp
   }
 
   return limited;
+}
+
+function applyPolicyPrioritySort(
+  updates: PackageUpdate[],
+  policy: Awaited<ReturnType<typeof loadPolicy>>,
+): PackageUpdate[] {
+  return [...updates].sort((left, right) => {
+    const leftPriority = resolvePolicyRule(left.name, policy)?.priority ?? 0;
+    const rightPriority = resolvePolicyRule(right.name, policy)?.priority ?? 0;
+    if (leftPriority !== rightPriority) return rightPriority - leftPriority;
+    const byRisk = riskRank(left.diffType) - riskRank(right.diffType);
+    if (byRisk !== 0) return byRisk;
+    const byName = left.name.localeCompare(right.name);
+    if (byName !== 0) return byName;
+    return left.packagePath.localeCompare(right.packagePath);
+  });
+}
+
+function riskRank(value: PackageUpdate["diffType"]): number {
+  if (value === "patch") return 0;
+  if (value === "minor") return 1;
+  if (value === "major") return 2;
+  return 3;
 }
 
 function sortUpdates(updates: PackageUpdate[]): PackageUpdate[] {

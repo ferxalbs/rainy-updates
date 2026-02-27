@@ -8,6 +8,7 @@ import type {
   DependencyKind,
   FailOnLevel,
   GroupBy,
+  LockfileMode,
   OutputFormat,
   TargetLevel,
   UpgradeOptions,
@@ -55,7 +56,10 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     githubOutputFile: undefined,
     sarifFile: undefined,
     concurrency: 16,
+    registryTimeoutMs: 8000,
+    registryRetries: 3,
     offline: false,
+    stream: false,
     policyFile: undefined,
     prReportFile: undefined,
     failOn: "none",
@@ -74,6 +78,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     prLimit: undefined,
     onlyChanged: false,
     ciProfile: "minimal",
+    lockfileMode: "preserve",
   };
 
   let force = false;
@@ -205,8 +210,39 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       throw new Error("Missing value for --concurrency");
     }
 
+    if (current === "--registry-timeout-ms" && next) {
+      const parsed = Number(next);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new Error("--registry-timeout-ms must be a positive integer");
+      }
+      base.registryTimeoutMs = parsed;
+      index += 1;
+      continue;
+    }
+    if (current === "--registry-timeout-ms") {
+      throw new Error("Missing value for --registry-timeout-ms");
+    }
+
+    if (current === "--registry-retries" && next) {
+      const parsed = Number(next);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error("--registry-retries must be a positive integer");
+      }
+      base.registryRetries = parsed;
+      index += 1;
+      continue;
+    }
+    if (current === "--registry-retries") {
+      throw new Error("Missing value for --registry-retries");
+    }
+
     if (current === "--offline") {
       base.offline = true;
+      continue;
+    }
+
+    if (current === "--stream") {
+      base.stream = true;
       continue;
     }
 
@@ -416,6 +452,15 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       continue;
     }
 
+    if (current === "--lockfile-mode" && next) {
+      base.lockfileMode = ensureLockfileMode(next);
+      index += 1;
+      continue;
+    }
+    if (current === "--lockfile-mode") {
+      throw new Error("Missing value for --lockfile-mode");
+    }
+
     if (current === "--save") {
       baselineAction = "save";
       continue;
@@ -536,8 +581,17 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   if (typeof config.concurrency === "number" && Number.isInteger(config.concurrency) && config.concurrency > 0) {
     base.concurrency = config.concurrency;
   }
+  if (typeof config.registryTimeoutMs === "number" && Number.isInteger(config.registryTimeoutMs) && config.registryTimeoutMs > 0) {
+    base.registryTimeoutMs = config.registryTimeoutMs;
+  }
+  if (typeof config.registryRetries === "number" && Number.isInteger(config.registryRetries) && config.registryRetries > 0) {
+    base.registryRetries = config.registryRetries;
+  }
   if (typeof config.offline === "boolean") {
     base.offline = config.offline;
+  }
+  if (typeof config.stream === "boolean") {
+    base.stream = config.stream;
   }
   if (typeof config.policyFile === "string") {
     base.policyFile = path.resolve(base.cwd, config.policyFile);
@@ -592,6 +646,9 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   }
   if (typeof config.ciProfile === "string") {
     base.ciProfile = ensureCiProfile(config.ciProfile);
+  }
+  if (typeof config.lockfileMode === "string") {
+    base.lockfileMode = ensureLockfileMode(config.lockfileMode);
   }
 }
 
@@ -679,4 +736,11 @@ function ensureCiProfile(value: string): CiProfile {
     return value;
   }
   throw new Error("--mode must be minimal, strict or enterprise");
+}
+
+function ensureLockfileMode(value: string): LockfileMode {
+  if (value === "preserve" || value === "update" || value === "error") {
+    return value;
+  }
+  throw new Error("--lockfile-mode must be preserve, update or error");
 }

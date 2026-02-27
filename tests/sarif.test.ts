@@ -19,7 +19,7 @@ test("createSarifReport includes updates and errors", () => {
       skipped: 0,
       warmedPackages: 0,
       failReason: "none",
-      errorCounts: { total: 1, offlineCacheMiss: 0, registryFailure: 0, other: 1 },
+      errorCounts: { total: 1, offlineCacheMiss: 0, registryFailure: 0, registryAuthFailure: 0, other: 1 },
       warningCounts: { total: 0, staleCache: 0, other: 0 },
       durationMs: { total: 0, discovery: 0, registry: 0, cache: 0, render: 0 },
       fixPrApplied: false,
@@ -30,6 +30,8 @@ test("createSarifReport includes updates and errors", () => {
       cooldownSkipped: 0,
       ciProfile: "minimal",
       prLimitHit: false,
+      streamedEvents: 0,
+      policyOverridesApplied: 0,
     },
     updates: [
       {
@@ -41,6 +43,7 @@ test("createSarifReport includes updates and errors", () => {
         toVersionResolved: "19.0.0",
         diffType: "major",
         filtered: false,
+        autofix: true,
       },
     ],
     errors: ["sample error"],

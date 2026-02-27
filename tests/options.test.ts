@@ -22,7 +22,14 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     "--sync",
     "--concurrency",
     "8",
+    "--registry-timeout-ms",
+    "12000",
+    "--registry-retries",
+    "5",
     "--offline",
+    "--stream",
+    "--lockfile-mode",
+    "update",
     "--format",
     "github",
   ]);
@@ -33,8 +40,12 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.sync).toBe(true);
     expect(parsed.options.concurrency).toBe(8);
+    expect(parsed.options.registryTimeoutMs).toBe(12000);
+    expect(parsed.options.registryRetries).toBe(5);
     expect(parsed.options.offline).toBe(true);
+    expect(parsed.options.stream).toBe(true);
     expect(parsed.options.format).toBe("github");
+    expect(parsed.options.lockfileMode).toBe("update");
   }
 });
 

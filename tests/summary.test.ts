@@ -36,6 +36,8 @@ test("createSummary includes fix-pr defaults", () => {
   expect(summary.cooldownSkipped).toBe(0);
   expect(summary.ciProfile).toBe("minimal");
   expect(summary.prLimitHit).toBe(false);
+  expect(summary.streamedEvents).toBe(0);
+  expect(summary.policyOverridesApplied).toBe(0);
 });
 
 test("resolveFailReason applies severity threshold for minor", () => {
@@ -49,6 +51,7 @@ test("resolveFailReason applies severity threshold for minor", () => {
       toVersionResolved: "18.3.0",
       diffType: "minor",
       filtered: false,
+      autofix: true,
     },
   ];
   const failReason = resolveFailReason(updates, [], "minor", undefined, false);

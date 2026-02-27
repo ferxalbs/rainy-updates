@@ -40,6 +40,9 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
       `cooldown_skipped=${result.summary.cooldownSkipped}`,
       `ci_profile=${result.summary.ciProfile}`,
       `pr_limit_hit=${result.summary.prLimitHit ? "1" : "0"}`,
+      `streamed_events=${result.summary.streamedEvents}`,
+      `policy_overrides_applied=${result.summary.policyOverridesApplied}`,
+      `registry_auth_failures=${result.summary.errorCounts.registryAuthFailure}`,
       `fix_pr_branches_created=${result.summary.fixPrBranchesCreated}`,
     ].join("\n");
   }
@@ -88,6 +91,9 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   );
   lines.push(
     `Groups=${result.summary.groupedUpdates}, cooldownSkipped=${result.summary.cooldownSkipped}, ciProfile=${result.summary.ciProfile}, prLimitHit=${result.summary.prLimitHit ? "yes" : "no"}`,
+  );
+  lines.push(
+    `StreamedEvents=${result.summary.streamedEvents}, policyOverrides=${result.summary.policyOverridesApplied}, registryAuthFailures=${result.summary.errorCounts.registryAuthFailure}`,
   );
   lines.push(
     `Contract v${result.summary.contractVersion}, failReason=${result.summary.failReason}, duration=${result.summary.durationMs.total}ms`,

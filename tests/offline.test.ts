@@ -32,7 +32,10 @@ test("offline mode reports cache miss error", async () => {
     githubOutputFile: undefined,
     sarifFile: undefined,
     concurrency: 2,
+    registryTimeoutMs: 8000,
+    registryRetries: 3,
     offline: true,
+    stream: false,
     policyFile: undefined,
     prReportFile: undefined,
     failOn: "none",
@@ -49,6 +52,7 @@ test("offline mode reports cache miss error", async () => {
     prLimit: undefined,
     onlyChanged: false,
     ciProfile: "minimal",
+    lockfileMode: "preserve",
   });
 
   expect(result.errors.some((item) => item.includes("Offline cache miss for react"))).toBe(true);

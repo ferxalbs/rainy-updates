@@ -65,7 +65,9 @@ npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --w
 - Scans dependency groups: `dependencies`, `devDependencies`, `optionalDependencies`, `peerDependencies`.
 - Resolves versions per unique package to reduce duplicate network requests.
 - Uses network concurrency controls and resilient retries.
+- Supports explicit registry retry/timeout tuning (`--registry-retries`, `--registry-timeout-ms`).
 - Supports stale-cache fallback when registry calls fail.
+- Supports streamed progress output for long CI runs (`--stream`).
 
 ### Workspace support
 
@@ -80,6 +82,7 @@ npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --w
 - Apply global ignore patterns.
 - Apply package-specific rules.
 - Enforce max upgrade target per package (for safer rollout).
+- Support per-package target override and fix-pr inclusion (`target`, `autofix`).
 
 Example policy file:
 
@@ -87,7 +90,7 @@ Example policy file:
 {
   "ignore": ["@types/*", "eslint*"],
   "packageRules": {
-    "react": { "maxTarget": "minor" },
+    "react": { "maxTarget": "minor", "target": "patch", "autofix": false },
     "typescript": { "ignore": true }
   }
 }
@@ -155,7 +158,10 @@ Schedule:
 - `--dep-kinds deps,dev,optional,peer`
 - `--concurrency <n>`
 - `--cache-ttl <seconds>`
+- `--registry-timeout-ms <n>`
+- `--registry-retries <n>`
 - `--offline`
+- `--stream`
 - `--fail-on none|patch|minor|major|any`
 - `--max-updates <n>`
 - `--group-by none|name|scope|kind|risk`
@@ -175,6 +181,7 @@ Schedule:
 - `--fix-branch <name>`
 - `--fix-commit-message <text>`
 - `--fix-dry-run`
+- `--lockfile-mode preserve|update|error`
 - `--no-pr-report`
 - `--ci`
 

@@ -14,7 +14,8 @@ export async function applyFixPr(
   extraFiles: string[],
 ): Promise<FixPrResult> {
   if (!options.fixPr) return { applied: false };
-  if (result.updates.length === 0) {
+  const autofixUpdates = result.updates.filter((update) => update.autofix !== false);
+  if (autofixUpdates.length === 0) {
     return {
       applied: false,
       branchName: options.fixBranch ?? "chore/rainy-updates",
@@ -51,11 +52,15 @@ export async function applyFixPr(
   }
 
   const manifestFiles = Array.from(
-    new Set(result.updates.map((update) => path.resolve(update.packagePath, "package.json"))),
+    new Set(autofixUpdates.map((update) => path.resolve(update.packagePath, "package.json"))),
   );
+  const lockfileFiles =
+    options.lockfileMode === "update"
+      ? (await collectChangedLockfiles(options.cwd)).map((entry) => path.resolve(options.cwd, entry))
+      : [];
   const filesToStage = Array.from(
     new Set(
-      [...manifestFiles, ...extraFiles]
+      [...manifestFiles, ...extraFiles, ...lockfileFiles]
         .map((entry) => path.resolve(options.cwd, entry))
         .filter((entry) => entry.startsWith(path.resolve(options.cwd) + path.sep) || entry === path.resolve(options.cwd)),
     ),
@@ -73,7 +78,7 @@ export async function applyFixPr(
     };
   }
 
-  const message = options.fixCommitMessage ?? `chore(deps): apply rainy-updates (${result.updates.length} updates)`;
+  const message = options.fixCommitMessage ?? `chore(deps): apply rainy-updates (${autofixUpdates.length} updates)`;
   await runGit(options.cwd, ["commit", "-m", message]);
   const rev = await runGit(options.cwd, ["rev-parse", "HEAD"]);
 
@@ -112,4 +117,16 @@ async function runGit(cwd: string, args: string[], allowNonZero = false): Promis
       resolve({ code: normalized, stdout, stderr });
     });
   });
+}
+
+async function collectChangedLockfiles(cwd: string): Promise<string[]> {
+  const status = await runGit(cwd, ["status", "--porcelain"], true);
+  const allowed = new Set(["package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock"]);
+  const changed = status.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.slice(3).trim())
+    .filter((entry) => allowed.has(path.basename(entry)));
+  return Array.from(new Set(changed)).sort((a, b) => a.localeCompare(b));
 }
