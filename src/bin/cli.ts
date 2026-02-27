@@ -1,20 +1,40 @@
 #!/usr/bin/env node
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import process from "node:process";
 import { parseCliArgs } from "../core/options.js";
 import { check } from "../core/check.js";
 import { upgrade } from "../core/upgrade.js";
 import { renderResult } from "../output/format.js";
+import { writeGitHubOutput } from "../output/github.js";
+import { createSarifReport } from "../output/sarif.js";
 
 async function main(): Promise<void> {
   try {
-    const parsed = parseCliArgs(process.argv.slice(2));
+    const parsed = await parseCliArgs(process.argv.slice(2));
 
     const result =
       parsed.command === "upgrade"
         ? await upgrade(parsed.options)
         : await check(parsed.options);
 
-    process.stdout.write(renderResult(result, parsed.options.format) + "\n");
+    const rendered = renderResult(result, parsed.options.format);
+    process.stdout.write(rendered + "\n");
+
+    if (parsed.options.jsonFile) {
+      await fs.mkdir(path.dirname(parsed.options.jsonFile), { recursive: true });
+      await fs.writeFile(parsed.options.jsonFile, JSON.stringify(result, null, 2) + "\n", "utf8");
+    }
+
+    if (parsed.options.githubOutputFile) {
+      await writeGitHubOutput(parsed.options.githubOutputFile, result);
+    }
+
+    if (parsed.options.sarifFile) {
+      const sarif = createSarifReport(result);
+      await fs.mkdir(path.dirname(parsed.options.sarifFile), { recursive: true });
+      await fs.writeFile(parsed.options.sarifFile, JSON.stringify(sarif, null, 2) + "\n", "utf8");
+    }
 
     if (parsed.options.ci && result.updates.length > 0) {
       process.exitCode = 1;

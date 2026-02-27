@@ -6,7 +6,7 @@ export type DependencyKind =
 
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
 
-export type OutputFormat = "table" | "json" | "minimal";
+export type OutputFormat = "table" | "json" | "minimal" | "github";
 
 export interface RunOptions {
   cwd: string;
@@ -19,6 +19,9 @@ export interface RunOptions {
   format: OutputFormat;
   workspace: boolean;
   jsonFile?: string;
+  githubOutputFile?: string;
+  sarifFile?: string;
+  concurrency: number;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -26,6 +29,7 @@ export interface CheckOptions extends RunOptions {}
 export interface UpgradeOptions extends RunOptions {
   install: boolean;
   packageManager: "auto" | "npm" | "pnpm";
+  sync: boolean;
 }
 
 export interface PackageDependency {

@@ -1,7 +1,8 @@
-import type { UpgradeOptions, UpgradeResult } from "../types/index.js";
+import type { DependencyKind, PackageManifest, UpgradeOptions, UpgradeResult } from "../types/index.js";
 import { check } from "./check.js";
 import { readManifest, writeManifest } from "../parsers/package-json.js";
 import { installDependencies } from "../pm/install.js";
+import { applyRangeStyle, parseVersion, compareVersions } from "../utils/semver.js";
 
 export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
   const checkResult = await check(options);
@@ -12,15 +13,26 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
     };
   }
 
-  const manifest = await readManifest(options.cwd);
+  const manifestsByPath = new Map<string, PackageManifest>();
 
   for (const update of checkResult.updates) {
-    const section = manifest[update.kind] as Record<string, string> | undefined;
-    if (!section || !section[update.name]) continue;
-    section[update.name] = update.toRange;
+    const manifestPath = update.packagePath;
+    let manifest = manifestsByPath.get(manifestPath);
+    if (!manifest) {
+      manifest = await readManifest(manifestPath);
+      manifestsByPath.set(manifestPath, manifest);
+    }
+
+    applyDependencyVersion(manifest, update.kind, update.name, update.toRange);
   }
 
-  await writeManifest(options.cwd, manifest);
+  if (options.sync) {
+    applyWorkspaceSync(manifestsByPath, options.includeKinds, checkResult.updates);
+  }
+
+  for (const [manifestPath, manifest] of manifestsByPath) {
+    await writeManifest(manifestPath, manifest);
+  }
 
   if (options.install) {
     await installDependencies(options.cwd, options.packageManager, checkResult.packageManager);
@@ -34,4 +46,55 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
       upgraded: checkResult.updates.length,
     },
   };
+}
+
+function applyWorkspaceSync(
+  manifestsByPath: Map<string, PackageManifest>,
+  includeKinds: DependencyKind[],
+  updates: UpgradeResult["updates"],
+): void {
+  const desiredByPackage = new Map<string, string>();
+
+  for (const update of updates) {
+    const current = desiredByPackage.get(update.name);
+    if (!current) {
+      desiredByPackage.set(update.name, update.toVersionResolved);
+      continue;
+    }
+
+    const currentParsed = parseVersion(current);
+    const nextParsed = parseVersion(update.toVersionResolved);
+    if (!currentParsed || !nextParsed) {
+      desiredByPackage.set(update.name, update.toVersionResolved);
+      continue;
+    }
+
+    if (compareVersions(nextParsed, currentParsed) > 0) {
+      desiredByPackage.set(update.name, update.toVersionResolved);
+    }
+  }
+
+  for (const manifest of manifestsByPath.values()) {
+    for (const kind of includeKinds) {
+      const section = manifest[kind] as Record<string, string> | undefined;
+      if (!section) continue;
+
+      for (const [depName, depRange] of Object.entries(section)) {
+        const desiredVersion = desiredByPackage.get(depName);
+        if (!desiredVersion) continue;
+        section[depName] = applyRangeStyle(depRange, desiredVersion);
+      }
+    }
+  }
+}
+
+function applyDependencyVersion(
+  manifest: PackageManifest,
+  kind: DependencyKind,
+  depName: string,
+  nextRange: string,
+): void {
+  const section = manifest[kind] as Record<string, string> | undefined;
+  if (!section || !section[depName]) return;
+  section[depName] = nextRange;
 }

@@ -113,6 +113,10 @@ export class VersionCache {
     return entry;
   }
 
+  async getAny(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {
+    return this.store.get(packageName, target);
+  }
+
   async set(packageName: string, target: TargetLevel, latestVersion: string, ttlSeconds: number): Promise<void> {
     await this.store.set({
       packageName,

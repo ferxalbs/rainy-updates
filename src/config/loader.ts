@@ -12,8 +12,12 @@ export interface FileConfig {
   format?: OutputFormat;
   workspace?: boolean;
   jsonFile?: string;
+  githubOutputFile?: string;
+  sarifFile?: string;
+  concurrency?: number;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
+  sync?: boolean;
 }
 
 export async function loadConfig(cwd: string): Promise<FileConfig> {

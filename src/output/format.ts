@@ -1,4 +1,5 @@
 import type { CheckResult, OutputFormat } from "../types/index.js";
+import { renderGitHubAnnotations } from "./github.js";
 
 export function renderResult(result: CheckResult, format: OutputFormat): string {
   if (format === "json") {
@@ -7,11 +8,18 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
 
   if (format === "minimal") {
     if (result.updates.length === 0) return "No updates found.";
-    return result.updates.map((item) => `${item.name}: ${item.fromRange} -> ${item.toRange}`).join("\n");
+    return result.updates
+      .map((item) => `${item.packagePath} :: ${item.name}: ${item.fromRange} -> ${item.toRange}`)
+      .join("\n");
+  }
+
+  if (format === "github") {
+    return renderGitHubAnnotations(result);
   }
 
   const lines: string[] = [];
   lines.push(`Project: ${result.projectPath}`);
+  lines.push(`Scanned packages: ${result.summary.scannedPackages}`);
   lines.push(`Package manager: ${result.packageManager}`);
   lines.push(`Target: ${result.target}`);
   lines.push("");
@@ -22,7 +30,7 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
     lines.push("Updates:");
     for (const update of result.updates) {
       lines.push(
-        `- ${update.name} [${update.kind}] ${update.fromRange} -> ${update.toRange} (${update.diffType})`,
+        `- ${update.packagePath} :: ${update.name} [${update.kind}] ${update.fromRange} -> ${update.toRange} (${update.diffType})`,
       );
     }
   }
@@ -32,6 +40,14 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
     lines.push("Errors:");
     for (const error of result.errors) {
       lines.push(`- ${error}`);
+    }
+  }
+
+  if (result.warnings.length > 0) {
+    lines.push("");
+    lines.push("Warnings:");
+    for (const warning of result.warnings) {
+      lines.push(`- ${warning}`);
     }
   }
 
