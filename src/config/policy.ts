@@ -7,15 +7,29 @@ export interface PolicyConfig {
   packageRules?: Record<
     string,
     {
+      match?: string;
       maxTarget?: TargetLevel;
       ignore?: boolean;
+      maxUpdatesPerRun?: number;
+      cooldownDays?: number;
+      allowPrerelease?: boolean;
     }
   >;
 }
 
+export interface PolicyRule {
+  match?: string;
+  maxTarget?: TargetLevel;
+  ignore: boolean;
+  maxUpdatesPerRun?: number;
+  cooldownDays?: number;
+  allowPrerelease?: boolean;
+}
+
 export interface ResolvedPolicy {
   ignorePatterns: string[];
-  packageRules: Map<string, { maxTarget?: TargetLevel; ignore: boolean }>;
+  packageRules: Map<string, PolicyRule>;
+  matchRules: PolicyRule[];
 }
 
 export async function loadPolicy(cwd: string, policyFile?: string): Promise<ResolvedPolicy> {
@@ -31,15 +45,10 @@ export async function loadPolicy(cwd: string, policyFile?: string): Promise<Reso
       const parsed = JSON.parse(content) as PolicyConfig;
       return {
         ignorePatterns: parsed.ignore ?? [],
-        packageRules: new Map(
-          Object.entries(parsed.packageRules ?? {}).map(([pkg, rule]) => [
-            pkg,
-            {
-              maxTarget: rule.maxTarget,
-              ignore: rule.ignore === true,
-            },
-          ]),
-        ),
+        packageRules: new Map(Object.entries(parsed.packageRules ?? {}).map(([pkg, rule]) => [pkg, normalizeRule(rule)])),
+        matchRules: Object.values(parsed.packageRules ?? {})
+          .map((rule) => normalizeRule(rule))
+          .filter((rule) => typeof rule.match === "string" && rule.match.length > 0),
       };
     } catch {
       // noop
@@ -49,5 +58,43 @@ export async function loadPolicy(cwd: string, policyFile?: string): Promise<Reso
   return {
     ignorePatterns: [],
     packageRules: new Map(),
+    matchRules: [],
   };
+}
+
+export function resolvePolicyRule(packageName: string, policy: ResolvedPolicy): PolicyRule | undefined {
+  const exact = policy.packageRules.get(packageName);
+  if (exact) return exact;
+  return policy.matchRules.find((rule) => matchesPattern(packageName, rule.match));
+}
+
+function normalizeRule(rule: {
+  match?: string;
+  maxTarget?: TargetLevel;
+  ignore?: boolean;
+  maxUpdatesPerRun?: number;
+  cooldownDays?: number;
+  allowPrerelease?: boolean;
+}): PolicyRule {
+  return {
+    match: typeof rule.match === "string" ? rule.match : undefined,
+    maxTarget: rule.maxTarget,
+    ignore: rule.ignore === true,
+    maxUpdatesPerRun: asNonNegativeInt(rule.maxUpdatesPerRun),
+    cooldownDays: asNonNegativeInt(rule.cooldownDays),
+    allowPrerelease: rule.allowPrerelease === true,
+  };
+}
+
+function asNonNegativeInt(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) return undefined;
+  return value;
+}
+
+function matchesPattern(value: string, pattern?: string): boolean {
+  if (!pattern || pattern.length === 0) return false;
+  if (pattern === "*") return true;
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  const regex = new RegExp(`^${escaped}$`);
+  return regex.test(value);
 }

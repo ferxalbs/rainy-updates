@@ -20,6 +20,24 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
     return renderGitHubAnnotations(result);
   }
 
+  if (format === "metrics") {
+    return [
+      `contract_version=${result.summary.contractVersion}`,
+      `updates_found=${result.summary.updatesFound}`,
+      `errors_count=${result.summary.errorCounts.total}`,
+      `warnings_count=${result.summary.warningCounts.total}`,
+      `checked_dependencies=${result.summary.checkedDependencies}`,
+      `scanned_packages=${result.summary.scannedPackages}`,
+      `warmed_packages=${result.summary.warmedPackages}`,
+      `fail_reason=${result.summary.failReason}`,
+      `duration_total_ms=${result.summary.durationMs.total}`,
+      `duration_discovery_ms=${result.summary.durationMs.discovery}`,
+      `duration_registry_ms=${result.summary.durationMs.registry}`,
+      `duration_cache_ms=${result.summary.durationMs.cache}`,
+      `duration_render_ms=${result.summary.durationMs.render}`,
+    ].join("\n");
+  }
+
   const lines: string[] = [];
   lines.push(`Project: ${result.projectPath}`);
   lines.push(`Scanned packages: ${result.summary.scannedPackages}`);
@@ -61,6 +79,9 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   lines.push("");
   lines.push(
     `Summary: ${result.summary.updatesFound} updates, ${result.summary.checkedDependencies}/${result.summary.totalDependencies} checked, ${result.summary.warmedPackages} warmed`,
+  );
+  lines.push(
+    `Contract v${result.summary.contractVersion}, failReason=${result.summary.failReason}, duration=${result.summary.durationMs.total}ms`,
   );
   if (result.summary.fixPrApplied) {
     lines.push(`Fix PR: applied on branch ${result.summary.fixBranchName ?? "unknown"} (${result.summary.fixCommitSha ?? "no-commit"})`);

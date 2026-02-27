@@ -17,12 +17,14 @@ test("applyFixPr supports dry-run branch preparation", async () => {
     includeKinds: ["dependencies"],
     ci: false,
     format: "json",
+    logLevel: "info",
     workspace: false,
     concurrency: 2,
     offline: false,
     fixPr: true,
     fixBranch: "chore/rainy-updates-test",
     fixDryRun: true,
+    fixPrNoCheckout: false,
     noPrReport: true,
   };
 
@@ -33,6 +35,7 @@ test("applyFixPr supports dry-run branch preparation", async () => {
     target: "latest",
     timestamp: new Date().toISOString(),
     summary: {
+      contractVersion: "2",
       scannedPackages: 1,
       totalDependencies: 1,
       checkedDependencies: 1,
@@ -40,6 +43,10 @@ test("applyFixPr supports dry-run branch preparation", async () => {
       upgraded: 1,
       skipped: 0,
       warmedPackages: 0,
+      failReason: "none",
+      errorCounts: { total: 0, offlineCacheMiss: 0, registryFailure: 0, other: 0 },
+      warningCounts: { total: 0, staleCache: 0, other: 0 },
+      durationMs: { total: 0, discovery: 0, registry: 0, cache: 0, render: 0 },
     },
     updates: [
       {

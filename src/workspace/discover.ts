@@ -1,6 +1,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+const HARD_IGNORE_DIRS = new Set(["node_modules", ".git", ".turbo", ".next", "dist", "coverage"]);
+const MAX_DISCOVERED_DIRS = 20000;
+
 export async function discoverPackageDirs(cwd: string, workspaceMode: boolean): Promise<string[]> {
   if (!workspaceMode) {
     return [cwd];
@@ -100,6 +103,10 @@ async function expandWorkspacePattern(cwd: string, pattern: string): Promise<str
 }
 
 async function collectMatches(baseDir: string, segments: string[], index: number, out: Set<string>): Promise<void> {
+  if (out.size > MAX_DISCOVERED_DIRS) {
+    throw new Error(`Workspace discovery exceeded ${MAX_DISCOVERED_DIRS} directories. Refine workspace patterns.`);
+  }
+
   if (index >= segments.length) {
     out.add(baseDir);
     return;
@@ -131,7 +138,8 @@ async function readChildDirs(dir: string): Promise<string[]> {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     return entries
       .filter((entry) => entry.isDirectory())
-      .filter((entry) => entry.name !== "node_modules" && !entry.name.startsWith("."))
+      .filter((entry) => !HARD_IGNORE_DIRS.has(entry.name))
+      .filter((entry) => !entry.name.startsWith("."))
       .map((entry) => path.join(dir, entry.name));
   } catch {
     return [];

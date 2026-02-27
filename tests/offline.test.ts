@@ -26,6 +26,7 @@ test("offline mode reports cache miss error", async () => {
     includeKinds: ["dependencies"],
     ci: false,
     format: "json",
+    logLevel: "info",
     workspace: false,
     jsonFile: undefined,
     githubOutputFile: undefined,
@@ -34,6 +35,14 @@ test("offline mode reports cache miss error", async () => {
     offline: true,
     policyFile: undefined,
     prReportFile: undefined,
+    failOn: "none",
+    maxUpdates: undefined,
+    fixPr: false,
+    fixBranch: undefined,
+    fixCommitMessage: undefined,
+    fixDryRun: false,
+    fixPrNoCheckout: false,
+    noPrReport: false,
   });
 
   expect(result.errors.some((item) => item.includes("Offline cache miss for react"))).toBe(true);

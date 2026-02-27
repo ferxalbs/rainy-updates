@@ -10,6 +10,7 @@ test("createSarifReport includes updates and errors", () => {
     target: "latest",
     timestamp: new Date().toISOString(),
     summary: {
+      contractVersion: "2",
       scannedPackages: 1,
       totalDependencies: 1,
       checkedDependencies: 1,
@@ -17,6 +18,10 @@ test("createSarifReport includes updates and errors", () => {
       upgraded: 0,
       skipped: 0,
       warmedPackages: 0,
+      failReason: "none",
+      errorCounts: { total: 1, offlineCacheMiss: 0, registryFailure: 0, other: 1 },
+      warningCounts: { total: 0, staleCache: 0, other: 0 },
+      durationMs: { total: 0, discovery: 0, registry: 0, cache: 0, render: 0 },
     },
     updates: [
       {

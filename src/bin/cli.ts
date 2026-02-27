@@ -14,7 +14,9 @@ import { renderResult } from "../output/format.js";
 import { writeGitHubOutput } from "../output/github.js";
 import { createSarifReport } from "../output/sarif.js";
 import { renderPrReport } from "../output/pr-report.js";
-import type { CheckOptions, CheckResult, FailOnLevel, PackageUpdate, UpgradeOptions } from "../types/index.js";
+import type { CheckOptions, CheckResult, FailReason, UpgradeOptions } from "../types/index.js";
+import { writeFileAtomic } from "../utils/io.js";
+import { resolveFailReason } from "../core/summary.js";
 
 async function main(): Promise<void> {
   try {
@@ -78,8 +80,7 @@ async function main(): Promise<void> {
 
     if (parsed.options.prReportFile) {
       const markdown = renderPrReport(result);
-      await fs.mkdir(path.dirname(parsed.options.prReportFile), { recursive: true });
-      await fs.writeFile(parsed.options.prReportFile, markdown + "\n", "utf8");
+      await writeFileAtomic(parsed.options.prReportFile, markdown + "\n");
     }
 
     if (parsed.options.fixPr && (parsed.command === "check" || parsed.command === "upgrade")) {
@@ -93,9 +94,23 @@ async function main(): Promise<void> {
       result.summary.fixCommitSha = fixResult.commitSha;
     }
 
+    result.summary.failReason = resolveFailReason(
+      result.updates,
+      result.errors,
+      parsed.options.failOn,
+      parsed.options.maxUpdates,
+      parsed.options.ci,
+    );
+
+    const renderStartedAt = Date.now();
+    let rendered = renderResult(result, parsed.options.format);
+    result.summary.durationMs.render = Math.max(0, Date.now() - renderStartedAt);
+    if (parsed.options.format === "json" || parsed.options.format === "metrics") {
+      rendered = renderResult(result, parsed.options.format);
+    }
+
     if (parsed.options.jsonFile) {
-      await fs.mkdir(path.dirname(parsed.options.jsonFile), { recursive: true });
-      await fs.writeFile(parsed.options.jsonFile, JSON.stringify(result, null, 2) + "\n", "utf8");
+      await writeFileAtomic(parsed.options.jsonFile, JSON.stringify(result, null, 2) + "\n");
     }
 
     if (parsed.options.githubOutputFile) {
@@ -104,14 +119,12 @@ async function main(): Promise<void> {
 
     if (parsed.options.sarifFile) {
       const sarif = createSarifReport(result);
-      await fs.mkdir(path.dirname(parsed.options.sarifFile), { recursive: true });
-      await fs.writeFile(parsed.options.sarifFile, JSON.stringify(sarif, null, 2) + "\n", "utf8");
+      await writeFileAtomic(parsed.options.sarifFile, JSON.stringify(sarif, null, 2) + "\n");
     }
 
-    const rendered = renderResult(result, parsed.options.format);
     process.stdout.write(rendered + "\n");
 
-    process.exitCode = resolveExitCode(result, parsed.options.failOn, parsed.options.maxUpdates, parsed.options.ci);
+    process.exitCode = resolveExitCode(result, result.summary.failReason);
   } catch (error) {
     process.stderr.write(`rainy-updates: ${String(error)}\n`);
     process.exitCode = 2;
@@ -141,6 +154,7 @@ Options:
   --fix-branch <name>
   --fix-commit-message <text>
   --fix-dry-run
+  --fix-pr-no-checkout
   --no-pr-report
   --json-file <path>
   --github-output <path>
@@ -148,6 +162,7 @@ Options:
   --pr-report-file <path>
   --fail-on none|patch|minor|major|any
   --max-updates <n>
+  --log-level error|warn|info|debug
   --ci`;
   }
 
@@ -188,6 +203,7 @@ Options:
   --fix-branch <name>
   --fix-commit-message <text>
   --fix-dry-run
+  --fix-pr-no-checkout
   --no-pr-report
   --json-file <path>
   --pr-report-file <path>`;
@@ -232,7 +248,7 @@ Global options:
   --cwd <path>
   --workspace
   --target patch|minor|major|latest
-  --format table|json|minimal|github
+  --format table|json|minimal|github|metrics
   --json-file <path>
   --github-output <path>
   --sarif-file <path>
@@ -244,7 +260,9 @@ Global options:
   --fix-branch <name>
   --fix-commit-message <text>
   --fix-dry-run
+  --fix-pr-no-checkout
   --no-pr-report
+  --log-level error|warn|info|debug
   --concurrency <n>
   --cache-ttl <seconds>
   --offline
@@ -288,25 +306,8 @@ async function readPackageVersion(): Promise<string> {
   return parsed.version ?? "0.0.0";
 }
 
-function resolveExitCode(
-  result: CheckResult,
-  failOn: FailOnLevel | undefined,
-  maxUpdates: number | undefined,
-  ciMode: boolean,
-): number {
+function resolveExitCode(result: CheckResult, failReason: FailReason): number {
   if (result.errors.length > 0) return 2;
-  if (typeof maxUpdates === "number" && result.updates.length > maxUpdates) return 1;
-
-  const effectiveFailOn: FailOnLevel =
-    failOn && failOn !== "none" ? failOn : ciMode ? "any" : "none";
-
-  if (!shouldFailForUpdates(result.updates, effectiveFailOn)) return 0;
-  return 1;
-}
-
-function shouldFailForUpdates(updates: PackageUpdate[], failOn: FailOnLevel): boolean {
-  if (failOn === "none") return false;
-  if (failOn === "any" || failOn === "patch") return updates.length > 0;
-  if (failOn === "minor") return updates.some((update) => update.diffType === "minor" || update.diffType === "major");
-  return updates.some((update) => update.diffType === "major");
+  if (failReason !== "none") return 1;
+  return 0;
 }

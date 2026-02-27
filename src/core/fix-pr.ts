@@ -22,11 +22,18 @@ export async function applyFixPr(
   }
 
   const branch = options.fixBranch ?? "chore/rainy-updates";
-  const branchCheck = await runGit(options.cwd, ["rev-parse", "--verify", "--quiet", branch], true);
-  if (branchCheck.code === 0) {
-    await runGit(options.cwd, ["checkout", branch]);
-  } else {
-    await runGit(options.cwd, ["checkout", "-b", branch]);
+  const headRef = await runGit(options.cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"], true);
+  if (headRef.code !== 0 && !options.fixPrNoCheckout) {
+    throw new Error("Cannot run --fix-pr in detached HEAD state without --fix-pr-no-checkout.");
+  }
+
+  if (!options.fixPrNoCheckout) {
+    const branchCheck = await runGit(options.cwd, ["rev-parse", "--verify", "--quiet", branch], true);
+    if (branchCheck.code === 0) {
+      await runGit(options.cwd, ["checkout", branch]);
+    } else {
+      await runGit(options.cwd, ["checkout", "-b", branch]);
+    }
   }
 
   if (options.fixDryRun) {

@@ -9,6 +9,7 @@ import type {
   OutputFormat,
   TargetLevel,
   UpgradeOptions,
+  LogLevel,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -60,7 +61,9 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     fixBranch: "chore/rainy-updates",
     fixCommitMessage: undefined,
     fixDryRun: false,
+    fixPrNoCheckout: false,
     noPrReport: false,
+    logLevel: "info",
   };
 
   let force = false;
@@ -251,6 +254,20 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     if (current === "--no-pr-report") {
       base.noPrReport = true;
       continue;
+    }
+
+    if (current === "--fix-pr-no-checkout") {
+      base.fixPrNoCheckout = true;
+      continue;
+    }
+
+    if (current === "--log-level" && next) {
+      base.logLevel = ensureLogLevel(next);
+      index += 1;
+      continue;
+    }
+    if (current === "--log-level") {
+      throw new Error("Missing value for --log-level");
     }
 
     if (current === "--install" && command === "upgrade") {
@@ -462,8 +479,14 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   if (typeof config.fixDryRun === "boolean") {
     base.fixDryRun = config.fixDryRun;
   }
+  if (typeof config.fixPrNoCheckout === "boolean") {
+    base.fixPrNoCheckout = config.fixPrNoCheckout;
+  }
   if (typeof config.noPrReport === "boolean") {
     base.noPrReport = config.noPrReport;
+  }
+  if (typeof config.logLevel === "string") {
+    base.logLevel = ensureLogLevel(config.logLevel);
   }
 }
 
@@ -485,10 +508,17 @@ function ensureTarget(value: string): TargetLevel {
 }
 
 function ensureFormat(value: string): OutputFormat {
-  if (value === "table" || value === "json" || value === "minimal" || value === "github") {
+  if (value === "table" || value === "json" || value === "minimal" || value === "github" || value === "metrics") {
     return value;
   }
-  throw new Error("--format must be table, json, minimal or github");
+  throw new Error("--format must be table, json, minimal, github or metrics");
+}
+
+function ensureLogLevel(value: string): LogLevel {
+  if (value === "error" || value === "warn" || value === "info" || value === "debug") {
+    return value;
+  }
+  throw new Error("--log-level must be error, warn, info or debug");
 }
 
 function parseDependencyKinds(value: string): DependencyKind[] {

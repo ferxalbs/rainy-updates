@@ -11,6 +11,7 @@ const DEFAULT_REGISTRY = "https://registry.npmjs.org/";
 type RequestLike = (packageName: string, timeoutMs: number) => Promise<{
   status: number;
   data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> } | null;
+  retryAfterMs: number | null;
 }>;
 
 interface RegistryConfig {
@@ -49,7 +50,10 @@ export class NpmRegistryClient {
           return { latestVersion: null, versions: [] };
         }
         if (response.status === 429 || response.status >= 500) {
-          throw new Error(`Registry temporary error: ${response.status}`);
+          throw new RetryableRegistryError(
+            `Registry temporary error: ${response.status}`,
+            response.retryAfterMs ?? computeBackoffMs(attempt),
+          );
         }
         if (response.status < 200 || response.status >= 300) {
           throw new Error(`Registry request failed: ${response.status}`);
@@ -60,7 +64,8 @@ export class NpmRegistryClient {
       } catch (error) {
         lastError = String(error);
         if (attempt < 3) {
-          await sleep(120 * attempt);
+          const backoffMs = error instanceof RetryableRegistryError ? error.waitMs : computeBackoffMs(attempt);
+          await sleep(backoffMs);
         }
       }
     }
@@ -128,6 +133,21 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function computeBackoffMs(attempt: number): number {
+  const baseMs = Math.max(120, attempt * 180);
+  const jitterMs = Math.floor(Math.random() * 120);
+  return baseMs + jitterMs;
+}
+
+class RetryableRegistryError extends Error {
+  readonly waitMs: number;
+
+  constructor(message: string, waitMs: number) {
+    super(message);
+    this.waitMs = waitMs;
+  }
+}
+
 async function createRequester(cwd?: string): Promise<RequestLike> {
   const registryConfig = await loadRegistryConfig(cwd ?? process.cwd());
   const undiciRequester = await tryCreateUndiciRequester(registryConfig);
@@ -151,7 +171,11 @@ async function createRequester(cwd?: string): Promise<RequestLike> {
       const data = (await response.json().catch(() => null)) as
         | { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown> }
         | null;
-      return { status: response.status, data };
+      return {
+        status: response.status,
+        data,
+        retryAfterMs: parseRetryAfterHeader(response.headers.get("retry-after")),
+      };
     } finally {
       clearTimeout(timeout);
     }
@@ -187,7 +211,18 @@ async function tryCreateUndiciRequester(registryConfig: RegistryConfig): Promise
           data = null;
         }
 
-        return { status: res.statusCode, data };
+        const retryAfter = (() => {
+          const header = res.headers["retry-after"];
+          if (Array.isArray(header)) return header[0] ?? null;
+          if (typeof header === "string") return header;
+          return null;
+        })();
+
+        return {
+          status: res.statusCode,
+          data,
+          retryAfterMs: parseRetryAfterHeader(retryAfter),
+        };
       } finally {
         clearTimeout(timeout);
       }
@@ -268,4 +303,18 @@ function extractScope(packageName: string): string | null {
 function buildRegistryUrl(registry: string, packageName: string): string {
   const base = normalizeRegistryUrl(registry);
   return new URL(encodeURIComponent(packageName), base).toString();
+}
+
+function parseRetryAfterHeader(value: string | null): number | null {
+  if (!value) return null;
+  const parsedSeconds = Number(value);
+  if (Number.isFinite(parsedSeconds) && parsedSeconds >= 0) {
+    return Math.round(parsedSeconds * 1000);
+  }
+
+  const untilMs = Date.parse(value);
+  if (!Number.isFinite(untilMs)) return null;
+  const delta = untilMs - Date.now();
+  if (delta <= 0) return 0;
+  return delta;
 }

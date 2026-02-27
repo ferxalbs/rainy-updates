@@ -62,6 +62,14 @@ export function createSarifReport(result: CheckResult): Record<string, unknown> 
           },
         },
         results: [...updateResults, ...errorResults],
+        properties: {
+          contractVersion: result.summary.contractVersion,
+          failReason: result.summary.failReason,
+          updatesFound: result.summary.updatesFound,
+          errorsCount: result.summary.errorCounts.total,
+          warningsCount: result.summary.warningCounts.total,
+          durationMs: result.summary.durationMs,
+        },
       },
     ],
   };

@@ -1,22 +1,27 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import type { CheckResult } from "../types/index.js";
+import { writeFileAtomic } from "../utils/io.js";
 
 export async function writeGitHubOutput(filePath: string, result: CheckResult): Promise<void> {
   const lines = [
+    `contract_version=${result.summary.contractVersion}`,
     `updates_found=${result.summary.updatesFound}`,
-    `errors_count=${result.errors.length}`,
-    `warnings_count=${result.warnings.length}`,
+    `errors_count=${result.summary.errorCounts.total}`,
+    `warnings_count=${result.summary.warningCounts.total}`,
     `checked_dependencies=${result.summary.checkedDependencies}`,
     `scanned_packages=${result.summary.scannedPackages}`,
     `warmed_packages=${result.summary.warmedPackages}`,
+    `fail_reason=${result.summary.failReason}`,
+    `duration_total_ms=${result.summary.durationMs.total}`,
+    `duration_discovery_ms=${result.summary.durationMs.discovery}`,
+    `duration_registry_ms=${result.summary.durationMs.registry}`,
+    `duration_cache_ms=${result.summary.durationMs.cache}`,
+    `duration_render_ms=${result.summary.durationMs.render}`,
     `fix_pr_applied=${result.summary.fixPrApplied === true ? "1" : "0"}`,
     `fix_pr_branch=${result.summary.fixBranchName ?? ""}`,
     `fix_pr_commit=${result.summary.fixCommitSha ?? ""}`,
   ];
 
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, lines.join("\n") + "\n", "utf8");
+  await writeFileAtomic(filePath, lines.join("\n") + "\n");
 }
 
 export function renderGitHubAnnotations(result: CheckResult): string {

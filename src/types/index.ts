@@ -6,8 +6,16 @@ export type DependencyKind =
 
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
 
-export type OutputFormat = "table" | "json" | "minimal" | "github";
+export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
+export type LogLevel = "error" | "warn" | "info" | "debug";
+export type FailReason =
+  | "none"
+  | "updates-threshold"
+  | "severity-threshold"
+  | "registry-failure"
+  | "offline-cache-miss"
+  | "policy-blocked";
 
 export interface RunOptions {
   cwd: string;
@@ -32,7 +40,9 @@ export interface RunOptions {
   fixBranch?: string;
   fixCommitMessage?: string;
   fixDryRun?: boolean;
+  fixPrNoCheckout?: boolean;
   noPrReport?: boolean;
+  logLevel: LogLevel;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -70,6 +80,7 @@ export interface PackageUpdate {
 }
 
 export interface Summary {
+  contractVersion: "2";
   scannedPackages: number;
   totalDependencies: number;
   checkedDependencies: number;
@@ -77,6 +88,25 @@ export interface Summary {
   upgraded: number;
   skipped: number;
   warmedPackages: number;
+  failReason: FailReason;
+  errorCounts: {
+    total: number;
+    offlineCacheMiss: number;
+    registryFailure: number;
+    other: number;
+  };
+  warningCounts: {
+    total: number;
+    staleCache: number;
+    other: number;
+  };
+  durationMs: {
+    total: number;
+    discovery: number;
+    registry: number;
+    cache: number;
+    render: number;
+  };
   fixPrApplied?: boolean;
   fixBranchName?: string;
   fixCommitSha?: string;

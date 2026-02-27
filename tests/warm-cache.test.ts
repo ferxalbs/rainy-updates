@@ -21,6 +21,7 @@ test("warmCache reports misses in offline mode", async () => {
     includeKinds: ["dependencies"],
     ci: false,
     format: "json",
+    logLevel: "info",
     workspace: false,
     jsonFile: undefined,
     githubOutputFile: undefined,
@@ -29,6 +30,14 @@ test("warmCache reports misses in offline mode", async () => {
     offline: true,
     policyFile: undefined,
     prReportFile: undefined,
+    failOn: "none",
+    maxUpdates: undefined,
+    fixPr: false,
+    fixBranch: undefined,
+    fixCommitMessage: undefined,
+    fixDryRun: false,
+    fixPrNoCheckout: false,
+    noPrReport: false,
   });
 
   expect(result.summary.warmedPackages).toBe(0);
