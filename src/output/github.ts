@@ -10,6 +10,9 @@ export async function writeGitHubOutput(filePath: string, result: CheckResult): 
     `checked_dependencies=${result.summary.checkedDependencies}`,
     `scanned_packages=${result.summary.scannedPackages}`,
     `warmed_packages=${result.summary.warmedPackages}`,
+    `fix_pr_applied=${result.summary.fixPrApplied === true ? "1" : "0"}`,
+    `fix_pr_branch=${result.summary.fixBranchName ?? ""}`,
+    `fix_pr_commit=${result.summary.fixCommitSha ?? ""}`,
   ];
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });

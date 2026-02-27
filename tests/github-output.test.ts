@@ -34,4 +34,5 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   expect(content.includes("updates_found=2")).toBe(true);
   expect(content.includes("errors_count=1")).toBe(true);
   expect(content.includes("warnings_count=1")).toBe(true);
+  expect(content.includes("fix_pr_applied=0")).toBe(true);
 });

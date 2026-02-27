@@ -7,14 +7,21 @@ export async function discoverPackageDirs(cwd: string, workspaceMode: boolean): 
   }
 
   const roots = new Set<string>([cwd]);
+  const patterns = [...(await readPackageJsonWorkspacePatterns(cwd)), ...(await readPnpmWorkspacePatterns(cwd))];
+  const include = patterns.filter((item) => !item.startsWith("!"));
+  const exclude = patterns.filter((item) => item.startsWith("!")).map((item) => item.slice(1));
 
-  const packagePatterns = await readPackageJsonWorkspacePatterns(cwd);
-  const pnpmPatterns = await readPnpmWorkspacePatterns(cwd);
-
-  for (const pattern of [...packagePatterns, ...pnpmPatterns]) {
-    const dirs = await expandSingleLevelPattern(cwd, pattern);
+  for (const pattern of include) {
+    const dirs = await expandWorkspacePattern(cwd, pattern);
     for (const dir of dirs) {
       roots.add(dir);
+    }
+  }
+
+  for (const pattern of exclude) {
+    const dirs = await expandWorkspacePattern(cwd, pattern);
+    for (const dir of dirs) {
+      roots.delete(dir);
     }
   }
 
@@ -25,7 +32,7 @@ export async function discoverPackageDirs(cwd: string, workspaceMode: boolean): 
       await fs.access(packageJsonPath);
       existing.push(dir);
     } catch {
-      // ignore
+      // ignore missing package.json
     }
   }
 
@@ -66,7 +73,7 @@ async function readPnpmWorkspacePatterns(cwd: string): Promise<string[]> {
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed.startsWith("-")) continue;
-      const value = trimmed.replace(/^-\s*/, "").replace(/^['\"]|['\"]$/g, "");
+      const value = trimmed.replace(/^-\s*/, "").replace(/^['"]|['"]$/g, "");
       if (value.length > 0) {
         patterns.push(value);
       }
@@ -78,27 +85,54 @@ async function readPnpmWorkspacePatterns(cwd: string): Promise<string[]> {
   }
 }
 
-async function expandSingleLevelPattern(cwd: string, pattern: string): Promise<string[]> {
-  if (!pattern.includes("*")) {
-    return [path.resolve(cwd, pattern)];
+async function expandWorkspacePattern(cwd: string, pattern: string): Promise<string[]> {
+  const normalized = pattern.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+  if (normalized.length === 0) return [];
+
+  if (!normalized.includes("*")) {
+    return [path.resolve(cwd, normalized)];
   }
 
-  const normalized = pattern.replace(/\\/g, "/");
-  const starIndex = normalized.indexOf("*");
-  const basePart = normalized.slice(0, starIndex).replace(/\/$/, "");
-  const suffix = normalized.slice(starIndex + 1);
+  const segments = normalized.split("/").filter(Boolean);
+  const results = new Set<string>();
+  await collectMatches(path.resolve(cwd), segments, 0, results);
+  return Array.from(results);
+}
 
-  if (suffix.length > 0 && suffix !== "/") {
-    return [];
+async function collectMatches(baseDir: string, segments: string[], index: number, out: Set<string>): Promise<void> {
+  if (index >= segments.length) {
+    out.add(baseDir);
+    return;
   }
 
-  const baseDir = path.resolve(cwd, basePart);
+  const segment = segments[index];
+  if (segment === "**") {
+    await collectMatches(baseDir, segments, index + 1, out);
+    const children = await readChildDirs(baseDir);
+    for (const child of children) {
+      await collectMatches(child, segments, index, out);
+    }
+    return;
+  }
 
+  if (segment === "*") {
+    const children = await readChildDirs(baseDir);
+    for (const child of children) {
+      await collectMatches(child, segments, index + 1, out);
+    }
+    return;
+  }
+
+  await collectMatches(path.join(baseDir, segment), segments, index + 1, out);
+}
+
+async function readChildDirs(dir: string): Promise<string[]> {
   try {
-    const entries = await fs.readdir(baseDir, { withFileTypes: true });
+    const entries = await fs.readdir(dir, { withFileTypes: true });
     return entries
       .filter((entry) => entry.isDirectory())
-      .map((entry) => path.join(baseDir, entry.name));
+      .filter((entry) => entry.name !== "node_modules" && !entry.name.startsWith("."))
+      .map((entry) => path.join(dir, entry.name));
   } catch {
     return [];
   }

@@ -20,6 +20,11 @@ export interface FileConfig {
   prReportFile?: string;
   failOn?: FailOnLevel;
   maxUpdates?: number;
+  fixPr?: boolean;
+  fixBranch?: string;
+  fixCommitMessage?: string;
+  fixDryRun?: boolean;
+  noPrReport?: boolean;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
   sync?: boolean;

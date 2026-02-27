@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { mkdtemp } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { parseCliArgs } from "../src/core/options.js";
 
 test("parseCliArgs defaults to check command", async () => {
@@ -84,4 +87,34 @@ test("parseCliArgs rejects unknown command", async () => {
 
 test("parseCliArgs rejects unknown options", async () => {
   await expect(parseCliArgs(["check", "--does-not-exist"])).rejects.toThrow("Unknown option");
+});
+
+test("parseCliArgs supports fix-pr options and default report path", async () => {
+  const parsed = await parseCliArgs(["upgrade", "--fix-pr", "--fix-branch", "chore/dep-bot", "--fix-dry-run"]);
+  expect(parsed.command).toBe("upgrade");
+  if (parsed.command === "upgrade") {
+    expect(parsed.options.fixPr).toBe(true);
+    expect(parsed.options.fixBranch).toBe("chore/dep-bot");
+    expect(parsed.options.fixDryRun).toBe(true);
+    expect(parsed.options.prReportFile?.endsWith(".artifacts/deps-report.md")).toBe(true);
+  }
+});
+
+test("parseCliArgs honors no-pr-report over report defaults", async () => {
+  const parsed = await parseCliArgs(["check", "--fix-pr", "--no-pr-report"]);
+  expect(parsed.command).toBe("check");
+  if (parsed.command === "check") {
+    expect(parsed.options.fixPr).toBe(true);
+    expect(parsed.options.noPrReport).toBe(true);
+    expect(parsed.options.prReportFile).toBeUndefined();
+  }
+});
+
+test("parseCliArgs resolves output paths from final cwd", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-options-cwd-"));
+  const parsed = await parseCliArgs(["--json-file", "out/result.json", "--cwd", dir]);
+  expect(parsed.command).toBe("check");
+  if (parsed.command === "check") {
+    expect(parsed.options.jsonFile).toBe(path.join(dir, "out", "result.json"));
+  }
 });

@@ -39,6 +39,9 @@ npx @rainy-updates/cli check --workspace --ci --format json --json-file .artifac
 # 3) Apply upgrades with workspace sync
 npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
 
+# 3b) Generate a fix branch + commit for CI automation
+npx @rainy-updates/cli check --workspace --fix-pr --fix-branch chore/rainy-updates
+
 # 4) Warm cache for deterministic offline checks
 npx @rainy-updates/cli warm-cache --workspace --concurrency 32
 npx @rainy-updates/cli check --workspace --offline --ci
@@ -154,6 +157,11 @@ Schedule:
 - `--github-output <path>`
 - `--sarif-file <path>`
 - `--pr-report-file <path>`
+- `--fix-pr`
+- `--fix-branch <name>`
+- `--fix-commit-message <text>`
+- `--fix-dry-run`
+- `--no-pr-report`
 - `--ci`
 
 ### Upgrade-only
@@ -189,6 +197,7 @@ rainy-updates --version
 - Node.js 20+ runtime.
 - Works with npm and pnpm workflows.
 - Uses optional `undici` pool path for high-throughput HTTP.
+- Reads `.npmrc` default and scoped registries for private package environments.
 - Cache-first architecture for speed and resilience.
 
 ## CI/CD included

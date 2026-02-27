@@ -2,6 +2,45 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.0-rc.2] - 2026-02-27
+
+### Added
+
+- New fix-PR automation flags for CI branch workflows:
+  - `--fix-pr`
+  - `--fix-branch <name>`
+  - `--fix-commit-message <text>`
+  - `--fix-dry-run`
+  - `--no-pr-report`
+- New summary metadata for fix-PR execution:
+  - `fixPrApplied`
+  - `fixBranchName`
+  - `fixCommitSha`
+- New GitHub output values for fix-PR state:
+  - `fix_pr_applied`
+  - `fix_pr_branch`
+  - `fix_pr_commit`
+- Added command-specific help output for `check --help`.
+
+### Changed
+
+- `check --fix-pr` now executes update application flow to support branch+commit automation without requiring `upgrade`.
+- Default PR report path is auto-assigned when `--fix-pr` is enabled: `.artifacts/deps-report.md`.
+- CLI path-like options are resolved against the final effective `--cwd` value (stable behavior when option order varies).
+- Workspace discovery now supports recursive patterns (`**`) and negated patterns (`!pattern`) with safer directory traversal defaults.
+- Registry resolution now loads `.npmrc` scope mappings (`@scope:registry=...`) from user and project config.
+
+### Fixed
+
+- Prevented stale output contracts by writing fix-PR metadata into JSON/GitHub/SARIF artifact flow after git automation is resolved.
+
+### Tests
+
+- Added parser tests for fix-PR flags and final-cwd path resolution.
+- Added workspace discovery coverage for recursive and negated patterns.
+- Added fix-PR dry-run workflow test in temporary git repos.
+- Extended GitHub output tests for new fix-PR keys.
+
 ## [0.5.0-rc.1] - 2026-02-27
 
 ### Added

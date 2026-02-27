@@ -28,6 +28,11 @@ export interface RunOptions {
   prReportFile?: string;
   failOn?: FailOnLevel;
   maxUpdates?: number;
+  fixPr?: boolean;
+  fixBranch?: string;
+  fixCommitMessage?: string;
+  fixDryRun?: boolean;
+  noPrReport?: boolean;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -72,6 +77,9 @@ export interface Summary {
   upgraded: number;
   skipped: number;
   warmedPackages: number;
+  fixPrApplied?: boolean;
+  fixBranchName?: string;
+  fixCommitSha?: string;
 }
 
 export interface CheckResult {

@@ -56,6 +56,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     prReportFile: undefined,
     failOn: "none",
     maxUpdates: undefined,
+    fixPr: false,
+    fixBranch: "chore/rainy-updates",
+    fixCommitMessage: undefined,
+    fixDryRun: false,
+    noPrReport: false,
   };
 
   let force = false;
@@ -63,6 +68,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   let initCiSchedule: InitCiSchedule = "weekly";
   let baselineAction: "save" | "check" = "check";
   let baselineFilePath = path.resolve(base.cwd, ".rainy-updates-baseline.json");
+  let jsonFileRaw: string | undefined;
+  let githubOutputRaw: string | undefined;
+  let sarifFileRaw: string | undefined;
+  let policyFileRaw: string | undefined;
+  let prReportFileRaw: string | undefined;
 
   let resolvedConfig = await loadConfig(base.cwd);
   applyConfig(base, resolvedConfig);
@@ -143,7 +153,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     }
 
     if (current === "--json-file" && next) {
-      base.jsonFile = path.resolve(next);
+      jsonFileRaw = next;
       index += 1;
       continue;
     }
@@ -152,7 +162,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     }
 
     if (current === "--github-output" && next) {
-      base.githubOutputFile = path.resolve(next);
+      githubOutputRaw = next;
       index += 1;
       continue;
     }
@@ -161,7 +171,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     }
 
     if (current === "--sarif-file" && next) {
-      base.sarifFile = path.resolve(next);
+      sarifFileRaw = next;
       index += 1;
       continue;
     }
@@ -188,7 +198,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     }
 
     if (current === "--policy-file" && next) {
-      base.policyFile = path.resolve(next);
+      policyFileRaw = next;
       index += 1;
       continue;
     }
@@ -197,7 +207,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     }
 
     if (current === "--pr-report-file" && next) {
-      base.prReportFile = path.resolve(next);
+      prReportFileRaw = next;
       index += 1;
       continue;
     }
@@ -207,6 +217,39 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
 
     if (current === "--force") {
       force = true;
+      continue;
+    }
+
+    if (current === "--fix-pr") {
+      base.fixPr = true;
+      continue;
+    }
+
+    if (current === "--fix-branch" && next) {
+      base.fixBranch = next;
+      index += 1;
+      continue;
+    }
+    if (current === "--fix-branch") {
+      throw new Error("Missing value for --fix-branch");
+    }
+
+    if (current === "--fix-commit-message" && next) {
+      base.fixCommitMessage = next;
+      index += 1;
+      continue;
+    }
+    if (current === "--fix-commit-message") {
+      throw new Error("Missing value for --fix-commit-message");
+    }
+
+    if (current === "--fix-dry-run") {
+      base.fixDryRun = true;
+      continue;
+    }
+
+    if (current === "--no-pr-report") {
+      base.noPrReport = true;
       continue;
     }
 
@@ -302,6 +345,28 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     throw new Error(`Unexpected argument: ${current}`);
   }
 
+  if (jsonFileRaw) {
+    base.jsonFile = path.resolve(base.cwd, jsonFileRaw);
+  }
+  if (githubOutputRaw) {
+    base.githubOutputFile = path.resolve(base.cwd, githubOutputRaw);
+  }
+  if (sarifFileRaw) {
+    base.sarifFile = path.resolve(base.cwd, sarifFileRaw);
+  }
+  if (policyFileRaw) {
+    base.policyFile = path.resolve(base.cwd, policyFileRaw);
+  }
+  if (prReportFileRaw) {
+    base.prReportFile = path.resolve(base.cwd, prReportFileRaw);
+  }
+
+  if (base.noPrReport) {
+    base.prReportFile = undefined;
+  } else if (base.fixPr && !base.prReportFile) {
+    base.prReportFile = path.resolve(base.cwd, ".artifacts/deps-report.md");
+  }
+
   if (command === "upgrade") {
     const configPm = resolvedConfig.packageManager;
     const cliPm = parsePackageManager(args);
@@ -384,6 +449,21 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   }
   if (typeof config.maxUpdates === "number" && Number.isInteger(config.maxUpdates) && config.maxUpdates >= 0) {
     base.maxUpdates = config.maxUpdates;
+  }
+  if (typeof config.fixPr === "boolean") {
+    base.fixPr = config.fixPr;
+  }
+  if (typeof config.fixBranch === "string" && config.fixBranch.length > 0) {
+    base.fixBranch = config.fixBranch;
+  }
+  if (typeof config.fixCommitMessage === "string" && config.fixCommitMessage.length > 0) {
+    base.fixCommitMessage = config.fixCommitMessage;
+  }
+  if (typeof config.fixDryRun === "boolean") {
+    base.fixDryRun = config.fixDryRun;
+  }
+  if (typeof config.noPrReport === "boolean") {
+    base.noPrReport = config.noPrReport;
   }
 }
 

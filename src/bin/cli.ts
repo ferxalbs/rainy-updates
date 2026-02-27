@@ -9,11 +9,12 @@ import { upgrade } from "../core/upgrade.js";
 import { warmCache } from "../core/warm-cache.js";
 import { initCiWorkflow } from "../core/init-ci.js";
 import { diffBaseline, saveBaseline } from "../core/baseline.js";
+import { applyFixPr } from "../core/fix-pr.js";
 import { renderResult } from "../output/format.js";
 import { writeGitHubOutput } from "../output/github.js";
 import { createSarifReport } from "../output/sarif.js";
 import { renderPrReport } from "../output/pr-report.js";
-import type { CheckResult, FailOnLevel, PackageUpdate } from "../types/index.js";
+import type { CheckOptions, CheckResult, FailOnLevel, PackageUpdate, UpgradeOptions } from "../types/index.js";
 
 async function main(): Promise<void> {
   try {
@@ -73,25 +74,28 @@ async function main(): Promise<void> {
       return;
     }
 
-    const result =
-      parsed.command === "upgrade"
-        ? await upgrade(parsed.options)
-        : parsed.command === "warm-cache"
-          ? await warmCache(parsed.options)
-          : await check(parsed.options);
-
-    const rendered = renderResult(result, parsed.options.format);
-    process.stdout.write(rendered + "\n");
-
-    if (parsed.options.jsonFile) {
-      await fs.mkdir(path.dirname(parsed.options.jsonFile), { recursive: true });
-      await fs.writeFile(parsed.options.jsonFile, JSON.stringify(result, null, 2) + "\n", "utf8");
-    }
+    const result = await runCommand(parsed);
 
     if (parsed.options.prReportFile) {
       const markdown = renderPrReport(result);
       await fs.mkdir(path.dirname(parsed.options.prReportFile), { recursive: true });
       await fs.writeFile(parsed.options.prReportFile, markdown + "\n", "utf8");
+    }
+
+    if (parsed.options.fixPr && (parsed.command === "check" || parsed.command === "upgrade")) {
+      const fixResult = await applyFixPr(
+        parsed.options,
+        result,
+        parsed.options.prReportFile ? [parsed.options.prReportFile] : [],
+      );
+      result.summary.fixPrApplied = fixResult.applied;
+      result.summary.fixBranchName = fixResult.branchName;
+      result.summary.fixCommitSha = fixResult.commitSha;
+    }
+
+    if (parsed.options.jsonFile) {
+      await fs.mkdir(path.dirname(parsed.options.jsonFile), { recursive: true });
+      await fs.writeFile(parsed.options.jsonFile, JSON.stringify(result, null, 2) + "\n", "utf8");
     }
 
     if (parsed.options.githubOutputFile) {
@@ -104,6 +108,9 @@ async function main(): Promise<void> {
       await fs.writeFile(parsed.options.sarifFile, JSON.stringify(sarif, null, 2) + "\n", "utf8");
     }
 
+    const rendered = renderResult(result, parsed.options.format);
+    process.stdout.write(rendered + "\n");
+
     process.exitCode = resolveExitCode(result, parsed.options.failOn, parsed.options.maxUpdates, parsed.options.ci);
   } catch (error) {
     process.stderr.write(`rainy-updates: ${String(error)}\n`);
@@ -115,6 +122,35 @@ void main();
 
 function renderHelp(command?: string): string {
   const isCommand = command && !command.startsWith("-");
+  if (isCommand && command === "check") {
+    return `rainy-updates check [options]
+
+Detect available dependency updates.
+
+Options:
+  --workspace
+  --target patch|minor|major|latest
+  --filter <pattern>
+  --reject <pattern>
+  --dep-kinds deps,dev,optional,peer
+  --concurrency <n>
+  --cache-ttl <seconds>
+  --policy-file <path>
+  --offline
+  --fix-pr
+  --fix-branch <name>
+  --fix-commit-message <text>
+  --fix-dry-run
+  --no-pr-report
+  --json-file <path>
+  --github-output <path>
+  --sarif-file <path>
+  --pr-report-file <path>
+  --fail-on none|patch|minor|major|any
+  --max-updates <n>
+  --ci`;
+  }
+
   if (isCommand && command === "warm-cache") {
     return `rainy-updates warm-cache [options]
 
@@ -148,6 +184,11 @@ Options:
   --target patch|minor|major|latest
   --policy-file <path>
   --concurrency <n>
+  --fix-pr
+  --fix-branch <name>
+  --fix-commit-message <text>
+  --fix-dry-run
+  --no-pr-report
   --json-file <path>
   --pr-report-file <path>`;
   }
@@ -199,12 +240,44 @@ Global options:
   --policy-file <path>
   --fail-on none|patch|minor|major|any
   --max-updates <n>
+  --fix-pr
+  --fix-branch <name>
+  --fix-commit-message <text>
+  --fix-dry-run
+  --no-pr-report
   --concurrency <n>
   --cache-ttl <seconds>
   --offline
   --ci
   --help, -h
   --version, -v`;
+}
+
+async function runCommand(
+  parsed:
+    | { command: "check"; options: CheckOptions }
+    | { command: "upgrade"; options: UpgradeOptions }
+    | { command: "warm-cache"; options: CheckOptions },
+): Promise<CheckResult> {
+  if (parsed.command === "upgrade") {
+    return await upgrade(parsed.options);
+  }
+
+  if (parsed.command === "warm-cache") {
+    return await warmCache(parsed.options);
+  }
+
+  if (parsed.options.fixPr) {
+    const upgradeOptions: UpgradeOptions = {
+      ...parsed.options,
+      install: false,
+      packageManager: "auto",
+      sync: false,
+    };
+    return await upgrade(upgradeOptions);
+  }
+
+  return await check(parsed.options);
 }
 
 async function readPackageVersion(): Promise<string> {

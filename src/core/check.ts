@@ -23,7 +23,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   const packageManager = await detectPackageManager(options.cwd);
   const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
   const cache = await VersionCache.create();
-  const registryClient = new NpmRegistryClient();
+  const registryClient = new NpmRegistryClient(options.cwd);
   const policy = await loadPolicy(options.cwd, options.policyFile);
 
   const updates: PackageUpdate[] = [];

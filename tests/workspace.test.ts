@@ -24,3 +24,23 @@ test("discoverPackageDirs resolves package.json workspaces", async () => {
   expect(dirs.includes(pkgA)).toBe(true);
   expect(dirs.includes(pkgB)).toBe(true);
 });
+
+test("discoverPackageDirs supports recursive and negated patterns", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "rainy-updates-workspace-recursive-"));
+  await writeFile(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "root", workspaces: ["apps/**", "!apps/private/**"] }, null, 2),
+    "utf8",
+  );
+
+  const appA = path.join(root, "apps", "web");
+  const appB = path.join(root, "apps", "private", "internal");
+  await mkdir(appA, { recursive: true });
+  await mkdir(appB, { recursive: true });
+  await writeFile(path.join(appA, "package.json"), JSON.stringify({ name: "web" }), "utf8");
+  await writeFile(path.join(appB, "package.json"), JSON.stringify({ name: "internal" }), "utf8");
+
+  const dirs = await discoverPackageDirs(root, true);
+  expect(dirs.includes(appA)).toBe(true);
+  expect(dirs.includes(appB)).toBe(false);
+});

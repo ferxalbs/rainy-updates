@@ -62,6 +62,9 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   lines.push(
     `Summary: ${result.summary.updatesFound} updates, ${result.summary.checkedDependencies}/${result.summary.totalDependencies} checked, ${result.summary.warmedPackages} warmed`,
   );
+  if (result.summary.fixPrApplied) {
+    lines.push(`Fix PR: applied on branch ${result.summary.fixBranchName ?? "unknown"} (${result.summary.fixCommitSha ?? "no-commit"})`);
+  }
 
   return lines.join("\n");
 }
