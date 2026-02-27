@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.1-rc.3] - 2026-02-27
+
+### Fixed
+
+- Resolved false dirty-worktree failures in `--fix-pr` flows caused by early PR report file creation.
+- `deps-report.md` generation now runs after fix-PR git automation checks/operations.
+
 ## [0.5.1-rc.2] - 2026-02-27
 
 ### Added
