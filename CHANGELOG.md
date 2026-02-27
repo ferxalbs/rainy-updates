@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.4.0] - 2026-02-27
+
+### Added
+
+- Production hardening for CLI UX:
+  - global and command-level help (`--help`, `-h`),
+  - version output (`--version`, `-v`),
+  - strict unknown command rejection.
+- OSS/release infrastructure:
+  - `LICENSE` (MIT),
+  - `CONTRIBUTING.md`,
+  - project CI workflow (`.github/workflows/ci.yml`),
+  - npm release workflow (`.github/workflows/release.yml`).
+- Packaging stabilization:
+  - `types` export path,
+  - production scripts (`clean`, `test:prod`, `prepublishOnly`),
+  - publish config with npm provenance and public access.
+
+### Changed
+
+- Registry client now retries latest-version resolution with backoff for transient failures.
+- Output formatting now shows cache warming summary when relevant.
+
+### Fixed
+
+- Parser now fails fast for unknown commands instead of silently defaulting to `check`.
+
 ## [0.3.0] - 2026-02-27
 
 ### Added

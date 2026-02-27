@@ -7,6 +7,9 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   }
 
   if (format === "minimal") {
+    if (result.updates.length === 0 && result.summary.warmedPackages > 0) {
+      return `Cache warmed for ${result.summary.warmedPackages} package(s).`;
+    }
     if (result.updates.length === 0) return "No updates found.";
     return result.updates
       .map((item) => `${item.packagePath} :: ${item.name}: ${item.fromRange} -> ${item.toRange}`)
@@ -25,7 +28,11 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   lines.push("");
 
   if (result.updates.length === 0) {
-    lines.push("No updates found.");
+    if (result.summary.warmedPackages > 0) {
+      lines.push(`Cache warmed for ${result.summary.warmedPackages} package(s).`);
+    } else {
+      lines.push("No updates found.");
+    }
   } else {
     lines.push("Updates:");
     for (const update of result.updates) {

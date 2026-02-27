@@ -2,6 +2,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { parseCliArgs } from "../core/options.js";
 import { check } from "../core/check.js";
 import { upgrade } from "../core/upgrade.js";
@@ -14,7 +15,18 @@ import { renderPrReport } from "../output/pr-report.js";
 
 async function main(): Promise<void> {
   try {
-    const parsed = await parseCliArgs(process.argv.slice(2));
+    const argv = process.argv.slice(2);
+    if (argv.includes("--version") || argv.includes("-v")) {
+      process.stdout.write((await readPackageVersion()) + "\n");
+      return;
+    }
+
+    if (argv.includes("--help") || argv.includes("-h")) {
+      process.stdout.write(renderHelp(argv[0]) + "\n");
+      return;
+    }
+
+    const parsed = await parseCliArgs(argv);
 
     if (parsed.command === "init-ci") {
       const workflow = await initCiWorkflow(parsed.options.cwd, parsed.options.force);
@@ -72,3 +84,83 @@ async function main(): Promise<void> {
 }
 
 void main();
+
+function renderHelp(command?: string): string {
+  const isCommand = command && !command.startsWith("-");
+  if (isCommand && command === "warm-cache") {
+    return `rainy-updates warm-cache [options]
+
+Pre-warm local metadata cache for faster CI checks.
+
+Options:
+  --workspace
+  --target patch|minor|major|latest
+  --filter <pattern>
+  --reject <pattern>
+  --dep-kinds deps,dev,optional,peer
+  --concurrency <n>
+  --cache-ttl <seconds>
+  --offline
+  --json-file <path>
+  --github-output <path>
+  --sarif-file <path>
+  --pr-report-file <path>`;
+  }
+
+  if (isCommand && command === "upgrade") {
+    return `rainy-updates upgrade [options]
+
+Apply dependency updates to package.json manifests.
+
+Options:
+  --workspace
+  --sync
+  --install
+  --pm auto|npm|pnpm
+  --target patch|minor|major|latest
+  --policy-file <path>
+  --concurrency <n>
+  --json-file <path>
+  --pr-report-file <path>`;
+  }
+
+  if (isCommand && command === "init-ci") {
+    return `rainy-updates init-ci [--force]
+
+Create a GitHub Actions workflow template at:
+  .github/workflows/rainy-updates.yml`;
+  }
+
+  return `rainy-updates <command> [options]
+
+Commands:
+  check       Detect available updates
+  upgrade     Apply updates to manifests
+  warm-cache  Warm local cache for fast/offline checks
+  init-ci     Scaffold GitHub Actions workflow
+
+Global options:
+  --cwd <path>
+  --workspace
+  --target patch|minor|major|latest
+  --format table|json|minimal|github
+  --json-file <path>
+  --github-output <path>
+  --sarif-file <path>
+  --pr-report-file <path>
+  --policy-file <path>
+  --concurrency <n>
+  --cache-ttl <seconds>
+  --offline
+  --ci
+  --help, -h
+  --version, -v`;
+}
+
+async function readPackageVersion(): Promise<string> {
+  const currentFile = fileURLToPath(import.meta.url);
+  const packageJsonPath = path.resolve(path.dirname(currentFile), "../../package.json");
+  const content = await fs.readFile(packageJsonPath, "utf8");
+  const parsed = JSON.parse(content) as { version?: string };
+  return parsed.version ?? "0.0.0";
+}

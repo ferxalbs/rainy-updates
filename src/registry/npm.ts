@@ -27,17 +27,29 @@ export class NpmRegistryClient {
 
   async resolveLatestVersion(packageName: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<string | null> {
     const requester = await this.requesterPromise;
-    const response = await requester(packageName, timeoutMs);
+    let lastError: string | null = null;
 
-    if (response.status === 404) return null;
-    if (response.status === 429 || response.status >= 500) {
-      throw new Error(`Registry temporary error: ${response.status}`);
-    }
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`Registry request failed: ${response.status}`);
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await requester(packageName, timeoutMs);
+        if (response.status === 404) return null;
+        if (response.status === 429 || response.status >= 500) {
+          throw new Error(`Registry temporary error: ${response.status}`);
+        }
+        if (response.status < 200 || response.status >= 300) {
+          throw new Error(`Registry request failed: ${response.status}`);
+        }
+
+        return response.data?.["dist-tags"]?.latest ?? null;
+      } catch (error) {
+        lastError = String(error);
+        if (attempt < 3) {
+          await sleep(120 * attempt);
+        }
+      }
     }
 
-    return response.data?.["dist-tags"]?.latest ?? null;
+    throw new Error(`Unable to resolve ${packageName}: ${lastError ?? "unknown error"}`);
   }
 
   async resolveManyLatestVersions(
@@ -74,6 +86,10 @@ export class NpmRegistryClient {
 
     return { versions, errors };
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function createRequester(): Promise<RequestLike> {

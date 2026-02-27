@@ -1,27 +1,51 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Agentic CLI to check and upgrade npm/pnpm dependencies for CI workflows",
   "type": "module",
   "private": false,
+  "license": "MIT",
+  "keywords": [
+    "dependencies",
+    "updates",
+    "cli",
+    "ci",
+    "npm",
+    "pnpm",
+    "monorepo"
+  ],
   "bin": {
     "rainy-updates": "./dist/bin/cli.js"
   },
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
+    "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "lint": "bunx biome check src tests",
-    "check": "bun run typecheck && bun test"
+    "check": "bun run typecheck && bun test",
+    "test:prod": "node dist/bin/cli.js --help && node dist/bin/cli.js --version",
+    "prepublishOnly": "bun run check && bun run build && bun run test:prod"
   },
   "engines": {
     "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "devDependencies": {
     "@types/bun": "latest",

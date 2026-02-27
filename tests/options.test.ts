@@ -47,3 +47,7 @@ test("parseCliArgs supports warm-cache and init-ci", async () => {
     expect(init.options.force).toBe(true);
   }
 });
+
+test("parseCliArgs rejects unknown command", async () => {
+  await expect(parseCliArgs(["deploy-updates"])).rejects.toThrow("Unknown command");
+});

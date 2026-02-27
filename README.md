@@ -79,6 +79,14 @@ Policy example:
 }
 ```
 
+## CLI help
+
+```bash
+rainy-updates --help
+rainy-updates <command> --help
+rainy-updates --version
+```
+
 ## CI behavior
 
 - `--ci`: returns exit code `1` when updates are found.
@@ -111,31 +119,20 @@ Example:
 }
 ```
 
+## Production release
+
+```bash
+bun run prepublishOnly
+npm publish --provenance --access public
+```
+
+The repository includes:
+
+- `.github/workflows/ci.yml` for test/typecheck/build/smoke checks.
+- `.github/workflows/release.yml` for tag-driven npm publishing.
+
 ## Performance and runtime notes
 
 - Resolves dependency metadata by unique package name to avoid duplicate network calls.
 - Uses `undici` pool with HTTP/2 when available; falls back to native `fetch` automatically.
 - Uses layered cache with stale fallback for resilient CI runs.
-
-## GitHub Actions example
-
-```yaml
-- name: Setup dependency update workflow
-  run: npx @rainy-updates/cli init-ci
-
-- name: Warm cache
-  run: npx @rainy-updates/cli warm-cache --workspace --concurrency 32
-
-- name: Check dependency updates
-  run: |
-    npx @rainy-updates/cli check \
-      --workspace \
-      --offline \
-      --ci \
-      --concurrency 32 \
-      --format github \
-      --json-file .artifacts/deps-report.json \
-      --pr-report-file .artifacts/deps-report.md \
-      --github-output $GITHUB_OUTPUT \
-      --sarif-file .artifacts/deps-report.sarif
-```

@@ -9,6 +9,7 @@ const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
   "optionalDependencies",
   "peerDependencies",
 ];
+const KNOWN_COMMANDS = ["check", "upgrade", "warm-cache", "init-ci"] as const;
 
 export type ParsedCliArgs =
   | { command: "check"; options: CheckOptions }
@@ -17,7 +18,11 @@ export type ParsedCliArgs =
   | { command: "init-ci"; options: CheckOptions & { force: boolean } };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
-  const isKnownCommand = argv[0] === "check" || argv[0] === "upgrade" || argv[0] === "warm-cache" || argv[0] === "init-ci";
+  const firstArg = argv[0];
+  const isKnownCommand = KNOWN_COMMANDS.includes(firstArg as (typeof KNOWN_COMMANDS)[number]);
+  if (firstArg && !firstArg.startsWith("-") && !isKnownCommand) {
+    throw new Error(`Unknown command: ${firstArg}`);
+  }
   const command = isKnownCommand ? argv[0] : "check";
   const hasExplicitCommand = isKnownCommand;
   const args = hasExplicitCommand ? argv.slice(1) : argv.slice(0);
