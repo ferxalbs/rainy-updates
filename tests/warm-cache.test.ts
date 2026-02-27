@@ -2,22 +2,17 @@ import { expect, test } from "bun:test";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { check } from "../src/core/check.js";
+import { warmCache } from "../src/core/warm-cache.js";
 
-test("offline mode reports cache miss error", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-offline-"));
+test("warmCache reports misses in offline mode", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-warm-cache-"));
   await writeFile(
     path.join(dir, "package.json"),
-    JSON.stringify({
-      name: "offline-test",
-      dependencies: {
-        react: "^18.2.0",
-      },
-    }),
+    JSON.stringify({ name: "sample", dependencies: { lodash: "^4.17.0" } }),
     "utf8",
   );
 
-  const result = await check({
+  const result = await warmCache({
     cwd: dir,
     target: "latest",
     filter: undefined,
@@ -30,11 +25,12 @@ test("offline mode reports cache miss error", async () => {
     jsonFile: undefined,
     githubOutputFile: undefined,
     sarifFile: undefined,
-    concurrency: 2,
+    concurrency: 4,
     offline: true,
     policyFile: undefined,
     prReportFile: undefined,
   });
 
-  expect(result.errors.some((item) => item.includes("Offline cache miss for react"))).toBe(true);
+  expect(result.summary.warmedPackages).toBe(0);
+  expect(result.errors.some((item) => item.includes("Offline cache miss for lodash"))).toBe(true);
 });

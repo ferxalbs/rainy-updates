@@ -22,6 +22,7 @@ test("writeGitHubOutput writes key-value outputs", async () => {
       updatesFound: 2,
       upgraded: 0,
       skipped: 0,
+      warmedPackages: 0,
     },
     updates: [],
     errors: ["x"],

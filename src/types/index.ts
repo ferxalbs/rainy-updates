@@ -23,6 +23,8 @@ export interface RunOptions {
   sarifFile?: string;
   concurrency: number;
   offline: boolean;
+  policyFile?: string;
+  prReportFile?: string;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -58,6 +60,7 @@ export interface Summary {
   updatesFound: number;
   upgraded: number;
   skipped: number;
+  warmedPackages: number;
 }
 
 export interface CheckResult {

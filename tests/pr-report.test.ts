@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import { createSarifReport } from "../src/output/sarif.js";
+import { renderPrReport } from "../src/output/pr-report.js";
 import type { CheckResult } from "../src/types/index.js";
 
-test("createSarifReport includes updates and errors", () => {
-  const input: CheckResult = {
-    projectPath: "/tmp/project",
-    packagePaths: ["/tmp/project"],
+test("renderPrReport includes markdown table", () => {
+  const result: CheckResult = {
+    projectPath: "/tmp/x",
+    packagePaths: ["/tmp/x"],
     packageManager: "npm",
     target: "latest",
     timestamp: new Date().toISOString(),
@@ -20,7 +20,7 @@ test("createSarifReport includes updates and errors", () => {
     },
     updates: [
       {
-        packagePath: "/tmp/project",
+        packagePath: "/tmp/x",
         name: "react",
         kind: "dependencies",
         fromRange: "^18.2.0",
@@ -30,13 +30,12 @@ test("createSarifReport includes updates and errors", () => {
         filtered: false,
       },
     ],
-    errors: ["sample error"],
+    errors: [],
     warnings: [],
   };
 
-  const sarif = createSarifReport(input);
-  const json = JSON.stringify(sarif);
-  expect(json.includes("dependency-update")).toBe(true);
-  expect(json.includes("runtime-error")).toBe(true);
-  expect(json.includes("react")).toBe(true);
+  const md = renderPrReport(result);
+  expect(md.includes("# Dependency Update Report")).toBe(true);
+  expect(md.includes("| Package | From | To | Type | Path |")).toBe(true);
+  expect(md.includes("react")).toBe(true);
 });

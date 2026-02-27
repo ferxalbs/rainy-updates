@@ -2,11 +2,12 @@ import path from "node:path";
 import type { CheckOptions, CheckResult, PackageDependency, PackageUpdate, Summary } from "../types/index.js";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { matchesPattern } from "../utils/pattern.js";
-import { applyRangeStyle, classifyDiff, pickTargetVersion } from "../utils/semver.js";
+import { applyRangeStyle, classifyDiff, clampTarget, pickTargetVersion } from "../utils/semver.js";
 import { VersionCache } from "../cache/cache.js";
 import { NpmRegistryClient } from "../registry/npm.js";
 import { detectPackageManager } from "../pm/detect.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
+import { loadPolicy } from "../config/policy.js";
 
 interface DependencyTask {
   packageDir: string;
@@ -18,6 +19,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
   const cache = await VersionCache.create();
   const registryClient = new NpmRegistryClient();
+  const policy = await loadPolicy(options.cwd, options.policyFile);
 
   const updates: PackageUpdate[] = [];
   const errors: string[] = [];
@@ -25,6 +27,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
 
   let totalDependencies = 0;
   const tasks: DependencyTask[] = [];
+  let skipped = 0;
 
   for (const packageDir of packageDirs) {
     let manifest;
@@ -41,6 +44,18 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     for (const dep of dependencies) {
       if (!matchesPattern(dep.name, options.filter)) continue;
       if (options.reject && matchesPattern(dep.name, options.reject)) continue;
+
+      const rule = policy.packageRules.get(dep.name);
+      if (rule?.ignore === true) {
+        skipped += 1;
+        continue;
+      }
+
+      if (policy.ignorePatterns.some((pattern) => matchesPattern(dep.name, pattern))) {
+        skipped += 1;
+        continue;
+      }
+
       tasks.push({ packageDir, dependency: dep });
     }
   }
@@ -97,7 +112,9 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     const latestVersion = resolvedVersions.get(task.dependency.name);
     if (!latestVersion) continue;
 
-    const picked = pickTargetVersion(task.dependency.range, latestVersion, options.target);
+    const rule = policy.packageRules.get(task.dependency.name);
+    const effectiveTarget = clampTarget(options.target, rule?.maxTarget);
+    const picked = pickTargetVersion(task.dependency.range, latestVersion, effectiveTarget);
     if (!picked) continue;
 
     const nextRange = applyRangeStyle(task.dependency.range, picked);
@@ -112,6 +129,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       toVersionResolved: picked,
       diffType: classifyDiff(task.dependency.range, picked),
       filtered: false,
+      reason: rule?.maxTarget ? `policy maxTarget=${rule.maxTarget}` : undefined,
     });
   }
 
@@ -121,7 +139,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     checkedDependencies: tasks.length,
     updatesFound: updates.length,
     upgraded: 0,
-    skipped: 0,
+    skipped,
+    warmedPackages: 0,
   };
 
   return {

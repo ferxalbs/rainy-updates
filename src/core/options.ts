@@ -12,11 +12,14 @@ const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
 
 export type ParsedCliArgs =
   | { command: "check"; options: CheckOptions }
-  | { command: "upgrade"; options: UpgradeOptions };
+  | { command: "upgrade"; options: UpgradeOptions }
+  | { command: "warm-cache"; options: CheckOptions }
+  | { command: "init-ci"; options: CheckOptions & { force: boolean } };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
-  const command = argv[0] === "upgrade" ? "upgrade" : "check";
-  const hasExplicitCommand = argv[0] === "check" || argv[0] === "upgrade";
+  const isKnownCommand = argv[0] === "check" || argv[0] === "upgrade" || argv[0] === "warm-cache" || argv[0] === "init-ci";
+  const command = isKnownCommand ? argv[0] : "check";
+  const hasExplicitCommand = isKnownCommand;
   const args = hasExplicitCommand ? argv.slice(1) : argv.slice(0);
 
   const base: CheckOptions = {
@@ -34,7 +37,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     sarifFile: undefined,
     concurrency: 16,
     offline: false,
+    policyFile: undefined,
+    prReportFile: undefined,
   };
+
+  let force = false;
 
   let resolvedConfig = await loadConfig(base.cwd);
   applyConfig(base, resolvedConfig);
@@ -128,6 +135,23 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       continue;
     }
 
+    if (current === "--policy-file" && next) {
+      base.policyFile = path.resolve(next);
+      index += 1;
+      continue;
+    }
+
+    if (current === "--pr-report-file" && next) {
+      base.prReportFile = path.resolve(next);
+      index += 1;
+      continue;
+    }
+
+    if (current === "--force") {
+      force = true;
+      continue;
+    }
+
     if (current === "--dep-kinds" && next) {
       base.includeKinds = parseDependencyKinds(next);
       index += 1;
@@ -148,8 +172,16 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     return { command, options: upgradeOptions };
   }
 
+  if (command === "warm-cache") {
+    return { command, options: base };
+  }
+
+  if (command === "init-ci") {
+    return { command, options: { ...base, force } };
+  }
+
   return {
-    command,
+    command: "check",
     options: base,
   };
 }
@@ -175,6 +207,12 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   }
   if (typeof config.offline === "boolean") {
     base.offline = config.offline;
+  }
+  if (typeof config.policyFile === "string") {
+    base.policyFile = path.resolve(base.cwd, config.policyFile);
+  }
+  if (typeof config.prReportFile === "string") {
+    base.prReportFile = path.resolve(base.cwd, config.prReportFile);
   }
 }
 

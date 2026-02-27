@@ -53,7 +53,7 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
 
   lines.push("");
   lines.push(
-    `Summary: ${result.summary.updatesFound} updates, ${result.summary.checkedDependencies}/${result.summary.totalDependencies} checked`,
+    `Summary: ${result.summary.updatesFound} updates, ${result.summary.checkedDependencies}/${result.summary.totalDependencies} checked, ${result.summary.warmedPackages} warmed`,
   );
 
   return lines.join("\n");

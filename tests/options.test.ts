@@ -32,3 +32,18 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     expect(parsed.options.format).toBe("github");
   }
 });
+
+test("parseCliArgs supports warm-cache and init-ci", async () => {
+  const warm = await parseCliArgs(["warm-cache", "--offline", "--policy-file", "policy.json"]);
+  expect(warm.command).toBe("warm-cache");
+  if (warm.command === "warm-cache") {
+    expect(warm.options.offline).toBe(true);
+    expect(warm.options.policyFile?.endsWith("policy.json")).toBe(true);
+  }
+
+  const init = await parseCliArgs(["init-ci", "--force"]);
+  expect(init.command).toBe("init-ci");
+  if (init.command === "init-ci") {
+    expect(init.options.force).toBe(true);
+  }
+});

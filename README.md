@@ -10,20 +10,29 @@ npm i -D @rainy-updates/cli
 pnpm add -D @rainy-updates/cli
 ```
 
-## Quick start
-
-```bash
-# check updates and fail CI if any are found
-npx @rainy-updates/cli check --ci --format json --json-file .artifacts/deps-report.json
-
-# upgrade ranges and install lockfiles
-npx @rainy-updates/cli upgrade --target latest --workspace --install
-```
-
 ## Commands
 
 - `check`: detect available dependency updates.
-- `upgrade`: rewrite `package.json` ranges; optional install step updates lockfiles.
+- `upgrade`: rewrite dependency ranges (optional install + workspace sync).
+- `warm-cache`: pre-fetch package metadata into local cache for faster CI checks.
+- `init-ci`: scaffold `.github/workflows/rainy-updates.yml`.
+
+## Quick start
+
+```bash
+# check and fail CI if updates are found
+npx @rainy-updates/cli check --ci --format json --json-file .artifacts/deps-report.json
+
+# pre-warm cache before strict offline checks
+npx @rainy-updates/cli warm-cache --workspace --concurrency 32
+npx @rainy-updates/cli check --workspace --offline --ci
+
+# upgrade ranges and install lockfiles
+npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
+
+# scaffold GitHub Actions workflow
+npx @rainy-updates/cli init-ci
+```
 
 ## Core options
 
@@ -43,12 +52,32 @@ npx @rainy-updates/cli upgrade --target latest --workspace --install
 - `--json-file <path>`
 - `--github-output <path>`
 - `--sarif-file <path>`
+- `--pr-report-file <path>` (generates markdown report for PR comments)
 
 ## Upgrade options
 
 - `--install`
 - `--pm auto|npm|pnpm`
 - `--sync` (graph-aware version alignment across workspace packages)
+
+## Policy controls
+
+- `--policy-file <path>` to apply package-level policy rules.
+- default policy discovery:
+  - `.rainyupdates-policy.json`
+  - `rainy-updates.policy.json`
+
+Policy example:
+
+```json
+{
+  "ignore": ["@types/*", "eslint*"],
+  "packageRules": {
+    "react": { "maxTarget": "minor" },
+    "typescript": { "ignore": true }
+  }
+}
+```
 
 ## CI behavior
 
@@ -75,28 +104,38 @@ Example:
     "format": "json",
     "cacheTtlSeconds": 1800,
     "jsonFile": ".artifacts/deps.json",
-    "sarifFile": ".artifacts/deps.sarif"
+    "sarifFile": ".artifacts/deps.sarif",
+    "prReportFile": ".artifacts/deps.md",
+    "policyFile": ".rainyupdates-policy.json"
   }
 }
 ```
 
 ## Performance and runtime notes
 
-- Uses batched unique-package resolution and configurable concurrency.
+- Resolves dependency metadata by unique package name to avoid duplicate network calls.
 - Uses `undici` pool with HTTP/2 when available; falls back to native `fetch` automatically.
 - Uses layered cache with stale fallback for resilient CI runs.
 
 ## GitHub Actions example
 
 ```yaml
+- name: Setup dependency update workflow
+  run: npx @rainy-updates/cli init-ci
+
+- name: Warm cache
+  run: npx @rainy-updates/cli warm-cache --workspace --concurrency 32
+
 - name: Check dependency updates
   run: |
     npx @rainy-updates/cli check \
       --workspace \
+      --offline \
       --ci \
       --concurrency 32 \
       --format github \
       --json-file .artifacts/deps-report.json \
+      --pr-report-file .artifacts/deps-report.md \
       --github-output $GITHUB_OUTPUT \
       --sarif-file .artifacts/deps-report.sarif
 ```

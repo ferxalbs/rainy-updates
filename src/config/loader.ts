@@ -16,6 +16,8 @@ export interface FileConfig {
   sarifFile?: string;
   concurrency?: number;
   offline?: boolean;
+  policyFile?: string;
+  prReportFile?: string;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
   sync?: boolean;

@@ -9,6 +9,7 @@ export async function writeGitHubOutput(filePath: string, result: CheckResult): 
     `warnings_count=${result.warnings.length}`,
     `checked_dependencies=${result.summary.checkedDependencies}`,
     `scanned_packages=${result.summary.scannedPackages}`,
+    `warmed_packages=${result.summary.warmedPackages}`,
   ];
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });

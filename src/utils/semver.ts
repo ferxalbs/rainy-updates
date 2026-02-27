@@ -80,3 +80,13 @@ export function applyRangeStyle(previousRange: string, version: string): string 
   const prefix = normalizeRangePrefix(previousRange);
   return `${prefix}${version}`;
 }
+
+const TARGET_ORDER: TargetLevel[] = ["patch", "minor", "major", "latest"];
+
+export function clampTarget(requested: TargetLevel, maxAllowed?: TargetLevel): TargetLevel {
+  if (!maxAllowed) return requested;
+  const requestedIndex = TARGET_ORDER.indexOf(requested);
+  const allowedIndex = TARGET_ORDER.indexOf(maxAllowed);
+  if (requestedIndex === -1 || allowedIndex === -1) return requested;
+  return TARGET_ORDER[Math.min(requestedIndex, allowedIndex)];
+}

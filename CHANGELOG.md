@@ -2,6 +2,41 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.0] - 2026-02-27
+
+### Added
+
+- `warm-cache` command:
+  - pre-fetches package metadata into cache,
+  - supports workspace scanning,
+  - supports offline behavior with explicit cache-miss reporting.
+- `init-ci` command:
+  - scaffolds `.github/workflows/rainy-updates.yml`,
+  - supports `--force` overwrite behavior.
+- Policy engine:
+  - `--policy-file` to load package update rules,
+  - default discovery of `.rainyupdates-policy.json` and `rainy-updates.policy.json`,
+  - rule-level controls:
+    - global ignore patterns,
+    - per-package ignore,
+    - per-package `maxTarget` update ceiling.
+- PR report output:
+  - `--pr-report-file` emits markdown report for pull request comments.
+- New summary metric:
+  - `warmedPackages` in results and GitHub output values.
+- New tests:
+  - warm cache behavior,
+  - policy loading,
+  - CI workflow scaffolding,
+  - PR markdown report rendering,
+  - parser support for new commands/flags.
+
+### Changed
+
+- Check pipeline now applies policy constraints before update proposals.
+- Output summary now includes warmed cache package count.
+- CLI command parser supports additional commands (`warm-cache`, `init-ci`) and options (`--policy-file`, `--pr-report-file`, `--force`).
+
 ## [0.2.0] - 2026-02-27
 
 ### Added
