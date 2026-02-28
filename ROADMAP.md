@@ -90,3 +90,9 @@ Focus: Stable platform release.
 - Faster feedback loops for CI usage at scale.
 - Security posture improvements and supply chain integrity.
 - Better defaults with zero-config onboarding.
+
+## Future integrations
+
+- Add stricter source-health controls for CI so teams can choose to fail runs when advisory coverage becomes partial, not only when every security backend is unavailable.
+- Add compact machine-readable audit summaries for automation platforms so pipelines can gate on affected packages, advisory-source health, and unresolved lockfile coverage without parsing the full report.
+- Expand ecosystem support from the current npm and pnpm foundation with explicit adapters, growing Bun support where lockfile and workspace inference improves accuracy and introducing future Deno, Hono, and framework integrations through clear resolution and metadata boundaries.
