@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.2-rc.2] - 2026-02-27
+
+### Added
+
+- **Interactive TUI Engine**: An `ink`-based Terminal User Interface for interactive dependency updates, featuring semantic diff coloring and keyboard navigation (`src/ui/tui.tsx`).
+- **Changelog Fetcher**: Implemented `changelog/fetcher.ts` to retrieve release notes dynamically from GitHub API.
+  - Utilizes `bun:sqlite` backed `VersionCache` to prevent API rate limit (403) errors.
+  - Strictly lazy-loaded to preserve zero-overhead startup time.
+
+### Fixed
+
+- Resolved TypeScript JSX compiler errors by properly exposing `"jsx": "react-jsx"` in `tsconfig.json`.
+
+---
+
 ## [0.5.2] - 2026-02-27
 
 ### Added
