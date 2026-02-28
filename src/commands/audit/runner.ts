@@ -1,3 +1,6 @@
+import { spawn } from "node:child_process";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import {
   collectDependencies,
   readManifest,
@@ -86,12 +89,165 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
     );
   }
 
-  if (options.fix && !options.dryRun && result.autoFixable > 0) {
-    const patchMap = buildPatchMap(advisories);
-    process.stderr.write(
-      `[audit] --fix: ${patchMap.size} packages have available patches. Apply with: npm install ${[...patchMap.entries()].map(([n, v]) => `${n}@${v}`).join(" ")}\n`,
-    );
+  if (options.fix && result.autoFixable > 0) {
+    await applyFix(advisories, options);
   }
 
   return result;
+}
+
+// ─── Fix application ──────────────────────────────────────────────────────────
+
+async function applyFix(
+  advisories: CveAdvisory[],
+  options: AuditOptions,
+): Promise<void> {
+  const patchMap = buildPatchMap(advisories);
+  if (patchMap.size === 0) return;
+
+  const pm = await detectPackageManager(options.cwd, options.packageManager);
+  const installArgs = buildInstallArgs(pm, patchMap);
+  const installCmd = `${pm} ${installArgs.join(" ")}`;
+
+  if (options.dryRun) {
+    process.stderr.write(
+      `[audit] --dry-run: would execute:\n  ${installCmd}\n`,
+    );
+    if (options.commit) {
+      const msg = buildCommitMessage(patchMap);
+      process.stderr.write(
+        `[audit] --dry-run: would commit:\n  git commit -m "${msg}"\n`,
+      );
+    }
+    return;
+  }
+
+  process.stderr.write(`[audit] Applying ${patchMap.size} fix(es)...\n`);
+  process.stderr.write(`  → ${installCmd}\n`);
+
+  try {
+    await runCommand(pm, installArgs, options.cwd);
+  } catch (err) {
+    process.stderr.write(`[audit] Install failed: ${String(err)}\n`);
+    return;
+  }
+
+  process.stderr.write(`[audit] ✔ Patches applied successfully.\n`);
+
+  if (options.commit) {
+    await commitFix(patchMap, options.cwd);
+  } else {
+    process.stderr.write(
+      `[audit] Tip: run with --commit to automatically commit the changes.\n`,
+    );
+  }
+}
+
+function buildInstallArgs(pm: string, patchMap: Map<string, string>): string[] {
+  const packages = [...patchMap.entries()].map(([n, v]) => `${n}@${v}`);
+
+  switch (pm) {
+    case "pnpm":
+      return ["add", ...packages];
+    case "bun":
+      return ["add", ...packages];
+    case "yarn":
+      return ["add", ...packages];
+    default:
+      return ["install", ...packages]; // npm
+  }
+}
+
+async function commitFix(
+  patchMap: Map<string, string>,
+  cwd: string,
+): Promise<void> {
+  const msg = buildCommitMessage(patchMap);
+
+  try {
+    // Stage all modified files (package.json + lockfiles)
+    await runCommand(
+      "git",
+      [
+        "add",
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+        "bun.lockb",
+      ],
+      cwd,
+      true,
+    );
+    await runCommand("git", ["commit", "-m", msg], cwd);
+    process.stderr.write(`[audit] ✔ Committed: "${msg}"\n`);
+  } catch (err) {
+    process.stderr.write(`[audit] Git commit failed: ${String(err)}\n`);
+    process.stderr.write(
+      `[audit] Changes are applied — commit manually with:\n`,
+    );
+    process.stderr.write(`  git add -A && git commit -m "${msg}"\n`);
+  }
+}
+
+function buildCommitMessage(patchMap: Map<string, string>): string {
+  const items = [...patchMap.entries()];
+  if (items.length === 1) {
+    const [name, version] = items[0]!;
+    return `fix(security): patch ${name} to ${version} (rup audit)`;
+  }
+  const names = items.map(([n]) => n).join(", ");
+  return `fix(security): patch ${items.length} vulnerabilities — ${names} (rup audit)`;
+}
+
+/** Detects the package manager in use by checking for lockfiles. */
+async function detectPackageManager(
+  cwd: string,
+  explicit: AuditOptions["packageManager"],
+): Promise<string> {
+  if (explicit !== "auto") return explicit;
+
+  const checks: Array<[string, string]> = [
+    ["bun.lockb", "bun"],
+    ["pnpm-lock.yaml", "pnpm"],
+    ["yarn.lock", "yarn"],
+  ];
+
+  for (const [lockfile, pm] of checks) {
+    try {
+      await fs.access(path.join(cwd, lockfile));
+      return pm;
+    } catch {
+      // not found, try next
+    }
+  }
+
+  return "npm"; // default
+}
+
+/** Spawns a subprocess, pipes stdio live to the terminal. */
+function runCommand(
+  cmd: string,
+  args: string[],
+  cwd: string,
+  ignoreErrors = false,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, {
+      cwd,
+      stdio: "inherit", // stream stdout/stderr live
+      shell: process.platform === "win32",
+    });
+    child.on("close", (code) => {
+      if (code === 0 || ignoreErrors) {
+        resolve();
+      } else {
+        reject(new Error(`${cmd} exited with code ${code}`));
+      }
+    });
+    child.on("error", (err) => {
+      if (ignoreErrors) resolve();
+      else reject(err);
+    });
+  });
 }

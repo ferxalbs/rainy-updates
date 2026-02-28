@@ -24,6 +24,10 @@ export function filterBySeverity(
  * For each advisory that has a known patchedVersion,
  * produces a sorted, deduplicated map of package → minimum secure version.
  * Used by --fix to determine what version to update to.
+ *
+ * Uses proper semver numeric comparison — NOT string comparison — so that
+ * e.g. "5.19.1" correctly beats "5.5.1" (lexicographically "5.5.1" > "5.19.1"
+ * because "5" > "1" at the third character, which is the classic semver trap).
  */
 export function buildPatchMap(advisories: CveAdvisory[]): Map<string, string> {
   const patchMap = new Map<string, string>();
@@ -31,12 +35,28 @@ export function buildPatchMap(advisories: CveAdvisory[]): Map<string, string> {
   for (const advisory of advisories) {
     if (!advisory.patchedVersion) continue;
     const existing = patchMap.get(advisory.packageName);
-    if (!existing || advisory.patchedVersion > existing) {
+    if (!existing || semverGt(advisory.patchedVersion, existing)) {
       patchMap.set(advisory.packageName, advisory.patchedVersion);
     }
   }
 
   return patchMap;
+}
+
+/** Returns true if `a` is semantically greater than `b`. */
+function semverGt(a: string, b: string): boolean {
+  const pa = parseSemver(a);
+  const pb = parseSemver(b);
+  if (!pa || !pb) return a > b; // fallback for non-standard versions
+  if (pa[0] !== pb[0]) return pa[0] > pb[0];
+  if (pa[1] !== pb[1]) return pa[1] > pb[1];
+  return pa[2] > pb[2];
+}
+
+function parseSemver(v: string): [number, number, number] | null {
+  const m = v.replace(/^[~^>=<]/, "").match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!m) return null;
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
 }
 
 /**

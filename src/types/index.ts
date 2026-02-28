@@ -197,6 +197,8 @@ export interface AuditOptions {
   severity?: AuditSeverity;
   fix: boolean;
   dryRun: boolean;
+  commit: boolean;
+  packageManager: "auto" | "npm" | "pnpm" | "bun" | "yarn";
   reportFormat: AuditReportFormat;
   jsonFile?: string;
   concurrency: number;

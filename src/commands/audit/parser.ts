@@ -20,6 +20,8 @@ export function parseAuditArgs(args: string[]): AuditOptions {
     severity: undefined,
     fix: false,
     dryRun: false,
+    commit: false,
+    packageManager: "auto",
     reportFormat: "table",
     jsonFile: undefined,
     concurrency: 16,
@@ -62,6 +64,20 @@ export function parseAuditArgs(args: string[]): AuditOptions {
       index += 1;
       continue;
     }
+    if (current === "--commit") {
+      options.commit = true;
+      index += 1;
+      continue;
+    }
+    if (current === "--pm" && next) {
+      const valid = ["auto", "npm", "pnpm", "bun", "yarn"];
+      if (!valid.includes(next))
+        throw new Error(`--pm must be one of: ${valid.join(", ")}`);
+      options.packageManager = next as AuditOptions["packageManager"];
+      index += 2;
+      continue;
+    }
+    if (current === "--pm") throw new Error("Missing value for --pm");
 
     if (current === "--report" && next) {
       if (next !== "table" && next !== "json") {
