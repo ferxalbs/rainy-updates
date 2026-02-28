@@ -18,6 +18,7 @@ import { resolveAuditTargets } from "./targets.js";
 import {
   filterBySeverity,
   buildPatchMap,
+  renderAuditSourceHealth,
   renderAuditSummary,
   renderAuditTable,
   summarizeAdvisories,
@@ -36,6 +37,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
     errors: [],
     warnings: [],
     sourcesUsed: [],
+    sourceHealth: [],
     resolution: {
       lockfile: 0,
       manifest: 0,
@@ -86,7 +88,14 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
     sourceMode: options.sourceMode,
   });
   result.sourcesUsed = fetched.sourcesUsed;
+  result.sourceHealth = fetched.sourceHealth;
   result.warnings.push(...fetched.warnings);
+
+  if (fetched.sourceHealth.every((item) => item.status === "failed")) {
+    result.errors.push(
+      "All advisory sources failed. Audit coverage is unavailable for this run.",
+    );
+  }
 
   let advisories = fetched.advisories;
 
@@ -98,9 +107,17 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
   ).length;
 
   if (options.reportFormat === "summary") {
-    process.stdout.write(renderAuditSummary(result.packages) + "\n");
+    process.stdout.write(
+      renderAuditSummary(result.packages) +
+        renderAuditSourceHealth(result.sourceHealth) +
+        "\n",
+    );
   } else if (options.reportFormat === "table" || !options.jsonFile) {
-    process.stdout.write(renderAuditTable(advisories) + "\n");
+    process.stdout.write(
+      renderAuditTable(advisories) +
+        renderAuditSourceHealth(result.sourceHealth) +
+        "\n",
+    );
   }
 
   if (options.jsonFile) {
@@ -111,6 +128,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
           advisories,
           packages: result.packages,
           sourcesUsed: result.sourcesUsed,
+          sourceHealth: result.sourceHealth,
           resolution: result.resolution,
           errors: result.errors,
           warnings: result.warnings,

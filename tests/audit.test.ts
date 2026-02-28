@@ -347,4 +347,232 @@ describe("audit targets", () => {
     expect(resolution.targets[0]?.version).toBe("1.7.9");
     expect(resolution.resolution.lockfile).toBe(1);
   });
+
+  it("resolves versions from bun.lock workspaces", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "rainy-audit-bun-lock-"));
+    const pkgDir = path.join(root, "apps", "web");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(
+      path.join(root, "bun.lock"),
+      [
+        "{",
+        '  "lockfileVersion": 1,',
+        '  "workspaces": {',
+        '    "": {',
+        '      "dependencies": {',
+        '        "zod": "^4.3.6",',
+        "      },",
+        "    },",
+        '    "apps/web": {',
+        '      "dependencies": {',
+        '        "axios": "1.7.9",',
+        "      },",
+        "    },",
+        "  },",
+        "}",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { resolveAuditTargets } =
+      await import("../src/commands/audit/targets.js");
+    const resolution = await resolveAuditTargets(
+      root,
+      [pkgDir],
+      new Map([
+        [
+          pkgDir,
+          [
+            {
+              name: "axios",
+              range: ">=1.0.0 <2.0.0",
+              kind: "dependencies" as const,
+            },
+          ],
+        ],
+      ]),
+    );
+
+    expect(resolution.targets[0]?.version).toBe("1.7.9");
+    expect(resolution.resolution.lockfile).toBe(1);
+  });
+});
+
+describe("audit sources", () => {
+  it("reports partial coverage when one source fails", async () => {
+    const { fetchAdvisories } = await import("../src/commands/audit/fetcher.js");
+    const mockSources = {
+      osv: {
+        name: "osv" as const,
+        async fetch() {
+          return {
+            advisories: [
+              {
+                cveId: "GHSA-1",
+                packageName: "axios",
+                currentVersion: "1.0.0",
+                severity: "high" as const,
+                vulnerableRange: "<1.1.0",
+                patchedVersion: "1.1.0",
+                title: "t",
+                url: "",
+                sources: ["osv"] as const,
+              },
+            ],
+            warnings: [],
+            health: {
+              source: "osv" as const,
+              status: "ok" as const,
+              attemptedTargets: 1,
+              successfulTargets: 1,
+              failedTargets: 0,
+              advisoriesFound: 1,
+            },
+          };
+        },
+      },
+      github: {
+        name: "github" as const,
+        async fetch() {
+          return {
+            advisories: [],
+            warnings: ["GitHub Advisory DB unavailable for all 1 audit target."],
+            health: {
+              source: "github" as const,
+              status: "failed" as const,
+              attemptedTargets: 1,
+              successfulTargets: 0,
+              failedTargets: 1,
+              advisoriesFound: 0,
+              message: "timeout",
+            },
+          };
+        },
+      },
+    };
+
+    const result = await fetchAdvisories(
+      [
+        {
+          name: "axios",
+          version: "1.0.0",
+          packageDir: "/tmp/demo",
+          manifestRange: "^1.0.0",
+          resolution: "manifest",
+        },
+      ],
+      {
+        concurrency: 4,
+        registryTimeoutMs: 1000,
+        sourceMode: "all",
+      },
+      mockSources,
+    );
+
+    expect(result.advisories).toHaveLength(1);
+    expect(result.sourceHealth).toHaveLength(2);
+    expect(
+      result.warnings.some((item) =>
+        item.includes("Continuing with partial advisory coverage"),
+      ),
+    ).toBe(true);
+  });
+
+  it("merges source health for total source failure", async () => {
+    const { fetchAdvisories } = await import("../src/commands/audit/fetcher.js");
+    const mockSources = {
+      osv: {
+        name: "osv" as const,
+        async fetch() {
+          return {
+            advisories: [],
+            warnings: ["OSV.dev unavailable for all 1 audit target."],
+            health: {
+              source: "osv" as const,
+              status: "failed" as const,
+              attemptedTargets: 1,
+              successfulTargets: 0,
+              failedTargets: 1,
+              advisoriesFound: 0,
+              message: "network",
+            },
+          };
+        },
+      },
+      github: {
+        name: "github" as const,
+        async fetch() {
+          return {
+            advisories: [],
+            warnings: ["GitHub Advisory DB unavailable for all 1 audit target."],
+            health: {
+              source: "github" as const,
+              status: "failed" as const,
+              attemptedTargets: 1,
+              successfulTargets: 0,
+              failedTargets: 1,
+              advisoriesFound: 0,
+              message: "timeout",
+            },
+          };
+        },
+      },
+    };
+
+    const result = await fetchAdvisories(
+      [
+        {
+          name: "axios",
+          version: "1.0.0",
+          packageDir: "/tmp/demo",
+          manifestRange: "^1.0.0",
+          resolution: "manifest",
+        },
+      ],
+      {
+        concurrency: 4,
+        registryTimeoutMs: 1000,
+        sourceMode: "all",
+      },
+      mockSources,
+    );
+
+    expect(result.advisories).toHaveLength(0);
+    expect(result.sourceHealth.every((item) => item.status === "failed")).toBe(
+      true,
+    );
+  });
+});
+
+describe("audit rendering", () => {
+  it("renders source health details for terminal users", async () => {
+    const { renderAuditSourceHealth } =
+      await import("../src/commands/audit/mapper.js");
+
+    const rendered = renderAuditSourceHealth([
+      {
+        source: "osv",
+        status: "ok",
+        attemptedTargets: 4,
+        successfulTargets: 4,
+        failedTargets: 0,
+        advisoriesFound: 6,
+      },
+      {
+        source: "github",
+        status: "partial",
+        attemptedTargets: 4,
+        successfulTargets: 3,
+        failedTargets: 1,
+        advisoriesFound: 7,
+        message: "timeout",
+      },
+    ]);
+
+    expect(rendered.includes("Sources:")).toBe(true);
+    expect(rendered.includes("OSV.dev")).toBe(true);
+    expect(rendered.includes("GitHub Advisory DB")).toBe(true);
+    expect(rendered.includes("PARTIAL")).toBe(true);
+    expect(rendered.includes("timeout")).toBe(true);
+  });
 });

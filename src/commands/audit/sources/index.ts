@@ -2,13 +2,17 @@ import type {
   AuditOptions,
   AuditSourceMode,
   AuditSourceName,
+  AuditSourceStatus,
   CveAdvisory,
 } from "../../../types/index.js";
 import { compareVersions, parseVersion } from "../../../utils/semver.js";
 import type { AuditTarget } from "../targets.js";
 import { githubAuditSource } from "./github.js";
 import { osvAuditSource } from "./osv.js";
-import type { AuditSourceAdapter, AuditSourceFetchResult } from "./types.js";
+import type {
+  AuditSourceAdapter,
+  AuditSourceAggregateResult,
+} from "./types.js";
 
 const SOURCE_MAP: Record<AuditSourceName, AuditSourceAdapter> = {
   osv: osvAuditSource,
@@ -18,19 +22,28 @@ const SOURCE_MAP: Record<AuditSourceName, AuditSourceAdapter> = {
 export async function fetchAdvisoriesFromSources(
   targets: AuditTarget[],
   options: Pick<AuditOptions, "concurrency" | "registryTimeoutMs" | "sourceMode">,
-): Promise<AuditSourceFetchResult & { sourcesUsed: AuditSourceName[] }> {
+  sourceMap: Record<AuditSourceName, AuditSourceAdapter> = SOURCE_MAP,
+): Promise<
+  AuditSourceAggregateResult & {
+    sourcesUsed: AuditSourceName[];
+  }
+> {
   const selected = selectSources(options.sourceMode);
   const results = await Promise.all(
-    selected.map((name) => SOURCE_MAP[name].fetch(targets, options)),
+    selected.map((name) => sourceMap[name].fetch(targets, options)),
   );
 
-  const warnings = results.flatMap((result) => result.warnings);
+  const warnings = normalizeSourceWarnings(
+    results.flatMap((result) => result.warnings),
+    results.map((result) => result.health),
+  );
   const merged = mergeAdvisories(results.flatMap((result) => result.advisories));
 
   return {
     advisories: merged,
     warnings,
     sourcesUsed: selected,
+    sourceHealth: results.map((result) => result.health),
   };
 }
 
@@ -73,6 +86,31 @@ function mergeAdvisories(advisories: CveAdvisory[]): CveAdvisory[] {
   }
 
   return [...merged.values()];
+}
+
+function normalizeSourceWarnings(
+  warnings: string[],
+  sourceHealth: AuditSourceStatus[],
+): string[] {
+  const normalized = [...warnings];
+  const successful = sourceHealth.filter((item) => item.status !== "failed");
+  const failed = sourceHealth.filter((item) => item.status === "failed");
+
+  if (failed.length > 0 && successful.length > 0) {
+    const failedNames = failed.map((item) => formatSourceName(item.source)).join(", ");
+    const successfulNames = successful
+      .map((item) => formatSourceName(item.source))
+      .join(", ");
+    normalized.push(
+      `Continuing with partial advisory coverage: ${failedNames} failed, ${successfulNames} still returned results.`,
+    );
+  }
+
+  return normalized;
+}
+
+function formatSourceName(source: AuditSourceName): string {
+  return source === "osv" ? "OSV.dev" : "GitHub Advisory DB";
 }
 
 function choosePreferredPatch(

@@ -6,6 +6,7 @@ const LOCKFILE_PRIORITY = [
   "package-lock.json",
   "npm-shrinkwrap.json",
   "pnpm-lock.yaml",
+  "bun.lock",
 ] as const;
 
 export interface AuditTarget {
@@ -36,8 +37,13 @@ interface PnpmLockData {
   importers: Map<string, Map<string, string>>;
 }
 
+interface BunLockData {
+  workspaces: Map<string, Map<string, string>>;
+}
+
 const packageLockCache = new Map<string, Promise<PackageLockData>>();
 const pnpmLockCache = new Map<string, Promise<PnpmLockData>>();
+const bunLockCache = new Map<string, Promise<BunLockData>>();
 
 export function extractAuditVersion(range: string): string | null {
   const trimmed = range.trim();
@@ -103,6 +109,8 @@ async function resolveDependencyVersion(
     const version =
       fileName === "pnpm-lock.yaml"
         ? await resolveFromPnpmLock(lockfilePath, packageDir, dep.name)
+        : fileName === "bun.lock"
+          ? await resolveFromBunLock(lockfilePath, packageDir, dep.name)
         : await resolveFromPackageLock(lockfilePath, packageDir, dep.name);
     if (version) {
       return {
@@ -197,6 +205,25 @@ async function resolveFromPnpmLock(
   return null;
 }
 
+async function resolveFromBunLock(
+  lockfilePath: string,
+  packageDir: string,
+  packageName: string,
+): Promise<string | null> {
+  const parsed = await readBunLock(lockfilePath);
+  const rootDir = path.dirname(lockfilePath);
+  const relDir = normalizeRelativePath(rootDir, packageDir);
+  const workspaceKeys = [relDir, ""];
+
+  for (const workspaceKey of workspaceKeys) {
+    const workspace = parsed.workspaces.get(workspaceKey);
+    const version = workspace?.get(packageName);
+    if (version) return version;
+  }
+
+  return null;
+}
+
 async function readPackageLock(lockfilePath: string): Promise<PackageLockData> {
   let promise = packageLockCache.get(lockfilePath);
   if (!promise) {
@@ -213,6 +240,15 @@ async function readPnpmLock(lockfilePath: string): Promise<PnpmLockData> {
   if (!promise) {
     promise = fs.readFile(lockfilePath, "utf8").then(parsePnpmLock);
     pnpmLockCache.set(lockfilePath, promise);
+  }
+  return await promise;
+}
+
+async function readBunLock(lockfilePath: string): Promise<BunLockData> {
+  let promise = bunLockCache.get(lockfilePath);
+  if (!promise) {
+    promise = fs.readFile(lockfilePath, "utf8").then(parseBunLock);
+    bunLockCache.set(lockfilePath, promise);
   }
   return await promise;
 }
@@ -289,6 +325,75 @@ function parsePnpmLock(content: string): PnpmLockData {
   }
 
   return { importers };
+}
+
+function parseBunLock(content: string): BunLockData {
+  const workspaces = new Map<string, Map<string, string>>();
+  const lines = content.split(/\r?\n/);
+
+  let inWorkspaces = false;
+  let currentWorkspace = "";
+  let currentSection: "dependencies" | "devDependencies" | "optionalDependencies" | null =
+    null;
+
+  for (const rawLine of lines) {
+    const indent = rawLine.match(/^ */)?.[0].length ?? 0;
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+
+    if (!inWorkspaces && trimmed === '"workspaces": {') {
+      inWorkspaces = true;
+      currentWorkspace = "";
+      currentSection = null;
+      continue;
+    }
+
+    if (inWorkspaces && indent <= 2 && trimmed === "},") {
+      inWorkspaces = false;
+      currentWorkspace = "";
+      currentSection = null;
+      continue;
+    }
+
+    if (indent === 4 && trimmed.endsWith("{")) {
+      const keyMatch = trimmed.match(/^"([^"]*)": \{$/);
+      if (!keyMatch) continue;
+      currentWorkspace = keyMatch[1] === "" ? "" : keyMatch[1];
+      workspaces.set(currentWorkspace, new Map());
+      currentSection = null;
+      continue;
+    }
+
+    if (!workspaces.has(currentWorkspace)) continue;
+
+    if (indent === 6 && trimmed.endsWith("{")) {
+      const keyMatch = trimmed.match(
+        /^"(dependencies|devDependencies|optionalDependencies)": \{$/,
+      );
+      const sectionName = keyMatch?.[1];
+      currentSection =
+        sectionName === "dependencies" ||
+        sectionName === "devDependencies" ||
+        sectionName === "optionalDependencies"
+          ? sectionName
+          : null;
+      continue;
+    }
+
+    if (!currentSection) continue;
+
+    if (indent === 8) {
+      const depMatch = trimmed.match(/^"([^"]+)": "([^"]+)",?$/);
+      if (!depMatch) continue;
+      const packageName = depMatch[1];
+      const version = extractAuditVersion(depMatch[2]);
+      if (version) {
+        workspaces.get(currentWorkspace)?.set(packageName, version);
+      }
+    }
+  }
+
+  return { workspaces };
 }
 
 function normalizeRelativePath(rootDir: string, targetDir: string): string {

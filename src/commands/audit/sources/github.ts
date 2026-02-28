@@ -1,6 +1,9 @@
 import type { AuditOptions, AuditSeverity, CveAdvisory } from "../../../types/index.js";
 import { asyncPool } from "../../../utils/async-pool.js";
-import type { AuditSourceAdapter } from "./types.js";
+import type {
+  AuditSourceAdapter,
+  AuditSourceTargetResult,
+} from "./types.js";
 import type { AuditTarget } from "../targets.js";
 
 const GITHUB_ADVISORY_API = "https://api.github.com/advisories";
@@ -22,25 +25,65 @@ export const githubAuditSource: AuditSourceAdapter = {
   name: "github",
   async fetch(targets, options) {
     const tasks = targets.map(
-      (target): (() => Promise<CveAdvisory[]>) =>
+      (target): (() => Promise<AuditSourceTargetResult>) =>
         () => queryGitHub(target, options.registryTimeoutMs),
     );
 
-    const results = await asyncPool<CveAdvisory[]>(options.concurrency, tasks);
+    const results = await asyncPool<AuditSourceTargetResult>(
+      options.concurrency,
+      tasks,
+    );
     const advisories: CveAdvisory[] = [];
+    let successfulTargets = 0;
+    let failedTargets = 0;
+    const errorCounts = new Map<string, number>();
     for (const result of results) {
-      if (result instanceof Error) continue;
-      advisories.push(...result);
+      if (result instanceof Error) {
+        failedTargets += 1;
+        incrementCount(errorCounts, "internal-error");
+        continue;
+      }
+      advisories.push(...result.advisories);
+      if (result.ok) {
+        successfulTargets += 1;
+      } else {
+        failedTargets += 1;
+        incrementCount(errorCounts, result.error ?? "request-failed");
+      }
     }
 
-    return { advisories, warnings: [] };
+    const status =
+      failedTargets === 0
+        ? "ok"
+        : successfulTargets === 0
+          ? "failed"
+          : "partial";
+
+    return {
+      advisories,
+      warnings: createSourceWarnings(
+        "GitHub Advisory DB",
+        targets.length,
+        successfulTargets,
+        failedTargets,
+      ),
+      health: {
+        source: "github",
+        status,
+        attemptedTargets: targets.length,
+        successfulTargets,
+        failedTargets,
+        advisoriesFound: advisories.length,
+        message: formatDominantError(errorCounts),
+      },
+    };
   },
 };
 
 async function queryGitHub(
   target: AuditTarget,
   timeoutMs: number,
-): Promise<CveAdvisory[]> {
+): Promise<AuditSourceTargetResult> {
   const url = new URL(GITHUB_ADVISORY_API);
   url.searchParams.set("ecosystem", "npm");
   url.searchParams.set("affects", `${target.name}@${target.version}`);
@@ -58,11 +101,13 @@ async function queryGitHub(
       signal: controller.signal,
     });
     clearTimeout(timer);
-  } catch {
-    return [];
+  } catch (error) {
+    return { advisories: [], ok: false, error: classifyFetchError(error) };
   }
 
-  if (!response.ok) return [];
+  if (!response.ok) {
+    return { advisories: [], ok: false, error: `http-${response.status}` };
+  }
 
   const data = (await response.json()) as GitHubAdvisoryResponseItem[];
   const advisories: CveAdvisory[] = [];
@@ -86,7 +131,7 @@ async function queryGitHub(
     });
   }
 
-  return advisories;
+  return { advisories, ok: true };
 }
 
 function normalizeSeverity(value: string | undefined): AuditSeverity {
@@ -101,4 +146,35 @@ function normalizeSeverity(value: string | undefined): AuditSeverity {
   }
   if (normalized === "moderate") return "medium";
   return "medium";
+}
+
+function createSourceWarnings(
+  label: string,
+  attemptedTargets: number,
+  successfulTargets: number,
+  failedTargets: number,
+): string[] {
+  if (failedTargets === 0) return [];
+  if (successfulTargets === 0) {
+    return [
+      `${label} unavailable for all ${attemptedTargets} audit target${attemptedTargets === 1 ? "" : "s"}.`,
+    ];
+  }
+  return [
+    `${label} partially unavailable: ${failedTargets}/${attemptedTargets} audit target${attemptedTargets === 1 ? "" : "s"} failed.`,
+  ];
+}
+
+function classifyFetchError(error: unknown): string {
+  if (error instanceof Error && error.name === "AbortError") return "timeout";
+  return "network";
+}
+
+function incrementCount(map: Map<string, number>, key: string): void {
+  map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+function formatDominantError(errorCounts: Map<string, number>): string | undefined {
+  const sorted = [...errorCounts.entries()].sort((a, b) => b[1] - a[1]);
+  return sorted[0]?.[0];
 }

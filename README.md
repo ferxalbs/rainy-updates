@@ -104,6 +104,8 @@ npx @rainy-updates/cli audit --source osv
 npx @rainy-updates/cli audit --fix          # prints the patching npm install command
 rup audit --severity high                   # if installed
 
+`audit` prefers npm/pnpm lockfiles today for exact installed-version inference, and now also reads simple `bun.lock` workspace entries when available. It reports source-health warnings when OSV or GitHub returns only partial coverage.
+
 # 9) Check dependency maintenance health  ── NEW in v0.5.1
 npx @rainy-updates/cli health
 npx @rainy-updates/cli health --stale 6m   # flag packages with no release in 6 months

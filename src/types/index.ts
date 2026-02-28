@@ -192,6 +192,7 @@ export type AuditSeverity = "critical" | "high" | "medium" | "low";
 export type AuditReportFormat = "table" | "json" | "summary";
 export type AuditSourceMode = "auto" | "osv" | "github" | "all";
 export type AuditSourceName = "osv" | "github";
+export type AuditSourceStatusLevel = "ok" | "partial" | "failed";
 
 export interface AuditOptions {
   cwd: string;
@@ -229,6 +230,16 @@ export interface AuditPackageSummary {
   sources: readonly AuditSourceName[];
 }
 
+export interface AuditSourceStatus {
+  source: AuditSourceName;
+  status: AuditSourceStatusLevel;
+  attemptedTargets: number;
+  successfulTargets: number;
+  failedTargets: number;
+  advisoriesFound: number;
+  message?: string;
+}
+
 export interface AuditResult {
   advisories: CveAdvisory[];
   packages: AuditPackageSummary[];
@@ -236,6 +247,7 @@ export interface AuditResult {
   errors: string[];
   warnings: string[];
   sourcesUsed: AuditSourceName[];
+  sourceHealth: AuditSourceStatus[];
   resolution: {
     lockfile: number;
     manifest: number;

@@ -1,5 +1,6 @@
 import type {
   AuditPackageSummary,
+  AuditSourceStatus,
   CveAdvisory,
   AuditSeverity,
 } from "../../types/index.js";
@@ -177,6 +178,25 @@ export function renderAuditSummary(packages: AuditPackageSummary[]): string {
     const count = String(item.advisoryCount).padEnd(12);
     const patch = item.patchedVersion ? `→ ${item.patchedVersion}` : "no patch";
     lines.push(`${name}${current}${sev}${count}${patch}`);
+  }
+
+  return lines.join("\n");
+}
+
+export function renderAuditSourceHealth(
+  sourceHealth: AuditSourceStatus[],
+): string {
+  if (sourceHealth.length === 0) return "";
+
+  const lines = ["", "Sources:"];
+  for (const item of sourceHealth) {
+    const label =
+      item.source === "osv" ? "OSV.dev" : "GitHub Advisory DB";
+    const status = item.status.toUpperCase().padEnd(7);
+    const coverage = `${item.successfulTargets}/${item.attemptedTargets} targets`;
+    const advisories = `${item.advisoriesFound} advisories`;
+    const suffix = item.message ? ` (${item.message})` : "";
+    lines.push(`  ${label.padEnd(22)} ${status} ${coverage}, ${advisories}${suffix}`);
   }
 
   return lines.join("\n");
