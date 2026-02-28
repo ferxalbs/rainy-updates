@@ -115,6 +115,36 @@ async function main(): Promise<void> {
       return;
     }
 
+    // ─── v0.5.2 commands ─────────────────────────────────────────────────────
+    if (parsed.command === "unused") {
+      const { runUnused } = await import("../commands/unused/runner.js");
+      const result = await runUnused(parsed.options);
+      process.exitCode =
+        result.totalUnused > 0 || result.totalMissing > 0 ? 1 : 0;
+      return;
+    }
+
+    if (parsed.command === "resolve") {
+      const { runResolve } = await import("../commands/resolve/runner.js");
+      const result = await runResolve(parsed.options);
+      process.exitCode = result.errorConflicts > 0 ? 1 : 0;
+      return;
+    }
+
+    if (parsed.command === "licenses") {
+      const { runLicenses } = await import("../commands/licenses/runner.js");
+      const result = await runLicenses(parsed.options);
+      process.exitCode = result.totalViolations > 0 ? 1 : 0;
+      return;
+    }
+
+    if (parsed.command === "snapshot") {
+      const { runSnapshot } = await import("../commands/snapshot/runner.js");
+      const result = await runSnapshot(parsed.options);
+      process.exitCode = result.errors.length > 0 ? 1 : 0;
+      return;
+    }
+
     const result = await runCommand(parsed);
 
     if (
@@ -386,6 +416,10 @@ Commands:
   audit       Scan dependencies for CVEs (OSV.dev)
   health      Detect stale/deprecated/unmaintained packages
   bisect      Find which version of a dep introduced a failure
+  unused      Detect unused or missing npm dependencies
+  resolve     Check peer dependency conflicts (pure-TS, no subprocess)
+  licenses    Scan dependency licenses and generate SPDX SBOM
+  snapshot    Save, list, restore, and diff dependency state snapshots
 
 Global options:
   --cwd <path>

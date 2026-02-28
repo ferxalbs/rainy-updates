@@ -1,6 +1,73 @@
-# Changelog
+# CHANGELOG
 
 All notable changes to this project are documented in this file.
+
+## [0.5.2] - 2026-02-27
+
+### Added
+
+- **New `unused` command**: Detect unused and missing npm dependencies by statically scanning source files.
+  - Walks `src/` (configurable via `--src`) and extracts all import/require specifiers (ESM static, ESM dynamic, CJS, re-exports).
+  - Cross-references against `package.json` `dependencies`, `devDependencies`, and `optionalDependencies`.
+  - Reports two problem classes: `declared-not-imported` (unused bloat) and `imported-not-declared` (missing declarations).
+  - `--fix` — removes unused entries from `package.json` atomically (with `--dry-run` preview).
+  - `--no-dev` — skip `devDependencies` from the unused scan.
+  - `--json-file <path>` — write structured JSON report for CI pipelines.
+  - Exit code `1` when unused or missing dependencies are found.
+
+- **New `resolve` command**: Pure-TS in-memory peer dependency conflict detector — **no `npm install` subprocess spawned**.
+  - Builds a `PeerGraph` from declared dependencies, enriched with `peerDependencies` fetched in parallel from the registry (cache-first — instant on warm cache, offline-capable).
+  - Performs a single-pass O(n × peers) BFS traversal using the new `satisfies()` semver util.
+  - Classifies conflicts as `error` (ERESOLVE-level, different major) or `warning` (soft peer incompatibility).
+  - Generates human-readable fix suggestions per conflict.
+  - `--after-update` — simulates proposed `rup check` updates in-memory _before_ writing anything, showing you peer conflicts before they happen.
+  - `--safe` — exits non-zero on any error-level conflict.
+  - `--json-file <path>` — write structured JSON conflict report.
+  - Exit code `1` when error-level conflicts are detected.
+
+- **New `licenses` command**: SPDX license compliance scanning with SBOM generation.
+  - Fetches the `license` field from each dependency's npm packument in parallel.
+  - Normalizes raw license strings to SPDX 2.x identifiers.
+  - `--allow <spdx,...>` — allowlist mode: flag any package not in the list.
+  - `--deny <spdx,...>` — denylist mode: flag any package matching these identifiers.
+  - `--sbom <path>` — generate a standards-compliant **SPDX 2.3 JSON SBOM** document (`DESCRIBES` + `DEPENDS_ON` relationship graph, required by CISA/EU CRA mandates).
+  - `--json-file <path>` — write full license report as JSON.
+  - Exit code `1` when license violations are detected.
+
+- **New `snapshot` command**: Save, list, restore, and diff dependency state snapshots.
+  - `rup snapshot save [--label <name>]` — captures `package.json` contents and lockfile hashes for all workspace packages into a lightweight JSON store (`.rup-snapshots.json`).
+  - `rup snapshot list` — shows all saved snapshots with timestamp and label.
+  - `rup snapshot restore <id|label>` — writes back captured `package.json` files atomically; prompts to re-run the package manager install.
+  - `rup snapshot diff <id|label>` — shows dependency version changes since the snapshot.
+  - JSON-file store (no SQLite dependency), human-readable and git-committable.
+  - `--store <path>` — custom store file location.
+
+- **Impact Score engine** (`src/core/impact.ts`): Per-update risk assessment.
+  - Computes a 0–100 composite score: `diffTypeWeight` (patch=10, minor=25, major=55) + CVE presence bonus (+35) + workspace spread (up to +20).
+  - Ranks each update as `critical`, `high`, `medium`, or `low`.
+  - `applyImpactScores()` batch helper for the check/upgrade pipeline.
+  - ANSI `impactBadge()` for terminal table rendering (wired to `--show-impact` flag, coming in a follow-up).
+
+- **`satisfies(version, range)` utility** (`src/utils/semver.ts`): Pure-TS semver range checker.
+  - Handles `^`, `~`, `>=`, `<=`, `>`, `<`, exact, `*`/empty (always true).
+  - Supports compound AND ranges (`>=1.0.0 <2.0.0`) and OR union ranges (`^16 || ^18`).
+  - Falls through gracefully on non-semver inputs (e.g., `workspace:*`, `latest`) — no false-positive conflicts.
+  - Used by `rup resolve` peer graph resolver.
+
+### Architecture
+
+- `unused`, `resolve`, `licenses`, and `snapshot` are fully isolated modules under `src/commands/`. All are lazy-loaded (dynamic `import()`) on first invocation — zero startup cost penalty.
+- `src/core/options.ts` dispatches all 4 new commands to their isolated sub-parsers. `KNOWN_COMMANDS` now contains **13 entries**.
+- `ParsedCliArgs` union extended with 4 new command variants.
+- `src/types/index.ts` extended with: `ImpactScore`, `PeerNode`, `PeerGraph`, `PeerConflict`, `PeerConflictSeverity`, `UnusedKind`, `UnusedDependency`, `UnusedOptions`, `UnusedResult`, `PackageLicense`, `SbomDocument`, `SbomPackage`, `SbomRelationship`, `LicenseOptions`, `LicenseResult`, `SnapshotEntry`, `SnapshotAction`, `SnapshotOptions`, `SnapshotResult`, `ResolveOptions`, `ResolveResult`.
+- `PackageUpdate` extended with optional `impactScore?: ImpactScore` and `homepage?: string` fields.
+
+### Changed
+
+- CLI global help updated to list all **13 commands** including `unused`, `resolve`, `licenses`, and `snapshot`.
+- `src/bin/cli.ts` exit codes: `unused` exits `1` on any unused/missing dep; `resolve` exits `1` on error-level peer conflicts; `licenses` exits `1` on violations; `snapshot` exits `1` on store errors.
+
+---
 
 ## [0.5.1] - 2026-02-27
 

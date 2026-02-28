@@ -81,6 +81,16 @@ export interface PackageDependency {
   kind: DependencyKind;
 }
 
+export interface ImpactScore {
+  rank: "critical" | "high" | "medium" | "low";
+  score: number; // 0–100 composite
+  factors: {
+    diffTypeWeight: number; // patch=1, minor=2, major=4
+    hasAdvisory: boolean;
+    affectedWorkspaceCount: number;
+  };
+}
+
 export interface PackageUpdate {
   packagePath: string;
   name: string;
@@ -92,6 +102,8 @@ export interface PackageUpdate {
   filtered: boolean;
   autofix: boolean;
   reason?: string;
+  impactScore?: ImpactScore;
+  homepage?: string;
 }
 
 export interface Summary {
@@ -257,6 +269,170 @@ export interface PackageHealthMetric {
 export interface HealthResult {
   metrics: PackageHealthMetric[];
   totalFlagged: number;
+  errors: string[];
+  warnings: string[];
+}
+
+// ─── v0.5.2 command types ────────────────────────────────────────────────────
+
+// resolve ─────────────────────────────────────────────────────────────────────
+
+export interface PeerNode {
+  name: string;
+  resolvedVersion: string;
+  peerRequirements: Map<string, string>;
+}
+
+export interface PeerGraph {
+  nodes: Map<string, PeerNode>;
+  roots: string[];
+}
+
+export type PeerConflictSeverity = "error" | "warning";
+
+export interface PeerConflict {
+  requester: string;
+  peer: string;
+  requiredRange: string;
+  resolvedVersion: string;
+  severity: PeerConflictSeverity;
+  suggestion: string;
+}
+
+export interface ResolveOptions {
+  cwd: string;
+  workspace: boolean;
+  afterUpdate: boolean; // simulate pending check updates before applying
+  safe: boolean;
+  jsonFile?: string;
+  concurrency: number;
+  registryTimeoutMs: number;
+  cacheTtlSeconds: number;
+}
+
+export interface ResolveResult {
+  conflicts: PeerConflict[];
+  errorConflicts: number;
+  warningConflicts: number;
+  errors: string[];
+  warnings: string[];
+}
+
+// unused ──────────────────────────────────────────────────────────────────────
+
+export type UnusedKind = "declared-not-imported" | "imported-not-declared";
+
+export interface UnusedDependency {
+  name: string;
+  kind: UnusedKind;
+  declaredIn?: string; // package.json field name
+  importedFrom?: string; // relative source file
+}
+
+export interface UnusedOptions {
+  cwd: string;
+  workspace: boolean;
+  srcDirs: string[]; // defaults: ['src', '.']
+  includeDevDependencies: boolean;
+  fix: boolean;
+  dryRun: boolean;
+  jsonFile?: string;
+  concurrency: number;
+}
+
+export interface UnusedResult {
+  unused: UnusedDependency[];
+  missing: UnusedDependency[];
+  totalUnused: number;
+  totalMissing: number;
+  errors: string[];
+  warnings: string[];
+}
+
+// licenses ────────────────────────────────────────────────────────────────────
+
+export interface PackageLicense {
+  name: string;
+  version: string;
+  license: string;
+  spdxExpression: string | null;
+  homepage?: string;
+  repository?: string;
+}
+
+export interface SbomDocument {
+  spdxVersion: "SPDX-2.3";
+  dataLicense: "CC0-1.0";
+  name: string;
+  documentNamespace: string;
+  packages: SbomPackage[];
+  relationships: SbomRelationship[];
+}
+
+export interface SbomPackage {
+  SPDXID: string;
+  name: string;
+  versionInfo: string;
+  downloadLocation: string;
+  licenseConcluded: string;
+  licenseDeclared: string;
+  copyrightText: string;
+}
+
+export interface SbomRelationship {
+  spdxElementId: string;
+  relationshipType: "DESCRIBES" | "DEPENDS_ON";
+  relatedSpdxElement: string;
+}
+
+export interface LicenseOptions {
+  cwd: string;
+  workspace: boolean;
+  allow?: string[];
+  deny?: string[];
+  sbomFile?: string;
+  jsonFile?: string;
+  diffMode: boolean;
+  concurrency: number;
+  registryTimeoutMs: number;
+  cacheTtlSeconds: number;
+}
+
+export interface LicenseResult {
+  packages: PackageLicense[];
+  violations: PackageLicense[];
+  totalViolations: number;
+  errors: string[];
+  warnings: string[];
+}
+
+// snapshot ────────────────────────────────────────────────────────────────────
+
+export interface SnapshotEntry {
+  id: string;
+  label: string;
+  createdAt: number; // unix timestamp ms
+  manifests: Record<string, string>; // packagePath → JSON string of package.json
+  lockfileHashes: Record<string, string>; // packagePath → sha256 of lockfile
+}
+
+export type SnapshotAction = "save" | "list" | "restore" | "diff";
+
+export interface SnapshotOptions {
+  cwd: string;
+  workspace: boolean;
+  action: SnapshotAction;
+  label?: string;
+  snapshotId?: string;
+  storeFile?: string;
+}
+
+export interface SnapshotResult {
+  action: SnapshotAction;
+  snapshotId?: string;
+  label?: string;
+  entries?: Array<{ id: string; label: string; createdAt: string }>;
+  diff?: Array<{ name: string; from: string; to: string }>;
   errors: string[];
   warnings: string[];
 }

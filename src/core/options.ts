@@ -16,6 +16,10 @@ import type {
   AuditOptions,
   BisectOptions,
   HealthOptions,
+  UnusedOptions,
+  ResolveOptions,
+  LicenseOptions,
+  SnapshotOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -35,6 +39,10 @@ const KNOWN_COMMANDS = [
   "bisect",
   "audit",
   "health",
+  "unused",
+  "resolve",
+  "licenses",
+  "snapshot",
 ] as const;
 
 export type ParsedCliArgs =
@@ -57,7 +65,11 @@ export type ParsedCliArgs =
     }
   | { command: "bisect"; options: BisectOptions }
   | { command: "audit"; options: AuditOptions }
-  | { command: "health"; options: HealthOptions };
+  | { command: "health"; options: HealthOptions }
+  | { command: "unused"; options: UnusedOptions }
+  | { command: "resolve"; options: ResolveOptions }
+  | { command: "licenses"; options: LicenseOptions }
+  | { command: "snapshot"; options: SnapshotOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -85,6 +97,24 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   if (command === "health") {
     const { parseHealthArgs } = await import("../commands/health/parser.js");
     return { command, options: parseHealthArgs(args) };
+  }
+  if (command === "unused") {
+    const { parseUnusedArgs } = await import("../commands/unused/parser.js");
+    return { command, options: parseUnusedArgs(args) };
+  }
+  if (command === "resolve") {
+    const { parseResolveArgs } = await import("../commands/resolve/parser.js");
+    return { command, options: parseResolveArgs(args) };
+  }
+  if (command === "licenses") {
+    const { parseLicensesArgs } =
+      await import("../commands/licenses/parser.js");
+    return { command, options: parseLicensesArgs(args) };
+  }
+  if (command === "snapshot") {
+    const { parseSnapshotArgs } =
+      await import("../commands/snapshot/parser.js");
+    return { command, options: parseSnapshotArgs(args) };
   }
 
   const base: CheckOptions = {
