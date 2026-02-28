@@ -208,6 +208,7 @@ export interface AuditOptions {
 export interface CveAdvisory {
   cveId: string;
   packageName: string;
+  currentVersion: string | null;
   severity: AuditSeverity;
   vulnerableRange: string;
   patchedVersion: string | null;

@@ -21,15 +21,29 @@ interface OsvResponse {
   }>;
 }
 
+interface AuditTarget {
+  name: string;
+  version: string;
+}
+
+export function extractAuditVersion(range: string): string | null {
+  const trimmed = range.trim();
+  const match = trimmed.match(
+    /^(?:\^|~|>=|<=|>|<|=)?\s*(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/,
+  );
+  return match?.[1] ?? null;
+}
+
 /**
- * Queries OSV.dev for advisories for a single npm package.
+ * Queries OSV.dev for advisories for a single npm package/version pair.
  */
 async function queryOsv(
-  packageName: string,
+  target: AuditTarget,
   timeoutMs: number,
 ): Promise<CveAdvisory[]> {
   const body = JSON.stringify({
-    package: { name: packageName, ecosystem: "npm" },
+    package: { name: target.name, ecosystem: "npm" },
+    version: target.version,
   });
 
   let response: Response;
@@ -67,7 +81,7 @@ async function queryOsv(
     let vulnerableRange = "*";
 
     for (const affected of vuln.affected ?? []) {
-      if (affected.package?.name !== packageName) continue;
+      if (affected.package?.name !== target.name) continue;
       for (const range of affected.ranges ?? []) {
         const fixedEvent = range.events?.find((e) => e.fixed);
         if (fixedEvent?.fixed) {
@@ -82,7 +96,8 @@ async function queryOsv(
 
     advisories.push({
       cveId,
-      packageName,
+      packageName: target.name,
+      currentVersion: target.version,
       severity,
       vulnerableRange,
       patchedVersion,
@@ -100,13 +115,13 @@ async function queryOsv(
  * Uses OSV.dev as primary source.
  */
 export async function fetchAdvisories(
-  packageNames: string[],
+  targets: AuditTarget[],
   options: Pick<AuditOptions, "concurrency" | "registryTimeoutMs">,
 ): Promise<CveAdvisory[]> {
-  const tasks = packageNames.map(
-    (name): (() => Promise<CveAdvisory[]>) =>
+  const tasks = targets.map(
+    (target): (() => Promise<CveAdvisory[]>) =>
       () =>
-        queryOsv(name, options.registryTimeoutMs),
+        queryOsv(target, options.registryTimeoutMs),
   );
   const results = await asyncPool<CveAdvisory[]>(options.concurrency, tasks);
   const advisories: CveAdvisory[] = [];

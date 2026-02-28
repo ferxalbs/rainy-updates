@@ -13,7 +13,7 @@ import type {
   AuditResult,
   CveAdvisory,
 } from "../../types/index.js";
-import { fetchAdvisories } from "./fetcher.js";
+import { extractAuditVersion, fetchAdvisories } from "./fetcher.js";
 import { filterBySeverity, buildPatchMap, renderAuditTable } from "./mapper.js";
 
 /**
@@ -31,8 +31,9 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
 
   const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
 
-  // Collect all unique package names
-  const packageNames = new Set<string>();
+  // Collect all unique package/version targets that can be audited safely.
+  const auditTargets = new Map<string, { name: string; version: string }>();
+  let skippedRanges = 0;
   for (const dir of packageDirs) {
     let manifest;
     try {
@@ -49,19 +50,30 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
       "optionalDependencies",
     ]);
     for (const dep of deps) {
-      packageNames.add(dep.name);
+      const version = extractAuditVersion(dep.range);
+      if (!version) {
+        skippedRanges += 1;
+        continue;
+      }
+      auditTargets.set(`${dep.name}@${version}`, { name: dep.name, version });
     }
   }
 
-  if (packageNames.size === 0) {
+  if (skippedRanges > 0) {
+    result.warnings.push(
+      `Skipped ${skippedRanges} dependency range${skippedRanges === 1 ? "" : "s"} that could not be mapped to a concrete version.`,
+    );
+  }
+
+  if (auditTargets.size === 0) {
     result.warnings.push("No dependencies found to audit.");
     return result;
   }
 
   process.stderr.write(
-    `[audit] Querying OSV.dev for ${packageNames.size} packages...\n`,
+    `[audit] Querying OSV.dev for ${auditTargets.size} dependency version${auditTargets.size === 1 ? "" : "s"}...\n`,
   );
-  let advisories = await fetchAdvisories([...packageNames], {
+  let advisories = await fetchAdvisories([...auditTargets.values()], {
     concurrency: options.concurrency,
     registryTimeoutMs: options.registryTimeoutMs,
   });
@@ -174,6 +186,7 @@ async function commitFix(
         "package-lock.json",
         "pnpm-lock.yaml",
         "yarn.lock",
+        "bun.lock",
         "bun.lockb",
       ],
       cwd,
@@ -208,6 +221,7 @@ async function detectPackageManager(
   if (explicit !== "auto") return explicit;
 
   const checks: Array<[string, string]> = [
+    ["bun.lock", "bun"],
     ["bun.lockb", "bun"],
     ["pnpm-lock.yaml", "pnpm"],
     ["yarn.lock", "yarn"],

@@ -1,4 +1,5 @@
 import type { CveAdvisory, AuditSeverity } from "../../types/index.js";
+import { compareVersions, parseVersion, satisfies } from "../../utils/semver.js";
 
 const SEVERITY_RANK: Record<AuditSeverity, number> = {
   critical: 4,
@@ -31,13 +32,28 @@ export function filterBySeverity(
  */
 export function buildPatchMap(advisories: CveAdvisory[]): Map<string, string> {
   const patchMap = new Map<string, string>();
+  const byPackage = new Map<string, CveAdvisory[]>();
 
   for (const advisory of advisories) {
-    if (!advisory.patchedVersion) continue;
-    const existing = patchMap.get(advisory.packageName);
-    if (!existing || semverGt(advisory.patchedVersion, existing)) {
-      patchMap.set(advisory.packageName, advisory.patchedVersion);
-    }
+    const items = byPackage.get(advisory.packageName) ?? [];
+    items.push(advisory);
+    byPackage.set(advisory.packageName, items);
+  }
+
+  for (const [packageName, items] of byPackage) {
+    const candidates = [...new Set(items.flatMap((item) => item.patchedVersion ? [item.patchedVersion] : []))].sort(
+      compareSemverAsc,
+    );
+    if (candidates.length === 0) continue;
+
+    const safeCandidate = candidates.find((candidate) =>
+      items.every((item) => !satisfies(candidate, item.vulnerableRange)),
+    );
+
+    patchMap.set(
+      packageName,
+      safeCandidate ?? candidates[candidates.length - 1]!,
+    );
   }
 
   return patchMap;
@@ -57,6 +73,14 @@ function parseSemver(v: string): [number, number, number] | null {
   const m = v.replace(/^[~^>=<]/, "").match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!m) return null;
   return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+function compareSemverAsc(a: string, b: string): number {
+  const pa = parseVersion(a);
+  const pb = parseVersion(b);
+  if (pa && pb) return compareVersions(pa, pb);
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
 }
 
 /**
@@ -80,16 +104,21 @@ export function renderAuditTable(advisories: CveAdvisory[]): string {
 
   const lines: string[] = [
     `Found ${advisories.length} ${advisories.length === 1 ? "vulnerability" : "vulnerabilities"}:\n`,
-    "Package".padEnd(30) + "Severity".padEnd(20) + "CVE".padEnd(22) + "Patch",
-    "─".repeat(90),
+    "Package".padEnd(24) +
+      "Current".padEnd(14) +
+      "Severity".padEnd(20) +
+      "CVE".padEnd(22) +
+      "Patch",
+    "─".repeat(104),
   ];
 
   for (const adv of sorted) {
-    const name = adv.packageName.slice(0, 28).padEnd(30);
+    const name = adv.packageName.slice(0, 22).padEnd(24);
+    const current = (adv.currentVersion ?? "?").slice(0, 12).padEnd(14);
     const sev = SEVERITY_ICON[adv.severity].padEnd(20);
     const cve = adv.cveId.slice(0, 20).padEnd(22);
     const patch = adv.patchedVersion ? `→ ${adv.patchedVersion}` : "no patch";
-    lines.push(`${name}${sev}${cve}${patch}`);
+    lines.push(`${name}${current}${sev}${cve}${patch}`);
   }
 
   return lines.join("\n");
