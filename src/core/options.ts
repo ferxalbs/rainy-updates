@@ -71,6 +71,22 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const hasExplicitCommand = isKnownCommand;
   const args = hasExplicitCommand ? argv.slice(1) : argv.slice(0);
 
+  // ─── Early dispatch for isolated commands ─────────────────────────────────
+  // These commands have their own parsers and must NOT go through the base
+  // CheckOptions builder below, which would throw on their unique flags.
+  if (command === "bisect") {
+    const { parseBisectArgs } = await import("../commands/bisect/parser.js");
+    return { command, options: parseBisectArgs(args) };
+  }
+  if (command === "audit") {
+    const { parseAuditArgs } = await import("../commands/audit/parser.js");
+    return { command, options: parseAuditArgs(args) };
+  }
+  if (command === "health") {
+    const { parseHealthArgs } = await import("../commands/health/parser.js");
+    return { command, options: parseHealthArgs(args) };
+  }
+
   const base: CheckOptions = {
     cwd: process.cwd(),
     target: "latest",
@@ -583,22 +599,6 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
         ci: base.ci,
       },
     };
-  }
-
-  // ─── New v0.5.1 commands: lazy-parsed by isolated sub-parsers ────────────
-  if (command === "bisect") {
-    const { parseBisectArgs } = await import("../commands/bisect/parser.js");
-    return { command, options: parseBisectArgs(args) };
-  }
-
-  if (command === "audit") {
-    const { parseAuditArgs } = await import("../commands/audit/parser.js");
-    return { command, options: parseAuditArgs(args) };
-  }
-
-  if (command === "health") {
-    const { parseHealthArgs } = await import("../commands/health/parser.js");
-    return { command, options: parseHealthArgs(args) };
   }
 
   return {

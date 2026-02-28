@@ -59,7 +59,7 @@ export function renderAuditTable(advisories: CveAdvisory[]): string {
   );
 
   const lines: string[] = [
-    `Found ${advisories.length} vulnerability${advisories.length === 1 ? "" : "ies"}:\n`,
+    `Found ${advisories.length} ${advisories.length === 1 ? "vulnerability" : "vulnerabilities"}:\n`,
     "Package".padEnd(30) + "Severity".padEnd(20) + "CVE".padEnd(22) + "Patch",
     "─".repeat(90),
   ];

@@ -1,8 +1,8 @@
 # @rainy-updates/cli
 
-Agentic CLI to detect, control, and apply dependency updates across npm/pnpm projects and monorepos.
+The fastest DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and automates npm/pnpm dependencies in CI.
 
-`@rainy-updates/cli` is built for teams that need fast dependency intelligence, policy-aware upgrades, and automation-ready output for CI/CD and pull request workflows.
+`@rainy-updates/cli` is built for teams that need fast dependency intelligence, security auditing, policy-aware upgrades, and automation-ready output for CI/CD and pull request workflows.
 
 ## Why this package
 
@@ -15,47 +15,104 @@ Agentic CLI to detect, control, and apply dependency updates across npm/pnpm pro
 ## Install
 
 ```bash
-npm i -D @rainy-updates/cli
+# As a project dev dependency (recommended for teams)
+npm install --save-dev @rainy-updates/cli
 # or
 pnpm add -D @rainy-updates/cli
 ```
 
-## Core commands
+Once installed, three binary aliases are available in your `node_modules/.bin/`:
 
-- `check`: analyze dependencies and report available updates.
-- `upgrade`: rewrite dependency ranges in manifests, optionally install lockfile updates.
-- `ci`: run CI-focused dependency automation (warm cache, check/upgrade, policy gates).
-- `warm-cache`: prefetch package metadata for fast and offline checks.
-- `baseline`: save and compare dependency baseline snapshots.
+| Alias           | Use case                                    |
+| --------------- | ------------------------------------------- |
+| `rup`           | Power-user shortcut — `rup ci`, `rup audit` |
+| `rainy-up`      | Human-friendly — `rainy-up check`           |
+| `rainy-updates` | Backwards-compatible (safe in CI scripts)   |
+
+```bash
+# All three are identical — use whichever you prefer:
+rup check
+rainy-up check
+rainy-updates check
+```
+
+### One-off usage with npx (no install required)
+
+```bash
+# Always works without installing:
+npx @rainy-updates/cli check
+npx @rainy-updates/cli audit --severity high
+npx @rainy-updates/cli ci --workspace --mode strict
+```
+
+> **Note:** The short aliases (`rup`, `rainy-up`) only work after installing the package. For one-off `npx` runs, use `npx @rainy-updates/cli <command>`.
+
+## Commands
+
+### Dependency management
+
+- `check` — analyze dependencies and report available updates
+- `upgrade` — rewrite dependency ranges in manifests, optionally install lockfile updates
+- `ci` — run CI-focused dependency automation (warm cache, check/upgrade, policy gates)
+- `warm-cache` — prefetch package metadata for fast and offline checks
+- `baseline` — save and compare dependency baseline snapshots
+
+### Security & health (_new in v0.5.1_)
+
+- `audit` — scan dependencies for CVEs using [OSV.dev](https://osv.dev) (Google's open vulnerability database)
+- `health` — detect stale, deprecated, and unmaintained packages before they become liabilities
+- `bisect` — binary-search across semver versions to find the exact version that broke your tests
 
 ## Quick usage
+
+> Commands work with `npx` (no install) **or** with the `rup` / `rainy-up` shortcut if the package is installed.
 
 ```bash
 # 1) Detect updates
 npx @rainy-updates/cli check --format table
+rup check --format table                      # if installed
 
 # 2) Strict CI mode (non-zero when updates exist)
 npx @rainy-updates/cli check --workspace --ci --format json --json-file .artifacts/updates.json
+rup check --workspace --ci --format json --json-file .artifacts/updates.json
 
-# 2b) CI orchestration mode
-npx @rainy-updates/cli ci --workspace --mode strict --format github --json-file .artifacts/updates.json
+# 3) CI orchestration with policy gates
+npx @rainy-updates/cli ci --workspace --mode strict --format github
+rup ci --workspace --mode strict --format github
 
-# 2c) Batch fix branches by scope
+# 4) Batch fix branches by scope (enterprise)
 npx @rainy-updates/cli ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
+rup ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
 
-# 3) Apply upgrades with workspace sync
+# 5) Apply upgrades with workspace sync
 npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
+rup upgrade --target latest --workspace --sync --install
 
-# 3b) Generate a fix branch + commit for CI automation
-npx @rainy-updates/cli check --workspace --fix-pr --fix-branch chore/rainy-updates
-
-# 4) Warm cache for deterministic offline checks
+# 6) Warm cache → deterministic offline CI check
 npx @rainy-updates/cli warm-cache --workspace --concurrency 32
 npx @rainy-updates/cli check --workspace --offline --ci
 
-# 5) Save and compare baseline drift in CI
+# 7) Save and compare baseline drift
 npx @rainy-updates/cli baseline --save --file .artifacts/deps-baseline.json --workspace
 npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --workspace --ci
+
+# 8) Scan for known CVEs  ── NEW in v0.5.1
+npx @rainy-updates/cli audit
+npx @rainy-updates/cli audit --severity high
+npx @rainy-updates/cli audit --fix          # prints the patching npm install command
+rup audit --severity high                   # if installed
+
+# 9) Check dependency maintenance health  ── NEW in v0.5.1
+npx @rainy-updates/cli health
+npx @rainy-updates/cli health --stale 6m   # flag packages with no release in 6 months
+npx @rainy-updates/cli health --stale 180d # same but in days
+rup health --stale 6m                       # if installed
+
+# 10) Find which version introduced a breaking change  ── NEW in v0.5.1
+npx @rainy-updates/cli bisect axios --cmd "bun test"
+npx @rainy-updates/cli bisect react --range "18.0.0..19.0.0" --cmd "npm test"
+npx @rainy-updates/cli bisect lodash --cmd "npm run test:unit" --dry-run
+rup bisect axios --cmd "bun test"           # if installed
 ```
 
 ## What it does in production
@@ -119,17 +176,16 @@ npx @rainy-updates/cli check --policy-file .rainyupdates-policy.json
 
 These outputs are designed for CI pipelines, security tooling, and PR review automation.
 
-
 ## Automatic CI bootstrap
 
 Generate a workflow in the target project automatically:
 
 ```bash
-# strict mode (recommended)
-npx @rainy-updates/cli init-ci --mode enterprise --schedule weekly
+# enterprise mode (recommended)
+rup init-ci --mode enterprise --schedule weekly
 
 # lightweight mode
-npx @rainy-updates/cli init-ci --mode minimal --schedule daily
+rup init-ci --mode minimal --schedule daily
 ```
 
 Generated file:
@@ -208,9 +264,13 @@ Configuration can be loaded from:
 ## CLI help
 
 ```bash
+rup --help
+rup <command> --help
+rup --version
+
+# or with the full name:
 rainy-updates --help
-rainy-updates <command> --help
-rainy-updates --version
+npx @rainy-updates/cli --help
 ```
 
 ## Reliability characteristics
@@ -229,7 +289,6 @@ This package ships with production CI/CD pipelines in the repository:
 - Performance smoke gate (`perf:smoke`) to catch startup/runtime regressions in CI.
 - Tag-driven release pipeline for npm publishing with provenance.
 - Release preflight validation for npm auth/scope checks before publishing.
-
 
 ## Product roadmap
 
