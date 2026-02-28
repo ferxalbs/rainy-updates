@@ -173,3 +173,90 @@ export interface CachedVersion {
 export interface VersionResolver {
   resolveLatestVersion(packageName: string): Promise<string | null>;
 }
+
+// ─── New v0.5.1 command types ──────────────────────────────────────────────
+
+export type AuditSeverity = "critical" | "high" | "medium" | "low";
+export type AuditReportFormat = "table" | "json";
+
+export interface AuditOptions {
+  cwd: string;
+  workspace: boolean;
+  severity?: AuditSeverity;
+  fix: boolean;
+  dryRun: boolean;
+  reportFormat: AuditReportFormat;
+  jsonFile?: string;
+  concurrency: number;
+  registryTimeoutMs: number;
+}
+
+export interface CveAdvisory {
+  cveId: string;
+  packageName: string;
+  severity: AuditSeverity;
+  vulnerableRange: string;
+  patchedVersion: string | null;
+  title: string;
+  url: string;
+}
+
+export interface AuditResult {
+  advisories: CveAdvisory[];
+  autoFixable: number;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface BisectOptions {
+  cwd: string;
+  packageName: string;
+  versionRange?: string; // e.g. "1.0.0..2.5.3", defaults to all available
+  testCommand: string; // --cmd value
+  concurrency: number;
+  registryTimeoutMs: number;
+  cacheTtlSeconds: number;
+  dryRun: boolean;
+}
+
+export type BisectOutcome = "good" | "bad" | "skip";
+
+export interface BisectResult {
+  packageName: string;
+  breakingVersion: string | null;
+  lastGoodVersion: string | null;
+  totalVersionsTested: number;
+  iterations: number;
+}
+
+export type HealthFlag = "stale" | "deprecated" | "archived" | "unmaintained";
+
+export interface HealthOptions {
+  cwd: string;
+  workspace: boolean;
+  staleDays: number; // default: 365
+  includeDeprecated: boolean;
+  includeAlternatives: boolean;
+  reportFormat: "table" | "json";
+  jsonFile?: string;
+  concurrency: number;
+  registryTimeoutMs: number;
+}
+
+export interface PackageHealthMetric {
+  name: string;
+  currentVersion: string;
+  lastPublished: string | null;
+  isDeprecated: boolean;
+  deprecatedMessage?: string;
+  isArchived: boolean;
+  daysSinceLastRelease: number | null;
+  flags: HealthFlag[];
+}
+
+export interface HealthResult {
+  metrics: PackageHealthMetric[];
+  totalFlagged: number;
+  errors: string[];
+  warnings: string[];
+}

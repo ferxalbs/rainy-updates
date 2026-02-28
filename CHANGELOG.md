@@ -2,6 +2,48 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.1] - 2026-02-27
+
+### Added
+
+- **New `audit` command**: Scan dependencies for known CVEs using [OSV.dev](https://osv.dev) (Google's open vulnerability database). Runs queries in parallel for all installed packages.
+  - `--severity critical|high|medium|low` — Filter by minimum severity level
+  - `--fix` — Print the minimum-secure-version `npm install` command to patch advisories
+  - `--dry-run` — Preview without side effects
+  - `--report json` — Machine-readable JSON output
+  - `--json-file <path>` — Write JSON report to file for CI pipelines
+  - Exit code `1` when vulnerabilities are found; `0` when clean.
+
+- **New `health` command**: Surface stale, deprecated, and unmaintained packages before they become liabilities.
+  - `--stale 12m|180d|365` — Flag packages with no release in the given period (supports months and days)
+  - `--deprecated` / `--no-deprecated` — Control deprecated package detection
+  - `--alternatives` — Suggest active alternatives for deprecated packages
+  - `--report json` — Machine-readable JSON output
+  - Exit code `1` when flagged packages are found.
+
+- **New `bisect` command**: Binary search across semver versions to find the exact version that introduced a failing test or breaking change.
+  - `rup bisect <package> --cmd "<test command>"` — Specify test oracle command
+  - `--range <start>..<end>` — Narrow the search to a specific version range
+  - `--dry-run` — Simulate without installing anything
+  - Exit code `1` when a breaking version is identified.
+
+- **New CLI binary aliases for developer ergonomics**:
+  - `rup` — Ultra-short power-user alias (e.g., `rup ci`, `rup audit`)
+  - `rainy-up` — Human-friendly alias (e.g., `rainy-up check`)
+  - `rainy-updates` retained for backwards compatibility with CI scripts.
+
+### Architecture
+
+- `bisect`, `audit`, and `health` are fully isolated modules under `src/commands/`. They are lazy-loaded (dynamic `import()`) only when their command is invoked — zero startup cost penalty.
+- `src/core/options.ts` now dispatches `bisect`, `audit`, and `health` to their isolated sub-parsers, keeping the command router clean and extensible.
+- New type definitions: `AuditOptions`, `AuditResult`, `CveAdvisory`, `BisectOptions`, `BisectResult`, `HealthOptions`, `HealthResult`, `PackageHealthMetric`.
+
+### Changed
+
+- CLI global help updated to list all 9 commands.
+- Error messages now include `(rup)` in the binary identifier.
+- `package.json` description updated to reflect DevOps-first positioning.
+
 ## [0.5.1-rc.4] - 2026-02-27
 
 ### Added
@@ -216,7 +258,6 @@ All notable changes to this project are documented in this file.
   - `--mode minimal|strict`
   - `--schedule weekly|daily|off`
   - package-manager-aware install step generation (npm/pnpm)
-
 
 ## [0.4.0] - 2026-02-27
 

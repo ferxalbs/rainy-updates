@@ -13,6 +13,9 @@ import type {
   TargetLevel,
   UpgradeOptions,
   LogLevel,
+  AuditOptions,
+  BisectOptions,
+  HealthOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -22,19 +25,45 @@ const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
   "optionalDependencies",
   "peerDependencies",
 ];
-const KNOWN_COMMANDS = ["check", "upgrade", "warm-cache", "init-ci", "baseline", "ci"] as const;
+const KNOWN_COMMANDS = [
+  "check",
+  "upgrade",
+  "warm-cache",
+  "init-ci",
+  "baseline",
+  "ci",
+  "bisect",
+  "audit",
+  "health",
+] as const;
 
 export type ParsedCliArgs =
   | { command: "check"; options: CheckOptions }
   | { command: "upgrade"; options: UpgradeOptions }
   | { command: "warm-cache"; options: CheckOptions }
   | { command: "ci"; options: CheckOptions }
-  | { command: "init-ci"; options: { cwd: string; force: boolean; mode: InitCiMode; schedule: InitCiSchedule } }
-  | { command: "baseline"; options: BaselineOptions & { action: "save" | "check" } };
+  | {
+      command: "init-ci";
+      options: {
+        cwd: string;
+        force: boolean;
+        mode: InitCiMode;
+        schedule: InitCiSchedule;
+      };
+    }
+  | {
+      command: "baseline";
+      options: BaselineOptions & { action: "save" | "check" };
+    }
+  | { command: "bisect"; options: BisectOptions }
+  | { command: "audit"; options: AuditOptions }
+  | { command: "health"; options: HealthOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
-  const isKnownCommand = KNOWN_COMMANDS.includes(firstArg as (typeof KNOWN_COMMANDS)[number]);
+  const isKnownCommand = KNOWN_COMMANDS.includes(
+    firstArg as (typeof KNOWN_COMMANDS)[number],
+  );
   if (firstArg && !firstArg.startsWith("-") && !isKnownCommand) {
     throw new Error(`Unknown command: ${firstArg}`);
   }
@@ -556,35 +585,69 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     };
   }
 
+  // ─── New v0.5.1 commands: lazy-parsed by isolated sub-parsers ────────────
+  if (command === "bisect") {
+    const { parseBisectArgs } = await import("../commands/bisect/parser.js");
+    return { command, options: parseBisectArgs(args) };
+  }
+
+  if (command === "audit") {
+    const { parseAuditArgs } = await import("../commands/audit/parser.js");
+    return { command, options: parseAuditArgs(args) };
+  }
+
+  if (command === "health") {
+    const { parseHealthArgs } = await import("../commands/health/parser.js");
+    return { command, options: parseHealthArgs(args) };
+  }
+
   return {
     command: "check",
     options: base,
   };
 }
 
-function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void {
+function applyConfig(
+  base: CheckOptions,
+  config: Partial<UpgradeOptions>,
+): void {
   if (config.target) base.target = config.target;
   if (config.filter !== undefined) base.filter = config.filter;
   if (config.reject !== undefined) base.reject = config.reject;
-  if (typeof config.cacheTtlSeconds === "number") base.cacheTtlSeconds = config.cacheTtlSeconds;
-  if (Array.isArray(config.includeKinds) && config.includeKinds.length > 0) base.includeKinds = config.includeKinds;
+  if (typeof config.cacheTtlSeconds === "number")
+    base.cacheTtlSeconds = config.cacheTtlSeconds;
+  if (Array.isArray(config.includeKinds) && config.includeKinds.length > 0)
+    base.includeKinds = config.includeKinds;
   if (typeof config.ci === "boolean") base.ci = config.ci;
   if (config.format) base.format = config.format;
   if (typeof config.workspace === "boolean") base.workspace = config.workspace;
-  if (typeof config.jsonFile === "string") base.jsonFile = path.resolve(base.cwd, config.jsonFile);
+  if (typeof config.jsonFile === "string")
+    base.jsonFile = path.resolve(base.cwd, config.jsonFile);
   if (typeof config.githubOutputFile === "string") {
     base.githubOutputFile = path.resolve(base.cwd, config.githubOutputFile);
   }
   if (typeof config.sarifFile === "string") {
     base.sarifFile = path.resolve(base.cwd, config.sarifFile);
   }
-  if (typeof config.concurrency === "number" && Number.isInteger(config.concurrency) && config.concurrency > 0) {
+  if (
+    typeof config.concurrency === "number" &&
+    Number.isInteger(config.concurrency) &&
+    config.concurrency > 0
+  ) {
     base.concurrency = config.concurrency;
   }
-  if (typeof config.registryTimeoutMs === "number" && Number.isInteger(config.registryTimeoutMs) && config.registryTimeoutMs > 0) {
+  if (
+    typeof config.registryTimeoutMs === "number" &&
+    Number.isInteger(config.registryTimeoutMs) &&
+    config.registryTimeoutMs > 0
+  ) {
     base.registryTimeoutMs = config.registryTimeoutMs;
   }
-  if (typeof config.registryRetries === "number" && Number.isInteger(config.registryRetries) && config.registryRetries > 0) {
+  if (
+    typeof config.registryRetries === "number" &&
+    Number.isInteger(config.registryRetries) &&
+    config.registryRetries > 0
+  ) {
     base.registryRetries = config.registryRetries;
   }
   if (typeof config.offline === "boolean") {
@@ -602,7 +665,11 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   if (typeof config.failOn === "string") {
     base.failOn = ensureFailOn(config.failOn);
   }
-  if (typeof config.maxUpdates === "number" && Number.isInteger(config.maxUpdates) && config.maxUpdates >= 0) {
+  if (
+    typeof config.maxUpdates === "number" &&
+    Number.isInteger(config.maxUpdates) &&
+    config.maxUpdates >= 0
+  ) {
     base.maxUpdates = config.maxUpdates;
   }
   if (typeof config.fixPr === "boolean") {
@@ -611,7 +678,10 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   if (typeof config.fixBranch === "string" && config.fixBranch.length > 0) {
     base.fixBranch = config.fixBranch;
   }
-  if (typeof config.fixCommitMessage === "string" && config.fixCommitMessage.length > 0) {
+  if (
+    typeof config.fixCommitMessage === "string" &&
+    config.fixCommitMessage.length > 0
+  ) {
     base.fixCommitMessage = config.fixCommitMessage;
   }
   if (typeof config.fixDryRun === "boolean") {
@@ -620,7 +690,11 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   if (typeof config.fixPrNoCheckout === "boolean") {
     base.fixPrNoCheckout = config.fixPrNoCheckout;
   }
-  if (typeof config.fixPrBatchSize === "number" && Number.isInteger(config.fixPrBatchSize) && config.fixPrBatchSize > 0) {
+  if (
+    typeof config.fixPrBatchSize === "number" &&
+    Number.isInteger(config.fixPrBatchSize) &&
+    config.fixPrBatchSize > 0
+  ) {
     base.fixPrBatchSize = config.fixPrBatchSize;
   }
   if (typeof config.noPrReport === "boolean") {
@@ -632,13 +706,25 @@ function applyConfig(base: CheckOptions, config: Partial<UpgradeOptions>): void 
   if (typeof config.groupBy === "string") {
     base.groupBy = ensureGroupBy(config.groupBy);
   }
-  if (typeof config.groupMax === "number" && Number.isInteger(config.groupMax) && config.groupMax > 0) {
+  if (
+    typeof config.groupMax === "number" &&
+    Number.isInteger(config.groupMax) &&
+    config.groupMax > 0
+  ) {
     base.groupMax = config.groupMax;
   }
-  if (typeof config.cooldownDays === "number" && Number.isInteger(config.cooldownDays) && config.cooldownDays >= 0) {
+  if (
+    typeof config.cooldownDays === "number" &&
+    Number.isInteger(config.cooldownDays) &&
+    config.cooldownDays >= 0
+  ) {
     base.cooldownDays = config.cooldownDays;
   }
-  if (typeof config.prLimit === "number" && Number.isInteger(config.prLimit) && config.prLimit > 0) {
+  if (
+    typeof config.prLimit === "number" &&
+    Number.isInteger(config.prLimit) &&
+    config.prLimit > 0
+  ) {
     base.prLimit = config.prLimit;
   }
   if (typeof config.onlyChanged === "boolean") {
@@ -663,21 +749,37 @@ function parsePackageManager(args: string[]): "auto" | "npm" | "pnpm" {
 }
 
 function ensureTarget(value: string): TargetLevel {
-  if (value === "patch" || value === "minor" || value === "major" || value === "latest") {
+  if (
+    value === "patch" ||
+    value === "minor" ||
+    value === "major" ||
+    value === "latest"
+  ) {
     return value;
   }
   throw new Error("--target must be patch, minor, major, latest");
 }
 
 function ensureFormat(value: string): OutputFormat {
-  if (value === "table" || value === "json" || value === "minimal" || value === "github" || value === "metrics") {
+  if (
+    value === "table" ||
+    value === "json" ||
+    value === "minimal" ||
+    value === "github" ||
+    value === "metrics"
+  ) {
     return value;
   }
   throw new Error("--format must be table, json, minimal, github or metrics");
 }
 
 function ensureLogLevel(value: string): LogLevel {
-  if (value === "error" || value === "warn" || value === "info" || value === "debug") {
+  if (
+    value === "error" ||
+    value === "warn" ||
+    value === "info" ||
+    value === "debug"
+  ) {
     return value;
   }
   throw new Error("--log-level must be error, warn, info or debug");
@@ -690,9 +792,12 @@ function parseDependencyKinds(value: string): DependencyKind[] {
     .filter(Boolean)
     .map((item): DependencyKind => {
       if (item === "dependencies" || item === "deps") return "dependencies";
-      if (item === "devDependencies" || item === "dev") return "devDependencies";
-      if (item === "optionalDependencies" || item === "optional") return "optionalDependencies";
-      if (item === "peerDependencies" || item === "peer") return "peerDependencies";
+      if (item === "devDependencies" || item === "dev")
+        return "devDependencies";
+      if (item === "optionalDependencies" || item === "optional")
+        return "optionalDependencies";
+      if (item === "peerDependencies" || item === "peer")
+        return "peerDependencies";
       throw new Error(`Unknown dependency kind: ${item}`);
     });
 
@@ -718,14 +823,26 @@ function ensureInitCiSchedule(value: string): InitCiSchedule {
 }
 
 function ensureFailOn(value: string): FailOnLevel {
-  if (value === "none" || value === "patch" || value === "minor" || value === "major" || value === "any") {
+  if (
+    value === "none" ||
+    value === "patch" ||
+    value === "minor" ||
+    value === "major" ||
+    value === "any"
+  ) {
     return value;
   }
   throw new Error("--fail-on must be none, patch, minor, major or any");
 }
 
 function ensureGroupBy(value: string): GroupBy {
-  if (value === "none" || value === "name" || value === "scope" || value === "kind" || value === "risk") {
+  if (
+    value === "none" ||
+    value === "name" ||
+    value === "scope" ||
+    value === "kind" ||
+    value === "risk"
+  ) {
     return value;
   }
   throw new Error("--group-by must be none, name, scope, kind or risk");

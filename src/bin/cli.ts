@@ -16,7 +16,12 @@ import { renderResult } from "../output/format.js";
 import { writeGitHubOutput } from "../output/github.js";
 import { createSarifReport } from "../output/sarif.js";
 import { renderPrReport } from "../output/pr-report.js";
-import type { CheckOptions, CheckResult, FailReason, UpgradeOptions } from "../types/index.js";
+import type {
+  CheckOptions,
+  CheckResult,
+  FailReason,
+  UpgradeOptions,
+} from "../types/index.js";
 import { writeFileAtomic } from "../utils/io.js";
 import { resolveFailReason } from "../core/summary.js";
 import { stableStringify } from "../utils/stable-json.js";
@@ -37,10 +42,14 @@ async function main(): Promise<void> {
     const parsed = await parseCliArgs(argv);
 
     if (parsed.command === "init-ci") {
-      const workflow = await initCiWorkflow(parsed.options.cwd, parsed.options.force, {
-        mode: parsed.options.mode,
-        schedule: parsed.options.schedule,
-      });
+      const workflow = await initCiWorkflow(
+        parsed.options.cwd,
+        parsed.options.force,
+        {
+          mode: parsed.options.mode,
+          schedule: parsed.options.schedule,
+        },
+      );
       process.stdout.write(
         workflow.created
           ? `Created CI workflow at ${workflow.path}\n`
@@ -52,15 +61,20 @@ async function main(): Promise<void> {
     if (parsed.command === "baseline") {
       if (parsed.options.action === "save") {
         const saved = await saveBaseline(parsed.options);
-        process.stdout.write(`Saved baseline at ${saved.filePath} (${saved.entries} entries)\n`);
+        process.stdout.write(
+          `Saved baseline at ${saved.filePath} (${saved.entries} entries)\n`,
+        );
         return;
       }
 
       const diff = await diffBaseline(parsed.options);
-      const changes = diff.added.length + diff.removed.length + diff.changed.length;
+      const changes =
+        diff.added.length + diff.removed.length + diff.changed.length;
 
       if (changes === 0) {
-        process.stdout.write(`No baseline drift detected (${diff.filePath}).\n`);
+        process.stdout.write(
+          `No baseline drift detected (${diff.filePath}).\n`,
+        );
         return;
       }
 
@@ -79,29 +93,58 @@ async function main(): Promise<void> {
       return;
     }
 
+    // ─── v0.5.1 commands: lazy-loaded, isolated from check pipeline ──────────
+    if (parsed.command === "bisect") {
+      const { runBisect } = await import("../commands/bisect/runner.js");
+      const result = await runBisect(parsed.options);
+      process.exitCode = result.breakingVersion ? 1 : 0;
+      return;
+    }
+
+    if (parsed.command === "audit") {
+      const { runAudit } = await import("../commands/audit/runner.js");
+      const result = await runAudit(parsed.options);
+      process.exitCode = result.advisories.length > 0 ? 1 : 0;
+      return;
+    }
+
+    if (parsed.command === "health") {
+      const { runHealth } = await import("../commands/health/runner.js");
+      const result = await runHealth(parsed.options);
+      process.exitCode = result.totalFlagged > 0 ? 1 : 0;
+      return;
+    }
+
     const result = await runCommand(parsed);
 
-    if (parsed.options.fixPr && (parsed.command === "check" || parsed.command === "upgrade" || parsed.command === "ci")) {
+    if (
+      parsed.options.fixPr &&
+      (parsed.command === "check" ||
+        parsed.command === "upgrade" ||
+        parsed.command === "ci")
+    ) {
       result.summary.fixPrApplied = false;
-      result.summary.fixBranchName = parsed.options.fixBranch ?? "chore/rainy-updates";
+      result.summary.fixBranchName =
+        parsed.options.fixBranch ?? "chore/rainy-updates";
       result.summary.fixCommitSha = "";
       result.summary.fixPrBranchesCreated = 0;
 
       if (parsed.command === "ci") {
         const batched = await applyFixPrBatches(parsed.options, result);
         result.summary.fixPrApplied = batched.applied;
-        result.summary.fixBranchName = batched.branches[0] ?? (parsed.options.fixBranch ?? "chore/rainy-updates");
+        result.summary.fixBranchName =
+          batched.branches[0] ??
+          parsed.options.fixBranch ??
+          "chore/rainy-updates";
         result.summary.fixCommitSha = batched.commits[0] ?? "";
         result.summary.fixPrBranchesCreated = batched.branches.length;
         if (batched.branches.length > 1) {
-          result.warnings.push(`Created ${batched.branches.length} fix-pr batch branches.`);
+          result.warnings.push(
+            `Created ${batched.branches.length} fix-pr batch branches.`,
+          );
         }
       } else {
-        const fixResult = await applyFixPr(
-          parsed.options,
-          result,
-          [],
-        );
+        const fixResult = await applyFixPr(parsed.options, result, []);
         result.summary.fixPrApplied = fixResult.applied;
         result.summary.fixBranchName = fixResult.branchName ?? "";
         result.summary.fixCommitSha = fixResult.commitSha ?? "";
@@ -124,8 +167,14 @@ async function main(): Promise<void> {
 
     const renderStartedAt = Date.now();
     let rendered = renderResult(result, parsed.options.format);
-    result.summary.durationMs.render = Math.max(0, Date.now() - renderStartedAt);
-    if (parsed.options.format === "json" || parsed.options.format === "metrics") {
+    result.summary.durationMs.render = Math.max(
+      0,
+      Date.now() - renderStartedAt,
+    );
+    if (
+      parsed.options.format === "json" ||
+      parsed.options.format === "metrics"
+    ) {
       rendered = renderResult(result, parsed.options.format);
     }
     if (
@@ -133,13 +182,18 @@ async function main(): Promise<void> {
       result.updates.length === 0 &&
       result.errors.length === 0 &&
       result.warnings.length === 0 &&
-      (parsed.options.format === "table" || parsed.options.format === "minimal" || parsed.options.format === "github")
+      (parsed.options.format === "table" ||
+        parsed.options.format === "minimal" ||
+        parsed.options.format === "github")
     ) {
       rendered = "";
     }
 
     if (parsed.options.jsonFile) {
-      await writeFileAtomic(parsed.options.jsonFile, stableStringify(result, 2) + "\n");
+      await writeFileAtomic(
+        parsed.options.jsonFile,
+        stableStringify(result, 2) + "\n",
+      );
     }
 
     if (parsed.options.githubOutputFile) {
@@ -148,14 +202,17 @@ async function main(): Promise<void> {
 
     if (parsed.options.sarifFile) {
       const sarif = createSarifReport(result);
-      await writeFileAtomic(parsed.options.sarifFile, stableStringify(sarif, 2) + "\n");
+      await writeFileAtomic(
+        parsed.options.sarifFile,
+        stableStringify(sarif, 2) + "\n",
+      );
     }
 
     process.stdout.write(rendered + "\n");
 
     process.exitCode = resolveExitCode(result, result.summary.failReason);
   } catch (error) {
-    process.stderr.write(`rainy-updates: ${String(error)}\n`);
+    process.stderr.write(`rainy-updates (rup): ${String(error)}\n`);
     process.exitCode = 2;
   }
 }
@@ -317,7 +374,7 @@ Options:
   --ci`;
   }
 
-  return `rainy-updates <command> [options]
+  return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
   check       Detect available updates
@@ -326,6 +383,9 @@ Commands:
   warm-cache  Warm local cache for fast/offline checks
   init-ci     Scaffold GitHub Actions workflow
   baseline    Save/check dependency baseline snapshots
+  audit       Scan dependencies for CVEs (OSV.dev)
+  health      Detect stale/deprecated/unmaintained packages
+  bisect      Find which version of a dep introduced a failure
 
 Global options:
   --cwd <path>
@@ -399,7 +459,10 @@ async function runCommand(
 
 async function readPackageVersion(): Promise<string> {
   const currentFile = fileURLToPath(import.meta.url);
-  const packageJsonPath = path.resolve(path.dirname(currentFile), "../../package.json");
+  const packageJsonPath = path.resolve(
+    path.dirname(currentFile),
+    "../../package.json",
+  );
   const content = await fs.readFile(packageJsonPath, "utf8");
   const parsed = JSON.parse(content) as { version?: string };
   return parsed.version ?? "0.0.0";
