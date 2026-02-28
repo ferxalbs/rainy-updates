@@ -13,8 +13,15 @@ import type {
   AuditResult,
   CveAdvisory,
 } from "../../types/index.js";
-import { extractAuditVersion, fetchAdvisories } from "./fetcher.js";
-import { filterBySeverity, buildPatchMap, renderAuditTable } from "./mapper.js";
+import { fetchAdvisories } from "./fetcher.js";
+import { resolveAuditTargets } from "./targets.js";
+import {
+  filterBySeverity,
+  buildPatchMap,
+  renderAuditSummary,
+  renderAuditTable,
+  summarizeAdvisories,
+} from "./mapper.js";
 
 /**
  * Entry point for `rup audit`. Lazy-loaded by cli.ts.
@@ -24,16 +31,21 @@ import { filterBySeverity, buildPatchMap, renderAuditTable } from "./mapper.js";
 export async function runAudit(options: AuditOptions): Promise<AuditResult> {
   const result: AuditResult = {
     advisories: [],
+    packages: [],
     autoFixable: 0,
     errors: [],
     warnings: [],
+    sourcesUsed: [],
+    resolution: {
+      lockfile: 0,
+      manifest: 0,
+      unresolved: 0,
+    },
   };
 
   const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const depsByDir = new Map<string, ReturnType<typeof collectDependencies>>();
 
-  // Collect all unique package/version targets that can be audited safely.
-  const auditTargets = new Map<string, { name: string; version: string }>();
-  let skippedRanges = 0;
   for (const dir of packageDirs) {
     let manifest;
     try {
@@ -49,42 +61,45 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
       "devDependencies",
       "optionalDependencies",
     ]);
-    for (const dep of deps) {
-      const version = extractAuditVersion(dep.range);
-      if (!version) {
-        skippedRanges += 1;
-        continue;
-      }
-      auditTargets.set(`${dep.name}@${version}`, { name: dep.name, version });
-    }
+    depsByDir.set(dir, deps);
   }
 
-  if (skippedRanges > 0) {
-    result.warnings.push(
-      `Skipped ${skippedRanges} dependency range${skippedRanges === 1 ? "" : "s"} that could not be mapped to a concrete version.`,
-    );
-  }
+  const targetResolution = await resolveAuditTargets(
+    options.cwd,
+    packageDirs,
+    depsByDir,
+  );
+  result.warnings.push(...targetResolution.warnings);
+  result.resolution = targetResolution.resolution;
 
-  if (auditTargets.size === 0) {
+  if (targetResolution.targets.length === 0) {
     result.warnings.push("No dependencies found to audit.");
     return result;
   }
 
   process.stderr.write(
-    `[audit] Querying OSV.dev for ${auditTargets.size} dependency version${auditTargets.size === 1 ? "" : "s"}...\n`,
+    `[audit] Querying ${describeSourceMode(options.sourceMode)} for ${targetResolution.targets.length} dependency version${targetResolution.targets.length === 1 ? "" : "s"}...\n`,
   );
-  let advisories = await fetchAdvisories([...auditTargets.values()], {
+  const fetched = await fetchAdvisories(targetResolution.targets, {
     concurrency: options.concurrency,
     registryTimeoutMs: options.registryTimeoutMs,
+    sourceMode: options.sourceMode,
   });
+  result.sourcesUsed = fetched.sourcesUsed;
+  result.warnings.push(...fetched.warnings);
+
+  let advisories = fetched.advisories;
 
   advisories = filterBySeverity(advisories, options.severity);
   result.advisories = advisories;
+  result.packages = summarizeAdvisories(advisories);
   result.autoFixable = advisories.filter(
     (a) => a.patchedVersion !== null,
   ).length;
 
-  if (options.reportFormat === "table" || !options.jsonFile) {
+  if (options.reportFormat === "summary") {
+    process.stdout.write(renderAuditSummary(result.packages) + "\n");
+  } else if (options.reportFormat === "table" || !options.jsonFile) {
     process.stdout.write(renderAuditTable(advisories) + "\n");
   }
 
@@ -92,7 +107,14 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
     await writeFileAtomic(
       options.jsonFile,
       stableStringify(
-        { advisories, errors: result.errors, warnings: result.warnings },
+        {
+          advisories,
+          packages: result.packages,
+          sourcesUsed: result.sourcesUsed,
+          resolution: result.resolution,
+          errors: result.errors,
+          warnings: result.warnings,
+        },
         2,
       ) + "\n",
     );
@@ -106,6 +128,12 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
   }
 
   return result;
+}
+
+function describeSourceMode(mode: AuditOptions["sourceMode"]): string {
+  if (mode === "osv") return "OSV.dev";
+  if (mode === "github") return "GitHub Advisory DB";
+  return "OSV.dev + GitHub Advisory DB";
 }
 
 // ─── Fix application ──────────────────────────────────────────────────────────

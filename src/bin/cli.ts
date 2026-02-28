@@ -404,6 +404,26 @@ Options:
   --ci`;
   }
 
+  if (isCommand && command === "audit") {
+    return `rainy-updates audit [options]
+
+Scan dependencies for CVEs using OSV.dev and GitHub Advisory Database.
+
+Options:
+  --workspace
+  --severity critical|high|medium|low
+  --summary
+  --report table|summary|json
+  --source auto|osv|github|all
+  --fix
+  --dry-run
+  --commit
+  --pm auto|npm|pnpm|bun|yarn
+  --json-file <path>
+  --concurrency <n>
+  --registry-timeout-ms <n>`;
+  }
+
   return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
@@ -413,7 +433,7 @@ Commands:
   warm-cache  Warm local cache for fast/offline checks
   init-ci     Scaffold GitHub Actions workflow
   baseline    Save/check dependency baseline snapshots
-  audit       Scan dependencies for CVEs (OSV.dev)
+  audit       Scan dependencies for CVEs (OSV.dev + GitHub)
   health      Detect stale/deprecated/unmaintained packages
   bisect      Find which version of a dep introduced a failure
   unused      Detect unused or missing npm dependencies

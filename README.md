@@ -59,7 +59,7 @@ npx @rainy-updates/cli ci --workspace --mode strict
 
 ### Security & health (_new in v0.5.1_)
 
-- `audit` — scan dependencies for CVEs using [OSV.dev](https://osv.dev) (Google's open vulnerability database)
+- `audit` — scan dependencies for CVEs using [OSV.dev](https://osv.dev) plus GitHub Advisory Database, with lockfile-aware version inference
 - `health` — detect stale, deprecated, and unmaintained packages before they become liabilities
 - `bisect` — binary-search across semver versions to find the exact version that broke your tests
 
@@ -99,6 +99,8 @@ npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --w
 # 8) Scan for known CVEs  ── NEW in v0.5.1
 npx @rainy-updates/cli audit
 npx @rainy-updates/cli audit --severity high
+npx @rainy-updates/cli audit --summary
+npx @rainy-updates/cli audit --source osv
 npx @rainy-updates/cli audit --fix          # prints the patching npm install command
 rup audit --severity high                   # if installed
 

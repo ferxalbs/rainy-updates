@@ -1,4 +1,8 @@
-import type { CveAdvisory, AuditSeverity } from "../../types/index.js";
+import type {
+  AuditPackageSummary,
+  CveAdvisory,
+  AuditSeverity,
+} from "../../types/index.js";
 import { compareVersions, parseVersion, satisfies } from "../../utils/semver.js";
 
 const SEVERITY_RANK: Record<AuditSeverity, number> = {
@@ -59,28 +63,48 @@ export function buildPatchMap(advisories: CveAdvisory[]): Map<string, string> {
   return patchMap;
 }
 
-/** Returns true if `a` is semantically greater than `b`. */
-function semverGt(a: string, b: string): boolean {
-  const pa = parseSemver(a);
-  const pb = parseSemver(b);
-  if (!pa || !pb) return a > b; // fallback for non-standard versions
-  if (pa[0] !== pb[0]) return pa[0] > pb[0];
-  if (pa[1] !== pb[1]) return pa[1] > pb[1];
-  return pa[2] > pb[2];
-}
-
-function parseSemver(v: string): [number, number, number] | null {
-  const m = v.replace(/^[~^>=<]/, "").match(/^(\d+)\.(\d+)\.(\d+)/);
-  if (!m) return null;
-  return [Number(m[1]), Number(m[2]), Number(m[3])];
-}
-
 function compareSemverAsc(a: string, b: string): number {
   const pa = parseVersion(a);
   const pb = parseVersion(b);
   if (pa && pb) return compareVersions(pa, pb);
   if (a === b) return 0;
   return a < b ? -1 : 1;
+}
+
+export function summarizeAdvisories(
+  advisories: CveAdvisory[],
+): AuditPackageSummary[] {
+  const byPackage = new Map<string, CveAdvisory[]>();
+
+  for (const advisory of advisories) {
+    const key = `${advisory.packageName}|${advisory.currentVersion ?? "?"}`;
+    const items = byPackage.get(key) ?? [];
+    items.push(advisory);
+    byPackage.set(key, items);
+  }
+
+  const summaries: AuditPackageSummary[] = [];
+  for (const [, items] of byPackage) {
+    const sorted = [...items].sort(
+      (a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity],
+    );
+    const representative = sorted[0]!;
+    const patchMap = buildPatchMap(items);
+    summaries.push({
+      packageName: representative.packageName,
+      currentVersion: representative.currentVersion,
+      severity: representative.severity,
+      advisoryCount: items.length,
+      patchedVersion: patchMap.get(representative.packageName) ?? null,
+      sources: [...new Set(items.flatMap((item) => item.sources))].sort(),
+    });
+  }
+
+  return summaries.sort((a, b) => {
+    const severityDiff = SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity];
+    if (severityDiff !== 0) return severityDiff;
+    return a.packageName.localeCompare(b.packageName);
+  });
 }
 
 /**
@@ -119,6 +143,40 @@ export function renderAuditTable(advisories: CveAdvisory[]): string {
     const cve = adv.cveId.slice(0, 20).padEnd(22);
     const patch = adv.patchedVersion ? `→ ${adv.patchedVersion}` : "no patch";
     lines.push(`${name}${current}${sev}${cve}${patch}`);
+  }
+
+  return lines.join("\n");
+}
+
+export function renderAuditSummary(packages: AuditPackageSummary[]): string {
+  if (packages.length === 0) {
+    return "✔ No vulnerable packages found.\n";
+  }
+
+  const SEVERITY_ICON: Record<AuditSeverity, string> = {
+    critical: "🔴 CRITICAL",
+    high: "🟠 HIGH    ",
+    medium: "🟡 MEDIUM  ",
+    low: "⚪ LOW     ",
+  };
+
+  const lines: string[] = [
+    `Found ${packages.length} affected ${packages.length === 1 ? "package" : "packages"}:\n`,
+    "Package".padEnd(24) +
+      "Current".padEnd(14) +
+      "Severity".padEnd(20) +
+      "Advisories".padEnd(12) +
+      "Patch",
+    "─".repeat(98),
+  ];
+
+  for (const item of packages) {
+    const name = item.packageName.slice(0, 22).padEnd(24);
+    const current = (item.currentVersion ?? "?").slice(0, 12).padEnd(14);
+    const sev = SEVERITY_ICON[item.severity].padEnd(20);
+    const count = String(item.advisoryCount).padEnd(12);
+    const patch = item.patchedVersion ? `→ ${item.patchedVersion}` : "no patch";
+    lines.push(`${name}${current}${sev}${count}${patch}`);
   }
 
   return lines.join("\n");

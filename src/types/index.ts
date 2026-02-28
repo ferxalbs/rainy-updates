@@ -189,7 +189,9 @@ export interface VersionResolver {
 // ─── New v0.5.1 command types ──────────────────────────────────────────────
 
 export type AuditSeverity = "critical" | "high" | "medium" | "low";
-export type AuditReportFormat = "table" | "json";
+export type AuditReportFormat = "table" | "json" | "summary";
+export type AuditSourceMode = "auto" | "osv" | "github" | "all";
+export type AuditSourceName = "osv" | "github";
 
 export interface AuditOptions {
   cwd: string;
@@ -200,6 +202,7 @@ export interface AuditOptions {
   commit: boolean;
   packageManager: "auto" | "npm" | "pnpm" | "bun" | "yarn";
   reportFormat: AuditReportFormat;
+  sourceMode: AuditSourceMode;
   jsonFile?: string;
   concurrency: number;
   registryTimeoutMs: number;
@@ -214,13 +217,30 @@ export interface CveAdvisory {
   patchedVersion: string | null;
   title: string;
   url: string;
+  sources: readonly AuditSourceName[];
+}
+
+export interface AuditPackageSummary {
+  packageName: string;
+  currentVersion: string | null;
+  severity: AuditSeverity;
+  advisoryCount: number;
+  patchedVersion: string | null;
+  sources: readonly AuditSourceName[];
 }
 
 export interface AuditResult {
   advisories: CveAdvisory[];
+  packages: AuditPackageSummary[];
   autoFixable: number;
   errors: string[];
   warnings: string[];
+  sourcesUsed: AuditSourceName[];
+  resolution: {
+    lockfile: number;
+    manifest: number;
+    unresolved: number;
+  };
 }
 
 export interface BisectOptions {

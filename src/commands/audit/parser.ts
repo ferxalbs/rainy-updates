@@ -1,8 +1,13 @@
 import path from "node:path";
 import process from "node:process";
-import type { AuditOptions, AuditSeverity } from "../../types/index.js";
+import type {
+  AuditOptions,
+  AuditSeverity,
+  AuditSourceMode,
+} from "../../types/index.js";
 
 const SEVERITY_LEVELS: AuditSeverity[] = ["critical", "high", "medium", "low"];
+const SOURCE_MODES: AuditSourceMode[] = ["auto", "osv", "github", "all"];
 
 export function parseSeverity(value: string): AuditSeverity {
   if (SEVERITY_LEVELS.includes(value as AuditSeverity)) {
@@ -23,6 +28,7 @@ export function parseAuditArgs(args: string[]): AuditOptions {
     commit: false,
     packageManager: "auto",
     reportFormat: "table",
+    sourceMode: "auto",
     jsonFile: undefined,
     concurrency: 16,
     registryTimeoutMs: 8000,
@@ -80,14 +86,30 @@ export function parseAuditArgs(args: string[]): AuditOptions {
     if (current === "--pm") throw new Error("Missing value for --pm");
 
     if (current === "--report" && next) {
-      if (next !== "table" && next !== "json") {
-        throw new Error("--report must be table or json");
+      if (next !== "table" && next !== "json" && next !== "summary") {
+        throw new Error("--report must be table, summary, or json");
       }
-      options.reportFormat = next;
+      options.reportFormat = next as AuditOptions["reportFormat"];
       index += 2;
       continue;
     }
     if (current === "--report") throw new Error("Missing value for --report");
+
+    if (current === "--summary") {
+      options.reportFormat = "summary";
+      index += 1;
+      continue;
+    }
+
+    if (current === "--source" && next) {
+      if (!SOURCE_MODES.includes(next as AuditSourceMode)) {
+        throw new Error(`--source must be one of: ${SOURCE_MODES.join(", ")}`);
+      }
+      options.sourceMode = next as AuditSourceMode;
+      index += 2;
+      continue;
+    }
+    if (current === "--source") throw new Error("Missing value for --source");
 
     if (current === "--json-file" && next) {
       options.jsonFile = path.resolve(options.cwd, next);

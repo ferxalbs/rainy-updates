@@ -6,6 +6,11 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- **Audit RC2 overhaul**:
+  - `audit --summary` / `audit --report summary` groups noisy advisory lists into affected-package summaries.
+  - `audit --source auto|osv|github|all` adds multi-source security lookups, with `auto` querying **OSV.dev + GitHub Advisory Database** and merging results.
+  - Lockfile-backed version inference for `package-lock.json`, `npm-shrinkwrap.json`, and `pnpm-lock.yaml` resolves real installed versions for complex ranges.
+  - JSON audit output now includes package summaries, source metadata, and resolution statistics.
 - **Interactive TUI Engine**: An `ink`-based Terminal User Interface for interactive dependency updates, featuring semantic diff coloring and keyboard navigation (`src/ui/tui.tsx`).
 - **Changelog Fetcher**: Implemented `changelog/fetcher.ts` to retrieve release notes dynamically from GitHub API.
   - Utilizes `bun:sqlite` backed `VersionCache` to prevent API rate limit (403) errors.
@@ -13,6 +18,8 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Audit patch planning now chooses the lowest safe patched version that clears all detected vulnerable ranges, avoiding unnecessary major jumps during `audit --fix`.
+- Audit findings now record the current installed version and contributing advisory sources per finding.
 - Resolved TypeScript JSX compiler errors by properly exposing `"jsx": "react-jsx"` in `tsconfig.json`.
 
 ---
