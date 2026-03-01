@@ -2,6 +2,10 @@
 
 Rainy Updates is built around a review-first workflow.
 
+If you are using the interactive terminal UI, read the dedicated guide:
+
+- [TUI Guide](./tui-guide.md)
+
 ## Local operator flow
 
 ```bash

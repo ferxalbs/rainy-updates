@@ -13,6 +13,9 @@ Command model:
 Review workflow:
 [Review workflow guide](./docs/review-workflow.md)
 
+TUI usage:
+[TUI guide](./docs/tui-guide.md)
+
 Risk engine:
 [Risk engine guide](./docs/risk-engine.md)
 
