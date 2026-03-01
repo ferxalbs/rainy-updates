@@ -31,7 +31,7 @@ export async function runResolve(
 
   if (options.afterUpdate) {
     versionOverrides = await fetchProposedVersions(options);
-    if (versionOverrides.size === 0) {
+    if (versionOverrides.size === 0 && !options.silent) {
       process.stderr.write(
         "[resolve] No pending updates found — checking current state.\n",
       );
@@ -55,13 +55,17 @@ export async function runResolve(
     (c) => c.severity === "warning",
   ).length;
 
-  process.stdout.write(renderConflictsTable(result, options) + "\n");
+  if (!options.silent) {
+    process.stdout.write(renderConflictsTable(result, options) + "\n");
+  }
 
   if (options.jsonFile) {
     await writeFileAtomic(options.jsonFile, stableStringify(result, 2) + "\n");
-    process.stderr.write(
-      `[resolve] JSON report written to ${options.jsonFile}\n`,
-    );
+    if (!options.silent) {
+      process.stderr.write(
+        `[resolve] JSON report written to ${options.jsonFile}\n`,
+      );
+    }
   }
 
   return result;

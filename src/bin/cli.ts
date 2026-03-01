@@ -25,7 +25,11 @@ import type {
 import { writeFileAtomic } from "../utils/io.js";
 import { resolveFailReason } from "../core/summary.js";
 import { stableStringify } from "../utils/stable-json.js";
-import type { DoctorOptions, ReviewOptions } from "../types/index.js";
+import type {
+  DoctorOptions,
+  ReviewOptions,
+  DashboardOptions,
+} from "../types/index.js";
 
 async function main(): Promise<void> {
   try {
@@ -165,6 +169,13 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (parsed.command === "dashboard") {
+      const { runDashboard } = await import("../commands/dashboard/runner.js");
+      const result = await runDashboard(parsed.options);
+      process.exitCode = result.errors.length > 0 ? 1 : 0;
+      return;
+    }
+
     if (
       parsed.options.interactive &&
       (parsed.command === "check" ||
@@ -180,7 +191,9 @@ async function main(): Promise<void> {
         applySelected: parsed.command === "upgrade",
       });
       process.exitCode =
-        result.summary.verdict === "safe" && result.updates.length === 0 ? 0 : 1;
+        result.summary.verdict === "safe" && result.updates.length === 0
+          ? 0
+          : 1;
       return;
     }
 
@@ -519,6 +532,7 @@ Commands:
   doctor      Summarize what matters
   review      Decide what to do
   upgrade     Apply the approved change set
+  dashboard   Open the interactive DevOps dashboard (Ink TUI)
   ci          Run CI-focused orchestration
   warm-cache  Warm local cache for fast/offline checks
   init-ci     Scaffold GitHub Actions workflow
@@ -579,7 +593,8 @@ async function runCommand(
     | { command: "warm-cache"; options: CheckOptions }
     | { command: "ci"; options: CheckOptions }
     | { command: "review"; options: ReviewOptions }
-    | { command: "doctor"; options: DoctorOptions },
+    | { command: "doctor"; options: DoctorOptions }
+    | { command: "dashboard"; options: DashboardOptions },
 ): Promise<CheckResult> {
   if (parsed.command === "review") {
     const { runReview } = await import("../commands/review/runner.js");

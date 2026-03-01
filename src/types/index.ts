@@ -14,10 +14,7 @@ export type RiskCategory =
   | "known-vulnerability"
   | "behavioral-risk"
   | "operational-health";
-export type MaintainerChurnStatus =
-  | "unknown"
-  | "stable"
-  | "elevated-change";
+export type MaintainerChurnStatus = "unknown" | "stable" | "elevated-change";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
@@ -242,6 +239,7 @@ export interface AuditOptions {
   jsonFile?: string;
   concurrency: number;
   registryTimeoutMs: number;
+  silent?: boolean;
 }
 
 export interface CveAdvisory {
@@ -378,6 +376,7 @@ export interface ResolveOptions {
   concurrency: number;
   registryTimeoutMs: number;
   cacheTtlSeconds: number;
+  silent?: boolean;
 }
 
 export interface ResolveResult {
@@ -450,6 +449,19 @@ export interface DoctorResult {
   review: ReviewResult;
   primaryFindings: string[];
   recommendedCommand: string;
+}
+
+// dashboard ───────────────────────────────────────────────────────────────────
+
+export interface DashboardOptions extends CheckOptions {
+  // Add any specific options here, e.g. default view
+  view?: "dependencies" | "security" | "health";
+}
+
+export interface DashboardResult {
+  completed: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
 // unused ──────────────────────────────────────────────────────────────────────

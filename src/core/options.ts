@@ -23,6 +23,7 @@ import type {
   ReviewOptions,
   DoctorOptions,
   RiskLevel,
+  DashboardOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -48,6 +49,7 @@ const KNOWN_COMMANDS = [
   "snapshot",
   "review",
   "doctor",
+  "dashboard",
 ] as const;
 
 export type ParsedCliArgs =
@@ -76,7 +78,8 @@ export type ParsedCliArgs =
   | { command: "licenses"; options: LicenseOptions }
   | { command: "snapshot"; options: SnapshotOptions }
   | { command: "review"; options: ReviewOptions }
-  | { command: "doctor"; options: DoctorOptions };
+  | { command: "doctor"; options: DoctorOptions }
+  | { command: "dashboard"; options: DashboardOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -130,6 +133,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   if (command === "doctor") {
     const { parseDoctorArgs } = await import("../commands/doctor/parser.js");
     return { command, options: parseDoctorArgs(args) };
+  }
+  if (command === "dashboard") {
+    const { parseDashboardArgs } =
+      await import("../commands/dashboard/parser.js");
+    return { command, options: parseDashboardArgs(args) };
   }
 
   const base: CheckOptions = {

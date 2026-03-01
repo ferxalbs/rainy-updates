@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.5] - 2026-03-01
+
+Interactive Dashboard TUI overhaul and domain logic integration.
+
+### Added
+
+- **Fully functional Interactive Dashboard TUI** (`dashboard` command):
+  - Built with Ink for a high-performance (60FPS+) CLI experience.
+  - Quick Actions directly bound to core CLI domain logic:
+    - **`[R]esolve`**: Runs peer-conflict resolution in the background and updates the UI with severity levels.
+    - **`[A]udit`**: Runs security audits in the background and surfaces CVE advisories and risk levels inline.
+    - **`<Enter>`**: Applies selected updates and exits the TUI to run the native package manager install.
+  - Zero-dependency atomic state manager (`useSyncExternalStore`) to ensure efficient rendering and avoid React Context cascading updates.
+  - Seamless background task execution with non-blocking modal overlays (`resolving`, `auditing`).
+
+### Changed
+
+- Added `silent: true` flag to `AuditOptions` and `ResolveOptions` to prevent standard stream pollution during background TUI operations.
+- Modified `dashboard` command runner to natively hand-off installation duties to the core `upgrade` flow upon `<Enter>`.
+
 ## [0.5.4] - 2026-03-01
 
 Production hotfix for interactive review stability.

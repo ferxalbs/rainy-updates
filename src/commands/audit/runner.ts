@@ -80,9 +80,11 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
     return result;
   }
 
-  process.stderr.write(
-    `[audit] Querying ${describeSourceMode(options.sourceMode)} for ${targetResolution.targets.length} dependency version${targetResolution.targets.length === 1 ? "" : "s"}...\n`,
-  );
+  if (!options.silent) {
+    process.stderr.write(
+      `[audit] Querying ${describeSourceMode(options.sourceMode)} for ${targetResolution.targets.length} dependency version${targetResolution.targets.length === 1 ? "" : "s"}...\n`,
+    );
+  }
   const fetched = await fetchAdvisories(targetResolution.targets, {
     concurrency: options.concurrency,
     registryTimeoutMs: options.registryTimeoutMs,
@@ -97,7 +99,8 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
       formatClassifiedMessage({
         code: "ADVISORY_SOURCE_DOWN",
         whatFailed: "All advisory sources failed.",
-        intact: "Dependency target resolution completed, but no advisory coverage was returned.",
+        intact:
+          "Dependency target resolution completed, but no advisory coverage was returned.",
         validity: "invalid",
         next: "Retry `rup audit` later or select a single healthy source with --source.",
       }),
@@ -113,18 +116,20 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
     (a) => a.patchedVersion !== null,
   ).length;
 
-  if (options.reportFormat === "summary") {
-    process.stdout.write(
-      renderAuditSummary(result.packages) +
-        renderAuditSourceHealth(result.sourceHealth) +
-        "\n",
-    );
-  } else if (options.reportFormat === "table" || !options.jsonFile) {
-    process.stdout.write(
-      renderAuditTable(advisories) +
-        renderAuditSourceHealth(result.sourceHealth) +
-        "\n",
-    );
+  if (!options.silent) {
+    if (options.reportFormat === "summary") {
+      process.stdout.write(
+        renderAuditSummary(result.packages) +
+          renderAuditSourceHealth(result.sourceHealth) +
+          "\n",
+      );
+    } else if (options.reportFormat === "table" || !options.jsonFile) {
+      process.stdout.write(
+        renderAuditTable(advisories) +
+          renderAuditSourceHealth(result.sourceHealth) +
+          "\n",
+      );
+    }
   }
 
   if (options.jsonFile) {
@@ -143,9 +148,11 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
         2,
       ) + "\n",
     );
-    process.stderr.write(
-      `[audit] JSON report written to ${options.jsonFile}\n`,
-    );
+    if (!options.silent) {
+      process.stderr.write(
+        `[audit] JSON report written to ${options.jsonFile}\n`,
+      );
+    }
   }
 
   if (options.fix && result.autoFixable > 0) {
@@ -175,33 +182,41 @@ async function applyFix(
   const installCmd = `${pm} ${installArgs.join(" ")}`;
 
   if (options.dryRun) {
-    process.stderr.write(
-      `[audit] --dry-run: would execute:\n  ${installCmd}\n`,
-    );
-    if (options.commit) {
-      const msg = buildCommitMessage(patchMap);
+    if (!options.silent) {
       process.stderr.write(
-        `[audit] --dry-run: would commit:\n  git commit -m "${msg}"\n`,
+        `[audit] --dry-run: would execute:\n  ${installCmd}\n`,
       );
+      if (options.commit) {
+        const msg = buildCommitMessage(patchMap);
+        process.stderr.write(
+          `[audit] --dry-run: would commit:\n  git commit -m "${msg}"\n`,
+        );
+      }
     }
     return;
   }
 
-  process.stderr.write(`[audit] Applying ${patchMap.size} fix(es)...\n`);
-  process.stderr.write(`  → ${installCmd}\n`);
+  if (!options.silent) {
+    process.stderr.write(`[audit] Applying ${patchMap.size} fix(es)...\n`);
+    process.stderr.write(`  → ${installCmd}\n`);
+  }
 
   try {
     await runCommand(pm, installArgs, options.cwd);
   } catch (err) {
-    process.stderr.write(`[audit] Install failed: ${String(err)}\n`);
+    if (!options.silent) {
+      process.stderr.write(`[audit] Install failed: ${String(err)}\n`);
+    }
     return;
   }
 
-  process.stderr.write(`[audit] ✔ Patches applied successfully.\n`);
+  if (!options.silent) {
+    process.stderr.write(`[audit] ✔ Patches applied successfully.\n`);
+  }
 
   if (options.commit) {
-    await commitFix(patchMap, options.cwd);
-  } else {
+    await commitFix(patchMap, options.cwd, options.silent);
+  } else if (!options.silent) {
     process.stderr.write(
       `[audit] Tip: run with --commit to automatically commit the changes.\n`,
     );
@@ -226,6 +241,7 @@ function buildInstallArgs(pm: string, patchMap: Map<string, string>): string[] {
 async function commitFix(
   patchMap: Map<string, string>,
   cwd: string,
+  silent?: boolean,
 ): Promise<void> {
   const msg = buildCommitMessage(patchMap);
 
@@ -246,13 +262,15 @@ async function commitFix(
       true,
     );
     await runCommand("git", ["commit", "-m", msg], cwd);
-    process.stderr.write(`[audit] ✔ Committed: "${msg}"\n`);
+    if (!silent) process.stderr.write(`[audit] ✔ Committed: "${msg}"\n`);
   } catch (err) {
-    process.stderr.write(`[audit] Git commit failed: ${String(err)}\n`);
-    process.stderr.write(
-      `[audit] Changes are applied — commit manually with:\n`,
-    );
-    process.stderr.write(`  git add -A && git commit -m "${msg}"\n`);
+    if (!silent) {
+      process.stderr.write(`[audit] Git commit failed: ${String(err)}\n`);
+      process.stderr.write(
+        `[audit] Changes are applied — commit manually with:\n`,
+      );
+      process.stderr.write(`  git add -A && git commit -m "${msg}"\n`);
+    }
   }
 }
 
