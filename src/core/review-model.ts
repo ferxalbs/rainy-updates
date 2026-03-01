@@ -131,7 +131,7 @@ export async function buildReviewResult(
 }
 
 export function createDoctorResult(review: ReviewResult): DoctorResult {
-  const verdict = review.summary.verdict ?? deriveVerdict(review.items);
+  const verdict = review.summary.verdict ?? deriveVerdict(review.items, review.errors);
   const primaryFindings = buildPrimaryFindings(review);
   return {
     verdict,
@@ -333,11 +333,11 @@ function createReviewSummary(
   summary.licenseViolationPackages = items.filter(
     (item) => item.update.licenseStatus === "denied",
   ).length;
-  summary.verdict = deriveVerdict(items);
+  summary.verdict = deriveVerdict(items, errors);
   return summary;
 }
 
-function deriveVerdict(items: ReviewItem[]): Verdict {
+function deriveVerdict(items: ReviewItem[], errors: string[]): Verdict {
   if (
     items.some(
       (item) =>
@@ -350,7 +350,10 @@ function deriveVerdict(items: ReviewItem[]): Verdict {
   if (items.some((item) => item.advisories.length > 0 || item.update.riskLevel === "critical")) {
     return "actionable";
   }
-  if (items.some((item) => item.update.riskLevel === "high" || item.update.diffType === "major")) {
+  if (
+    errors.length > 0 ||
+    items.some((item) => item.update.riskLevel === "high" || item.update.diffType === "major")
+  ) {
     return "review";
   }
   return "safe";
@@ -370,6 +373,9 @@ function buildPrimaryFindings(review: ReviewResult): string[] {
   if ((review.summary.riskPackages ?? 0) > 0) {
     findings.push(`${review.summary.riskPackages} package(s) are high risk.`);
   }
+  if (review.errors.length > 0) {
+    findings.push(`${review.errors.length} execution error(s) need review before treating the result as clean.`);
+  }
   if (findings.length === 0) {
     findings.push("No blocking findings; remaining updates are low-risk.");
   }
@@ -379,7 +385,7 @@ function buildPrimaryFindings(review: ReviewResult): string[] {
 function recommendCommand(review: ReviewResult, verdict: Verdict): string {
   if (verdict === "blocked") return "rup review --interactive";
   if ((review.summary.securityPackages ?? 0) > 0) return "rup review --security-only";
-  if (review.items.length > 0) return "rup review --interactive";
+  if (review.errors.length > 0 || review.items.length > 0) return "rup review --interactive";
   return "rup check";
 }
 

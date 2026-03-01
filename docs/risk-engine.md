@@ -20,6 +20,12 @@ Rainy Updates distinguishes three kinds of dependency concern:
 - stale or deprecated health signals
 - major version jumps
 
+## Internal scoring model
+
+- The engine separates direct supply-chain risk into an internal `baseScore`.
+- Operational and upgrade-shape adjustments are added as an internal `modifierScore`.
+- The public `riskScore` is the capped total of both values.
+
 ## Output shape
 
 The risk engine produces:
@@ -32,5 +38,5 @@ The risk engine produces:
 
 ## Important note on maintainer churn
 
-The current `v0.5.2.a` line uses a lightweight registry-backed heuristic.
-If the registry does not expose enough data, the signal is reported as `unknown` instead of pretending to be authoritative.
+The current `v0.5.3` line uses a lightweight registry-backed heuristic.
+If the registry does not expose enough data, the signal is reported as `unknown` instead of pretending to be authoritative, and missing maintainer data does not add a churn penalty by itself.

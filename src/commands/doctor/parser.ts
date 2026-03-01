@@ -87,7 +87,7 @@ Usage:
   rup doctor [options]
 
 Options:
-  --verdict-only         Print one-line verdict for CI summaries
+  --verdict-only         Print the 3-line quick verdict without counts
   --workspace            Scan all workspace packages
   --json-file <path>     Write JSON doctor report to file
   --cwd <path>

@@ -110,6 +110,8 @@ test("renderGitHubAnnotations emits deterministic sorted output", () => {
         diffType: "minor",
         filtered: false,
         autofix: true,
+        riskLevel: "medium",
+        riskScore: 28,
       },
       {
         packagePath: "/tmp/project-a",
@@ -121,6 +123,8 @@ test("renderGitHubAnnotations emits deterministic sorted output", () => {
         diffType: "minor",
         filtered: false,
         autofix: true,
+        riskLevel: "high",
+        riskScore: 52,
       },
     ],
     errors: ["z-error", "a-error"],
@@ -129,7 +133,9 @@ test("renderGitHubAnnotations emits deterministic sorted output", () => {
 
   const output = renderGitHubAnnotations(result).split("\n");
   expect(output[0]?.includes("axios")).toBe(true);
+  expect(output[0]?.includes("[risk=high:52]")).toBe(true);
   expect(output[1]?.includes("zod")).toBe(true);
+  expect(output[1]?.includes("[risk=medium:28]")).toBe(true);
   expect(output[2]).toBe("::warning title=Rainy Updates::b-warning");
   expect(output[3]).toBe("::error title=Rainy Updates::a-error");
   expect(output[4]).toBe("::error title=Rainy Updates::z-error");

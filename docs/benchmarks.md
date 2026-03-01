@@ -38,6 +38,13 @@ Each scenario runs multiple samples and reports:
 - execution status (`ready` or `skipped`)
 - skip flag when warm cache could not be established
 
+## Reading a result
+
+- A measured run has `execution.status = "ready"` and includes timings plus a median.
+- A skipped warm run means the benchmark could not establish a warm cache because registry access was unavailable in the current environment.
+- A skipped cold run means the measured command itself could not reach the registry, so no timing claim should be published for that environment.
+- Skipped runs are environmental observations, not product failures.
+
 ## Methodology
 
 When publishing benchmark results, always include:

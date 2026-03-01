@@ -16,10 +16,12 @@ export function assessRisk(
   input: RiskInput,
   context: RiskContext,
 ): RiskAssessment {
-  const factors: RiskFactor[] = [];
+  // Base factors model direct supply-chain behavior; modifiers adjust operational severity.
+  const baseFactors: RiskFactor[] = [];
+  const modifierFactors: RiskFactor[] = [];
 
   if (input.advisories.length > 0) {
-    factors.push({
+    baseFactors.push({
       code: "known-vulnerability",
       weight: 35,
       category: "known-vulnerability",
@@ -28,25 +30,25 @@ export function assessRisk(
   }
 
   const installScripts = detectInstallScriptsRisk(input);
-  if (installScripts) factors.push(installScripts);
+  if (installScripts) baseFactors.push(installScripts);
 
   const typosquat = detectTyposquatRisk(input, context);
-  if (typosquat) factors.push(typosquat);
+  if (typosquat) baseFactors.push(typosquat);
 
   const freshPackage = detectFreshPackageRisk(input);
-  if (freshPackage) factors.push(freshPackage);
+  if (freshPackage) baseFactors.push(freshPackage);
 
   const metadata = detectSuspiciousMetadataRisk(input);
-  if (metadata) factors.push(metadata);
+  if (metadata) baseFactors.push(metadata);
 
   const mutableSource = detectMutableSourceRisk(input);
-  if (mutableSource) factors.push(mutableSource);
+  if (mutableSource) baseFactors.push(mutableSource);
 
   const maintainerChurn = detectMaintainerChurnRisk(input);
-  if (maintainerChurn) factors.push(maintainerChurn);
+  if (maintainerChurn) baseFactors.push(maintainerChurn);
 
   if (input.peerConflicts.some((conflict) => conflict.severity === "error")) {
-    factors.push({
+    modifierFactors.push({
       code: "peer-conflict",
       weight: 20,
       category: "operational-health",
@@ -55,7 +57,7 @@ export function assessRisk(
   }
 
   if (input.licenseViolation) {
-    factors.push({
+    modifierFactors.push({
       code: "license-violation",
       weight: 20,
       category: "operational-health",
@@ -64,7 +66,7 @@ export function assessRisk(
   }
 
   if (input.health?.flags.includes("deprecated")) {
-    factors.push({
+    modifierFactors.push({
       code: "deprecated-package",
       weight: 10,
       category: "operational-health",
@@ -74,7 +76,7 @@ export function assessRisk(
     input.health?.flags.includes("stale") ||
     input.health?.flags.includes("unmaintained")
   ) {
-    factors.push({
+    modifierFactors.push({
       code: "stale-package",
       weight: 5,
       category: "operational-health",
@@ -83,7 +85,7 @@ export function assessRisk(
   }
 
   if (input.update.diffType === "major") {
-    factors.push({
+    modifierFactors.push({
       code: "major-version",
       weight: 10,
       category: "operational-health",
@@ -91,10 +93,13 @@ export function assessRisk(
     });
   }
 
-  const score = Math.min(
-    100,
-    factors.reduce((sum, factor) => sum + factor.weight, 0),
+  const baseScore = baseFactors.reduce((sum, factor) => sum + factor.weight, 0);
+  const modifierScore = modifierFactors.reduce(
+    (sum, factor) => sum + factor.weight,
+    0,
   );
+  const factors = [...baseFactors, ...modifierFactors];
+  const score = Math.min(100, baseScore + modifierScore);
   const level = scoreToLevel(score);
   const categories = Array.from(
     new Set(factors.map((factor) => factor.category)),

@@ -52,6 +52,9 @@ test("createSarifReport includes updates and errors", () => {
         autofix: true,
         advisoryCount: 1,
         riskLevel: "critical",
+        riskScore: 75,
+        riskCategories: ["known-vulnerability", "behavioral-risk"],
+        recommendedAction: "Review in `rup review` before applying.",
       },
     ],
     errors: ["sample error"],
@@ -63,4 +66,6 @@ test("createSarifReport includes updates and errors", () => {
   expect(json.includes("dependency-update")).toBe(true);
   expect(json.includes("runtime-error")).toBe(true);
   expect(json.includes("react")).toBe(true);
+  expect(json.includes("riskScore")).toBe(true);
+  expect(json.includes("recommendedAction")).toBe(true);
 });
