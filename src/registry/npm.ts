@@ -10,9 +10,17 @@ const DEFAULT_REGISTRY = "https://registry.npmjs.org/";
 
 type RequestLike = (packageName: string, timeoutMs: number) => Promise<{
   status: number;
-  data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown>; time?: Record<string, string> } | null;
+  data: PackumentData | null;
   retryAfterMs: number | null;
 }>;
+
+type PackumentData = {
+  "dist-tags"?: { latest?: string };
+  versions?: Record<string, { scripts?: Record<string, string> }>;
+  time?: Record<string, string>;
+  homepage?: string;
+  repository?: { url?: string } | string;
+};
 
 interface RegistryConfig {
   defaultRegistry: string;
@@ -38,7 +46,14 @@ export interface RegistryClientOptions {
 }
 
 export interface ResolveManyResult {
-  metadata: Map<string, { latestVersion: string | null; versions: string[]; publishedAtByVersion: Record<string, number> }>;
+  metadata: Map<string, {
+    latestVersion: string | null;
+    versions: string[];
+    publishedAtByVersion: Record<string, number>;
+    homepage?: string;
+    repository?: string;
+    hasInstallScript: boolean;
+  }>;
   errors: Map<string, string>;
 }
 
@@ -57,6 +72,9 @@ export class NpmRegistryClient {
     latestVersion: string | null;
     versions: string[];
     publishedAtByVersion: Record<string, number>;
+    homepage?: string;
+    repository?: string;
+    hasInstallScript: boolean;
   }> {
     const requester = await this.requesterPromise;
     let lastError: string | null = null;
@@ -65,7 +83,7 @@ export class NpmRegistryClient {
       try {
         const response = await requester(packageName, timeoutMs);
         if (response.status === 404) {
-          return { latestVersion: null, versions: [], publishedAtByVersion: {} };
+          return { latestVersion: null, versions: [], publishedAtByVersion: {}, hasInstallScript: false };
         }
         if (response.status === 429 || response.status >= 500) {
           throw new RetryableRegistryError(
@@ -82,6 +100,9 @@ export class NpmRegistryClient {
           latestVersion: response.data?.["dist-tags"]?.latest ?? null,
           versions,
           publishedAtByVersion: extractPublishTimes(response.data?.time),
+          homepage: response.data?.homepage,
+          repository: normalizeRepository(response.data?.repository),
+          hasInstallScript: detectInstallScript(response.data?.versions),
         };
       } catch (error) {
         lastError = String(error);
@@ -105,7 +126,14 @@ export class NpmRegistryClient {
     options: ResolveManyOptions,
   ): Promise<ResolveManyResult> {
     const unique = Array.from(new Set(packageNames));
-    const metadata = new Map<string, { latestVersion: string | null; versions: string[]; publishedAtByVersion: Record<string, number> }>();
+    const metadata = new Map<string, {
+      latestVersion: string | null;
+      versions: string[];
+      publishedAtByVersion: Record<string, number>;
+      homepage?: string;
+      repository?: string;
+      hasInstallScript: boolean;
+    }>();
     const errors = new Map<string, string>();
     const timeoutMs = options.timeoutMs ?? this.defaultTimeoutMs;
     const retries = options.retries ?? this.defaultRetries;
@@ -156,6 +184,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function normalizeRepository(value: { url?: string } | string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") return value;
+  return value.url;
+}
+
+function detectInstallScript(
+  versions: Record<string, { scripts?: Record<string, string> }> | undefined,
+): boolean {
+  if (!versions) return false;
+  for (const metadata of Object.values(versions)) {
+    const scripts = metadata?.scripts;
+    if (!scripts) continue;
+    if (scripts.preinstall || scripts.install || scripts.postinstall) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function computeBackoffMs(attempt: number): number {
   const baseMs = Math.max(120, attempt * 180);
   const jitterMs = Math.floor(Math.random() * 120);
@@ -179,26 +227,24 @@ async function createRequester(cwd?: string): Promise<RequestLike> {
   return async (packageName: string, timeoutMs: number) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      const registry = resolveRegistryForPackage(packageName, registryConfig);
-      const url = buildRegistryUrl(registry, packageName);
-      const authHeader = resolveAuthHeader(registry, registryConfig);
-      const headers: Record<string, string> = {
-        accept: "application/json",
-        "user-agent": USER_AGENT,
-      };
-      if (authHeader) {
-        headers.authorization = authHeader;
-      }
+    const registry = resolveRegistryForPackage(packageName, registryConfig);
+    const url = buildRegistryUrl(registry, packageName);
+    const authHeader = resolveAuthHeader(registry, registryConfig);
+    const headers: Record<string, string> = {
+      accept: "application/json",
+      "user-agent": USER_AGENT,
+    };
+    if (authHeader) {
+      headers.authorization = authHeader;
+    }
 
-      try {
-        const response = await fetch(url, {
-          headers,
-          signal: controller.signal,
-        });
+    try {
+      const response = await fetch(url, {
+        headers,
+        signal: controller.signal,
+      });
 
-      const data = (await response.json().catch(() => null)) as
-        | { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown>; time?: Record<string, string> }
-        | null;
+      const data = (await response.json().catch(() => null)) as PackumentData | null;
       return {
         status: response.status,
         data,
@@ -237,13 +283,9 @@ async function tryCreateUndiciRequester(registryConfig: RegistryConfig): Promise
         });
 
         const bodyText = await res.body.text();
-        let data: { "dist-tags"?: { latest?: string }; versions?: Record<string, unknown>; time?: Record<string, string> } | null = null;
+        let data: PackumentData | null = null;
         try {
-          data = JSON.parse(bodyText) as {
-            "dist-tags"?: { latest?: string };
-            versions?: Record<string, unknown>;
-            time?: Record<string, string>;
-          };
+          data = JSON.parse(bodyText) as PackumentData;
         } catch {
           data = null;
         }

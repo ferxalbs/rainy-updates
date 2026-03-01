@@ -2,7 +2,11 @@ import type { CheckResult, OutputFormat } from "../types/index.js";
 import { renderGitHubAnnotations } from "./github.js";
 import { stableStringify } from "../utils/stable-json.js";
 
-export function renderResult(result: CheckResult, format: OutputFormat): string {
+export function renderResult(
+  result: CheckResult,
+  format: OutputFormat,
+  display: { showImpact?: boolean; showHomepage?: boolean } = {},
+): string {
   if (format === "json") {
     return stableStringify(result, 2);
   }
@@ -13,7 +17,16 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
     }
     if (result.updates.length === 0) return "No updates found.";
     return result.updates
-      .map((item) => `${item.packagePath} :: ${item.name}: ${item.fromRange} -> ${item.toRange}`)
+      .map((item) => {
+        const parts = [`${item.packagePath} :: ${item.name}: ${item.fromRange} -> ${item.toRange}`];
+        if (display.showImpact && item.impactScore) {
+          parts.push(`impact=${item.impactScore.rank}:${item.impactScore.score}`);
+        }
+        if (display.showHomepage && item.homepage) {
+          parts.push(item.homepage);
+        }
+        return parts.join(" | ");
+      })
       .join("\n");
   }
 
@@ -44,6 +57,11 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
       `policy_overrides_applied=${result.summary.policyOverridesApplied}`,
       `registry_auth_failures=${result.summary.errorCounts.registryAuthFailure}`,
       `fix_pr_branches_created=${result.summary.fixPrBranchesCreated}`,
+      `verdict=${result.summary.verdict ?? ""}`,
+      `risk_packages=${result.summary.riskPackages ?? 0}`,
+      `security_packages=${result.summary.securityPackages ?? 0}`,
+      `peer_conflict_packages=${result.summary.peerConflictPackages ?? 0}`,
+      `license_violation_packages=${result.summary.licenseViolationPackages ?? 0}`,
     ].join("\n");
   }
 
@@ -64,7 +82,16 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
     lines.push("Updates:");
     for (const update of result.updates) {
       lines.push(
-        `- ${update.packagePath} :: ${update.name} [${update.kind}] ${update.fromRange} -> ${update.toRange} (${update.diffType})`,
+        `- ${update.packagePath} :: ${update.name} [${update.kind}] ${update.fromRange} -> ${update.toRange} (${[
+          update.diffType,
+          display.showImpact && update.impactScore
+            ? `impact=${update.impactScore.rank}:${update.impactScore.score}`
+            : undefined,
+          display.showHomepage && update.homepage ? update.homepage : undefined,
+          update.riskLevel ? `risk=${update.riskLevel}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(", ")})`,
       );
     }
   }
@@ -95,6 +122,11 @@ export function renderResult(result: CheckResult, format: OutputFormat): string 
   lines.push(
     `StreamedEvents=${result.summary.streamedEvents}, policyOverrides=${result.summary.policyOverridesApplied}, registryAuthFailures=${result.summary.errorCounts.registryAuthFailure}`,
   );
+  if (result.summary.verdict) {
+    lines.push(
+      `Verdict=${result.summary.verdict}, riskPackages=${result.summary.riskPackages ?? 0}, securityPackages=${result.summary.securityPackages ?? 0}, peerConflictPackages=${result.summary.peerConflictPackages ?? 0}, licenseViolationPackages=${result.summary.licenseViolationPackages ?? 0}`,
+    );
+  }
   lines.push(
     `Contract v${result.summary.contractVersion}, failReason=${result.summary.failReason}, duration=${result.summary.durationMs.total}ms`,
   );

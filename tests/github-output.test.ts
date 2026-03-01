@@ -38,6 +38,12 @@ test("writeGitHubOutput writes key-value outputs", async () => {
       prLimitHit: false,
       streamedEvents: 0,
       policyOverridesApplied: 0,
+      verdict: "review",
+      riskPackages: 1,
+      securityPackages: 0,
+      peerConflictPackages: 0,
+      licenseViolationPackages: 0,
+      privateRegistryPackages: 0,
     },
     updates: [],
     errors: ["x"],
@@ -52,6 +58,8 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   expect(content.includes("fix_pr_applied=0")).toBe(true);
   expect(content.includes("ci_profile=minimal")).toBe(true);
   expect(content.includes("grouped_updates=0")).toBe(true);
+  expect(content.includes("verdict=review")).toBe(true);
+  expect(content.includes("risk_packages=1")).toBe(true);
 });
 
 test("renderGitHubAnnotations emits deterministic sorted output", () => {
@@ -84,6 +92,12 @@ test("renderGitHubAnnotations emits deterministic sorted output", () => {
       prLimitHit: false,
       streamedEvents: 0,
       policyOverridesApplied: 0,
+      verdict: undefined,
+      riskPackages: 0,
+      securityPackages: 0,
+      peerConflictPackages: 0,
+      licenseViolationPackages: 0,
+      privateRegistryPackages: 0,
     },
     updates: [
       {

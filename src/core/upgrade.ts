@@ -2,6 +2,7 @@ import type { DependencyKind, PackageManifest, UpgradeOptions, UpgradeResult } f
 import { check } from "./check.js";
 import { readManifest, writeManifest } from "../parsers/package-json.js";
 import { installDependencies } from "../pm/install.js";
+import { detectPackageManager } from "../pm/detect.js";
 import { applyRangeStyle, parseVersion, compareVersions } from "../utils/semver.js";
 import { buildWorkspaceGraph } from "../workspace/graph.js";
 import { captureLockfileSnapshot, changedLockfiles, validateLockfileMode } from "../utils/lockfile.js";
@@ -17,36 +18,7 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
     };
   }
 
-  const manifestsByPath = new Map<string, PackageManifest>();
-
-  for (const update of checkResult.updates) {
-    const manifestPath = update.packagePath;
-    let manifest = manifestsByPath.get(manifestPath);
-    if (!manifest) {
-      manifest = await readManifest(manifestPath);
-      manifestsByPath.set(manifestPath, manifest);
-    }
-
-    applyDependencyVersion(manifest, update.kind, update.name, update.toRange);
-  }
-
-  if (options.sync) {
-    const graph = buildWorkspaceGraph(manifestsByPath, options.includeKinds);
-    if (graph.cycles.length > 0) {
-      checkResult.warnings.push(
-        `Workspace graph contains cycle(s): ${graph.cycles.map((cycle) => cycle.join(" -> ")).join(" | ")}`,
-      );
-    }
-    applyWorkspaceSync(manifestsByPath, graph.orderedPaths, graph.localPackageNames, options.includeKinds, checkResult.updates);
-  }
-
-  for (const [manifestPath, manifest] of manifestsByPath) {
-    await writeManifest(manifestPath, manifest);
-  }
-
-  if (options.install) {
-    await installDependencies(options.cwd, options.packageManager, checkResult.packageManager);
-  }
+  await applySelectedUpdates(options, checkResult.updates);
 
   const lockfileChanges = await changedLockfiles(options.cwd, lockfilesBefore);
   if (lockfileChanges.length > 0 && (options.lockfileMode === "preserve" || options.lockfileMode === "error")) {
@@ -64,6 +36,49 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
       upgraded: checkResult.updates.length,
     },
   };
+}
+
+export async function applySelectedUpdates(
+  options: UpgradeOptions,
+  updates: UpgradeResult["updates"],
+): Promise<void> {
+  validateLockfileMode(options.lockfileMode, options.install);
+  if (updates.length === 0) {
+    return;
+  }
+
+  const manifestsByPath = new Map<string, PackageManifest>();
+
+  for (const update of updates) {
+    const manifestPath = update.packagePath;
+    let manifest = manifestsByPath.get(manifestPath);
+    if (!manifest) {
+      manifest = await readManifest(manifestPath);
+      manifestsByPath.set(manifestPath, manifest);
+    }
+
+    applyDependencyVersion(manifest, update.kind, update.name, update.toRange);
+  }
+
+  if (options.sync) {
+    const graph = buildWorkspaceGraph(manifestsByPath, options.includeKinds);
+    applyWorkspaceSync(
+      manifestsByPath,
+      graph.orderedPaths,
+      graph.localPackageNames,
+      options.includeKinds,
+      updates,
+    );
+  }
+
+  for (const [manifestPath, manifest] of manifestsByPath) {
+    await writeManifest(manifestPath, manifest);
+  }
+
+  if (options.install) {
+    const detected = await detectPackageManager(options.cwd);
+    await installDependencies(options.cwd, options.packageManager, detected);
+  }
 }
 
 function applyWorkspaceSync(

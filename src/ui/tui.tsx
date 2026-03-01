@@ -1,19 +1,48 @@
 import React, { useState } from "react";
-import { render, Text, Box, useInput } from "ink";
-import type { PackageUpdate } from "../types/index.js";
+import { Box, render, Text, useInput } from "ink";
+import type { PackageUpdate, RiskLevel, TargetLevel } from "../types/index.js";
 
-// Basic version diff string parser to split major.minor.patch
-export function VersionDiff({ from, to }: { from: string; to: string }) {
-  if (from === to) return <Text color="gray">{to}</Text>;
+const FILTER_ORDER: Array<"all" | "security" | "risky" | "major"> = [
+  "all",
+  "security",
+  "risky",
+  "major",
+];
 
-  // Very simplistic semver coloring: highlight the changed part
-  // E.g., from 1.2.3 to 1.3.0 -> 1 is dim, 3.0 is bright green
+function VersionDiff({ from, to }: { from: string; to: string }) {
   return (
     <Box>
-      <Text color="gray">{from} → </Text>
+      <Text color="gray">{from}</Text>
+      <Text color="gray"> {" -> "} </Text>
       <Text color="green">{to}</Text>
     </Box>
   );
+}
+
+function riskColor(level: RiskLevel | undefined): string {
+  switch (level) {
+    case "critical":
+      return "red";
+    case "high":
+      return "yellow";
+    case "medium":
+      return "cyan";
+    default:
+      return "green";
+  }
+}
+
+function diffColor(level: TargetLevel): string {
+  switch (level) {
+    case "major":
+      return "red";
+    case "minor":
+      return "yellow";
+    case "patch":
+      return "green";
+    default:
+      return "cyan";
+  }
 }
 
 interface TuiAppProps {
@@ -23,79 +52,177 @@ interface TuiAppProps {
 
 function TuiApp({ updates, onComplete }: TuiAppProps) {
   const [cursorIndex, setCursorIndex] = useState(0);
+  const [filterIndex, setFilterIndex] = useState(0);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(
-    new Set(updates.map((_, i) => i)), // all selected by default
+    new Set(updates.map((_, index) => index)),
   );
 
+  const activeFilter = FILTER_ORDER[filterIndex] ?? "all";
+  const filteredIndices = updates
+    .map((update, index) => ({ update, index }))
+    .filter(({ update }) => {
+      if (activeFilter === "security") return (update.advisoryCount ?? 0) > 0;
+      if (activeFilter === "risky") {
+        return update.riskLevel === "critical" || update.riskLevel === "high";
+      }
+      if (activeFilter === "major") return update.diffType === "major";
+      return true;
+    })
+    .map(({ index }) => index);
+
+  const boundedCursor = Math.min(
+    cursorIndex,
+    Math.max(0, filteredIndices.length - 1),
+  );
+  const focusedIndex = filteredIndices[boundedCursor] ?? 0;
+  const focusedUpdate = updates[focusedIndex];
+
   useInput((input, key) => {
+    if (key.leftArrow) {
+      setFilterIndex((prev) => Math.max(0, prev - 1));
+      setCursorIndex(0);
+    }
+    if (key.rightArrow) {
+      setFilterIndex((prev) => Math.min(FILTER_ORDER.length - 1, prev + 1));
+      setCursorIndex(0);
+    }
     if (key.upArrow) {
       setCursorIndex((prev) => Math.max(0, prev - 1));
     }
     if (key.downArrow) {
-      setCursorIndex((prev) => Math.min(updates.length - 1, prev + 1));
+      setCursorIndex((prev) =>
+        Math.min(filteredIndices.length - 1, Math.max(0, prev + 1)),
+      );
+    }
+    if (input === "a") {
+      setSelectedIndices(new Set(filteredIndices));
+    }
+    if (input === "n") {
+      setSelectedIndices(new Set());
     }
     if (input === " ") {
       setSelectedIndices((prev) => {
         const next = new Set(prev);
-        if (next.has(cursorIndex)) next.delete(cursorIndex);
-        else next.add(cursorIndex);
+        if (next.has(focusedIndex)) next.delete(focusedIndex);
+        else next.add(focusedIndex);
         return next;
       });
     }
     if (key.return) {
-      const selected = updates.filter((_, i) => selectedIndices.has(i));
-      onComplete(selected);
+      onComplete(updates.filter((_, index) => selectedIndices.has(index)));
     }
   });
 
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold color="cyan">
-        Choose updates to install (Space to toggle, Enter to confirm, Up/Down to
-        navigate)
+        Rainy Review TUI
+      </Text>
+      <Text color="gray">
+        Left/Right filter  Up/Down move  Space toggle  A select all view  N clear  Enter confirm
       </Text>
 
-      <Box flexDirection="column" marginTop={1}>
-        {updates.map((update, index) => {
-          const isSelected = selectedIndices.has(index);
-          const isFocused = cursorIndex === index;
-
-          return (
-            <Box key={update.name} flexDirection="row">
-              <Text color={isFocused ? "cyan" : "gray"}>
-                {isFocused ? "❯ " : "  "}
-                {isSelected ? "◉ " : "◯ "}
-              </Text>
-
-              <Box width={30}>
-                <Text bold={isFocused}>{update.name}</Text>
-              </Box>
-
-              <Box width={15}>
-                <Text color="gray">{update.diffType}</Text>
-              </Box>
-
-              <VersionDiff
-                from={update.fromRange}
-                to={update.toVersionResolved}
-              />
-            </Box>
-          );
-        })}
+      <Box marginTop={1}>
+        {FILTER_ORDER.map((filter, index) => (
+          <Box key={filter} marginRight={2}>
+            <Text color={index === filterIndex ? "cyan" : "gray"}>
+              [{filter}]
+            </Text>
+          </Box>
+        ))}
       </Box>
 
-      <Box marginTop={1}>
+      <Box marginTop={1} flexDirection="row">
+        <Box width={72} flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
+          <Text bold>Updates</Text>
+          {filteredIndices.length === 0 ? (
+            <Text color="gray">No updates match this filter.</Text>
+          ) : (
+            filteredIndices.map((index, visibleIndex) => {
+              const update = updates[index];
+              const isFocused = visibleIndex === boundedCursor;
+              const isSelected = selectedIndices.has(index);
+              return (
+                <Box key={`${update.packagePath}:${update.name}`} flexDirection="row">
+                  <Text color={isFocused ? "cyan" : "gray"}>
+                    {isFocused ? ">" : " "} {isSelected ? "[x]" : "[ ]"}{" "}
+                  </Text>
+                  <Box width={22}>
+                    <Text bold={isFocused}>{update.name}</Text>
+                  </Box>
+                  <Box width={10}>
+                    <Text color={diffColor(update.diffType)}>{update.diffType}</Text>
+                  </Box>
+                  <Box width={18}>
+                    <Text color={riskColor(update.riskLevel)}>
+                      {update.riskLevel ?? update.impactScore?.rank ?? "low"}
+                    </Text>
+                  </Box>
+                  <VersionDiff from={update.fromRange} to={update.toVersionResolved} />
+                </Box>
+              );
+            })
+          )}
+        </Box>
+
+        <Box
+          marginLeft={1}
+          width={46}
+          flexDirection="column"
+          borderStyle="round"
+          borderColor="gray"
+          paddingX={1}
+        >
+          <Text bold>Details</Text>
+          {focusedUpdate ? (
+            <>
+              <Text>{focusedUpdate.name}</Text>
+              <Text color="gray">package: {focusedUpdate.packagePath}</Text>
+              <Text>
+                diff: <Text color={diffColor(focusedUpdate.diffType)}>{focusedUpdate.diffType}</Text>
+              </Text>
+              <Text>
+                risk: <Text color={riskColor(focusedUpdate.riskLevel)}>{focusedUpdate.riskLevel ?? focusedUpdate.impactScore?.rank ?? "low"}</Text>
+              </Text>
+              <Text>impact: {focusedUpdate.impactScore?.score ?? 0}</Text>
+              <Text>advisories: {focusedUpdate.advisoryCount ?? 0}</Text>
+              <Text>peer: {focusedUpdate.peerConflictSeverity ?? "none"}</Text>
+              <Text>license: {focusedUpdate.licenseStatus ?? "allowed"}</Text>
+              <Text>health: {focusedUpdate.healthStatus ?? "healthy"}</Text>
+              {focusedUpdate.homepage ? (
+                <Text color="blue">homepage: {focusedUpdate.homepage}</Text>
+              ) : (
+                <Text color="gray">homepage: unavailable</Text>
+              )}
+              {focusedUpdate.riskReasons && focusedUpdate.riskReasons.length > 0 ? (
+                <>
+                  <Text bold>Reasons</Text>
+                  {focusedUpdate.riskReasons.slice(0, 4).map((reason) => (
+                    <Text key={reason} color="gray">
+                      - {reason}
+                    </Text>
+                  ))}
+                </>
+              ) : (
+                <Text color="gray">No elevated risk reasons.</Text>
+              )}
+            </>
+          ) : (
+            <Text color="gray">No update selected.</Text>
+          )}
+        </Box>
+      </Box>
+
+      <Box marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
         <Text color="gray">
-          {selectedIndices.size} of {updates.length} selected
+          {selectedIndices.size} selected of {updates.length}. Filter: {activeFilter}.
         </Text>
       </Box>
     </Box>
   );
 }
 
-export async function runTui(
-  updates: PackageUpdate[],
-): Promise<PackageUpdate[]> {
+export async function runTui(updates: PackageUpdate[]): Promise<PackageUpdate[]> {
   return new Promise((resolve) => {
     const { unmount } = render(
       <TuiApp

@@ -114,6 +114,9 @@ async function fetchProposedVersions(
       onlyChanged: false,
       ciProfile: "minimal",
       lockfileMode: "preserve",
+      interactive: false,
+      showImpact: false,
+      showHomepage: false,
     });
 
     for (const update of checkResult.updates ?? []) {

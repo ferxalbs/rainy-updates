@@ -68,6 +68,13 @@ export function createSummary(input: {
     prLimitHit: input.prLimitHit === true,
     streamedEvents: 0,
     policyOverridesApplied: Math.max(0, Math.round(input.policyOverridesApplied ?? 0)),
+    verdict: undefined,
+    interactiveSession: false,
+    riskPackages: 0,
+    securityPackages: 0,
+    peerConflictPackages: 0,
+    licenseViolationPackages: 0,
+    privateRegistryPackages: 0,
   };
 }
 

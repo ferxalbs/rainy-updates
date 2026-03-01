@@ -56,6 +56,8 @@ npx @rainy-updates/cli ci --workspace --mode strict
 - `ci` — run CI-focused dependency automation (warm cache, check/upgrade, policy gates)
 - `warm-cache` — prefetch package metadata for fast and offline checks
 - `baseline` — save and compare dependency baseline snapshots
+- `review` — guided review across updates, security, peer conflicts, licenses, and risk
+- `doctor` — fast verdict command for local triage and CI summaries
 
 ### Security & health (_new in v0.5.1_)
 
@@ -117,6 +119,15 @@ npx @rainy-updates/cli bisect axios --cmd "bun test"
 npx @rainy-updates/cli bisect react --range "18.0.0..19.0.0" --cmd "npm test"
 npx @rainy-updates/cli bisect lodash --cmd "npm run test:unit" --dry-run
 rup bisect axios --cmd "bun test"           # if installed
+
+# 11) Review updates with risk and security context  ── NEW in v0.5.2 GA
+npx @rainy-updates/cli review --security-only
+rup review --interactive
+rup review --risk high --diff major
+
+# 12) Get a fast dependency verdict for CI or local triage  ── NEW in v0.5.2 GA
+npx @rainy-updates/cli doctor
+rup doctor --verdict-only
 ```
 
 ## What it does in production
@@ -129,6 +140,7 @@ rup bisect axios --cmd "bun test"           # if installed
 - Supports explicit registry retry/timeout tuning (`--registry-retries`, `--registry-timeout-ms`).
 - Supports stale-cache fallback when registry calls fail.
 - Supports streamed progress output for long CI runs (`--stream`).
+- Exposes impact/risk metadata and homepage context in update output (`--show-impact`, `--show-homepage`).
 
 ### Workspace support
 
@@ -229,6 +241,9 @@ Schedule:
 - `--cooldown-days <n>`
 - `--pr-limit <n>`
 - `--only-changed`
+- `--interactive`
+- `--show-impact`
+- `--show-homepage`
 - `--mode minimal|strict|enterprise` (for `ci`)
 - `--fix-pr-batch-size <n>` (for batched fix branches in `ci`)
 - `--policy-file <path>`
@@ -250,6 +265,17 @@ Schedule:
 - `--install`
 - `--pm auto|npm|pnpm`
 - `--sync`
+
+### Review-only
+
+- `--security-only`
+- `--risk critical|high|medium|low`
+- `--diff patch|minor|major|latest`
+- `--apply-selected`
+
+### Doctor-only
+
+- `--verdict-only`
 
 ### Baseline-only
 

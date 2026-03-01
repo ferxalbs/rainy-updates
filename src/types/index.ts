@@ -8,6 +8,8 @@ export type TargetLevel = "patch" | "minor" | "major" | "latest";
 export type GroupBy = "none" | "name" | "scope" | "kind" | "risk";
 export type CiProfile = "minimal" | "strict" | "enterprise";
 export type LockfileMode = "preserve" | "update" | "error";
+export type Verdict = "safe" | "review" | "blocked" | "actionable";
+export type RiskLevel = "critical" | "high" | "medium" | "low";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
@@ -57,6 +59,9 @@ export interface RunOptions {
   onlyChanged: boolean;
   ciProfile: CiProfile;
   lockfileMode: LockfileMode;
+  interactive: boolean;
+  showImpact: boolean;
+  showHomepage: boolean;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -104,6 +109,12 @@ export interface PackageUpdate {
   reason?: string;
   impactScore?: ImpactScore;
   homepage?: string;
+  riskLevel?: RiskLevel;
+  riskReasons?: string[];
+  advisoryCount?: number;
+  peerConflictSeverity?: "none" | PeerConflictSeverity;
+  licenseStatus?: "allowed" | "review" | "denied";
+  healthStatus?: "healthy" | HealthFlag;
 }
 
 export interface Summary {
@@ -145,6 +156,13 @@ export interface Summary {
   prLimitHit: boolean;
   streamedEvents: number;
   policyOverridesApplied: number;
+  verdict?: Verdict;
+  interactiveSession?: boolean;
+  riskPackages?: number;
+  securityPackages?: number;
+  peerConflictPackages?: number;
+  licenseViolationPackages?: number;
+  privateRegistryPackages?: number;
 }
 
 export interface CheckResult {
@@ -351,6 +369,51 @@ export interface ResolveResult {
   warningConflicts: number;
   errors: string[];
   warnings: string[];
+}
+
+export interface RiskSignal {
+  packageName: string;
+  level: RiskLevel;
+  reasons: string[];
+}
+
+export interface ReviewItem {
+  update: PackageUpdate;
+  advisories: CveAdvisory[];
+  health?: PackageHealthMetric;
+  peerConflicts: PeerConflict[];
+  license?: PackageLicense;
+  unusedIssues: UnusedDependency[];
+  selected: boolean;
+}
+
+export interface ReviewResult {
+  projectPath: string;
+  target: TargetLevel;
+  summary: Summary;
+  items: ReviewItem[];
+  updates: PackageUpdate[];
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ReviewOptions extends CheckOptions {
+  securityOnly: boolean;
+  risk?: RiskLevel;
+  diff?: TargetLevel;
+  applySelected: boolean;
+}
+
+export interface DoctorOptions extends CheckOptions {
+  verdictOnly: boolean;
+}
+
+export interface DoctorResult {
+  verdict: Verdict;
+  summary: Summary;
+  review: ReviewResult;
+  primaryFindings: string[];
+  recommendedCommand: string;
 }
 
 // unused ──────────────────────────────────────────────────────────────────────

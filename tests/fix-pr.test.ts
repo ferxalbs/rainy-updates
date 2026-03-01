@@ -33,6 +33,9 @@ test("applyFixPr supports dry-run branch preparation", async () => {
     onlyChanged: false,
     ciProfile: "minimal",
     lockfileMode: "preserve",
+    interactive: false,
+    showImpact: false,
+    showHomepage: false,
   };
 
   const result: CheckResult = {
@@ -114,6 +117,9 @@ test("applyFixPr skips updates marked as autofix false", async () => {
     onlyChanged: false,
     ciProfile: "minimal",
     lockfileMode: "preserve",
+    interactive: false,
+    showImpact: false,
+    showHomepage: false,
   };
 
   const result: CheckResult = {

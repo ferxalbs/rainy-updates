@@ -158,3 +158,33 @@ test("parseCliArgs resolves output paths from final cwd", async () => {
     expect(parsed.options.jsonFile).toBe(path.join(dir, "out", "result.json"));
   }
 });
+
+test("parseCliArgs supports review command filters", async () => {
+  const parsed = await parseCliArgs([
+    "review",
+    "--workspace",
+    "--interactive",
+    "--security-only",
+    "--risk",
+    "high",
+    "--diff",
+    "major",
+  ]);
+  expect(parsed.command).toBe("review");
+  if (parsed.command === "review") {
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.interactive).toBe(true);
+    expect(parsed.options.securityOnly).toBe(true);
+    expect(parsed.options.risk).toBe("high");
+    expect(parsed.options.diff).toBe("major");
+  }
+});
+
+test("parseCliArgs supports doctor command", async () => {
+  const parsed = await parseCliArgs(["doctor", "--workspace", "--verdict-only"]);
+  expect(parsed.command).toBe("doctor");
+  if (parsed.command === "doctor") {
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.verdictOnly).toBe(true);
+  }
+});

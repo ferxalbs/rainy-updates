@@ -7,6 +7,7 @@ export { saveBaseline, diffBaseline } from "./core/baseline.js";
 export { createSarifReport } from "./output/sarif.js";
 export { writeGitHubOutput, renderGitHubAnnotations } from "./output/github.js";
 export { renderPrReport } from "./output/pr-report.js";
+export { buildReviewResult, createDoctorResult } from "./core/review-model.js";
 export type {
   CheckOptions,
   CheckResult,
@@ -20,4 +21,10 @@ export type {
   TargetLevel,
   UpgradeOptions,
   UpgradeResult,
+  ReviewOptions,
+  ReviewResult,
+  DoctorOptions,
+  DoctorResult,
+  Verdict,
+  RiskLevel,
 } from "./types/index.js";

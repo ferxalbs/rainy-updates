@@ -2,6 +2,36 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.2-ga] - 2026-03-01
+
+### Added
+
+- **New `review` command**: Aggregates pending updates with security, peer-conflict, license, health, and unused-dependency signals for guided dependency review.
+  - `--interactive` launches the upgraded Ink review TUI.
+  - `--security-only`, `--risk <level>`, and `--diff <level>` filter the review set.
+  - `--apply-selected` can apply the filtered/selected updates after review.
+- **New `doctor` command**: Produces a fast dependency verdict for local triage and CI summaries.
+  - Verdict classes: `safe`, `review`, `blocked`, `actionable`.
+  - `--verdict-only` prints a one-line CI-friendly summary.
+- **Interactive review TUI overhaul**:
+  - multi-pane layout with filters, selection state, detail panel, and status bar,
+  - risk/security/peer/license context inline per package,
+  - explicit selection controls for interactive upgrade review.
+- **Additive output contract metadata**:
+  - summary fields: `verdict`, `riskPackages`, `securityPackages`, `peerConflictPackages`, `licenseViolationPackages`, `interactiveSession`,
+  - GitHub outputs: `verdict`, `risk_packages`, `security_packages`, `peer_conflict_packages`, `license_violation_packages`,
+  - SARIF result properties for impact/risk/advisory/license context.
+- **New display controls**:
+  - `--interactive`
+  - `--show-impact`
+  - `--show-homepage`
+
+### Changed
+
+- `check` now computes impact scores in the core pipeline and carries homepage metadata when available.
+- `upgrade --interactive` now routes through the guided review flow before applying selected updates.
+- CLI help and package exports now cover the new review/verdict surfaces.
+
 ## [0.5.2-rc.2] - 2026-02-27
 
 ### Added

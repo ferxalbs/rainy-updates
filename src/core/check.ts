@@ -10,6 +10,7 @@ import { detectPackageManager } from "../pm/detect.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
 import { loadPolicy, resolvePolicyRule } from "../config/policy.js";
 import { createSummary, finalizeSummary } from "./summary.js";
+import { applyImpactScores } from "./impact.js";
 
 interface DependencyTask {
   packageDir: string;
@@ -20,6 +21,9 @@ interface ResolvedPackageMetadata {
   latestVersion: string | null;
   availableVersions: string[];
   publishedAtByVersion: Record<string, number>;
+  homepage?: string;
+  repository?: string;
+  hasInstallScript: boolean;
 }
 
 export async function check(options: CheckOptions): Promise<CheckResult> {
@@ -109,6 +113,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
         latestVersion: cached.latestVersion,
         availableVersions: cached.availableVersions,
         publishedAtByVersion: {},
+        hasInstallScript: false,
       });
     } else {
       unresolvedPackages.push(packageName);
@@ -126,6 +131,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
             latestVersion: stale.latestVersion,
             availableVersions: stale.availableVersions,
             publishedAtByVersion: {},
+            hasInstallScript: false,
           });
           warnings.push(`Using stale cache for ${packageName} because --offline is enabled.`);
         } else {
@@ -148,6 +154,9 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
           latestVersion: metadata.latestVersion,
           availableVersions: metadata.versions,
           publishedAtByVersion: metadata.publishedAtByVersion,
+          homepage: metadata.homepage,
+          repository: metadata.repository,
+          hasInstallScript: metadata.hasInstallScript,
         });
         if (metadata.latestVersion) {
           await cache.set(
@@ -169,6 +178,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
             latestVersion: stale.latestVersion,
             availableVersions: stale.availableVersions,
             publishedAtByVersion: {},
+            hasInstallScript: false,
           });
           warnings.push(`Using stale cache for ${packageName} due to registry error: ${error}`);
         } else {
@@ -217,13 +227,15 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       filtered: false,
       autofix: rule?.autofix !== false,
       reason: rule?.maxTarget ? `policy maxTarget=${rule.maxTarget}` : undefined,
+      homepage: metadata.homepage,
     });
     emitStream(
       `[update] ${task.dependency.name} ${task.dependency.range} -> ${nextRange} (${classifyDiff(task.dependency.range, picked)})`,
     );
   }
 
-  const grouped = groupUpdates(updates, options.groupBy);
+  const scoredUpdates = applyImpactScores(updates);
+  const grouped = groupUpdates(scoredUpdates, options.groupBy);
   const groupedUpdates = grouped.length;
   const groupedSorted = sortUpdates(grouped.flatMap((group) => group.items));
   const groupedCapped = typeof options.groupMax === "number" ? groupedSorted.slice(0, options.groupMax) : groupedSorted;
@@ -259,6 +271,10 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     }),
   );
   summary.streamedEvents = streamedEvents;
+  summary.riskPackages = limitedUpdates.filter(
+    (item) =>
+      item.impactScore?.rank === "critical" || item.impactScore?.rank === "high",
+  ).length;
 
   return {
     projectPath: options.cwd,

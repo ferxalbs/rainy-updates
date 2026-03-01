@@ -53,6 +53,9 @@ test("offline mode reports cache miss error", async () => {
     onlyChanged: false,
     ciProfile: "minimal",
     lockfileMode: "preserve",
+    interactive: false,
+    showImpact: false,
+    showHomepage: false,
   });
 
   expect(result.errors.some((item) => item.includes("Offline cache miss for react"))).toBe(true);

@@ -47,6 +47,9 @@ export interface FileConfig {
   onlyChanged?: boolean;
   ciProfile?: CiProfile;
   lockfileMode?: LockfileMode;
+  interactive?: boolean;
+  showImpact?: boolean;
+  showHomepage?: boolean;
   install?: boolean;
   packageManager?: "auto" | "npm" | "pnpm";
   sync?: boolean;

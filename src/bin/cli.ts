@@ -25,6 +25,7 @@ import type {
 import { writeFileAtomic } from "../utils/io.js";
 import { resolveFailReason } from "../core/summary.js";
 import { stableStringify } from "../utils/stable-json.js";
+import type { DoctorOptions, ReviewOptions } from "../types/index.js";
 
 async function main(): Promise<void> {
   try {
@@ -145,6 +146,44 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (parsed.command === "review") {
+      const { runReview } = await import("../commands/review/runner.js");
+      const result = await runReview(parsed.options);
+      process.exitCode =
+        result.summary.verdict === "blocked" ||
+        result.summary.verdict === "actionable" ||
+        result.summary.verdict === "review"
+          ? 1
+          : 0;
+      return;
+    }
+
+    if (parsed.command === "doctor") {
+      const { runDoctor } = await import("../commands/doctor/runner.js");
+      const result = await runDoctor(parsed.options);
+      process.exitCode = result.verdict === "safe" ? 0 : 1;
+      return;
+    }
+
+    if (
+      parsed.options.interactive &&
+      (parsed.command === "check" ||
+        parsed.command === "upgrade" ||
+        parsed.command === "ci")
+    ) {
+      const { runReview } = await import("../commands/review/runner.js");
+      const result = await runReview({
+        ...parsed.options,
+        securityOnly: false,
+        risk: undefined,
+        diff: undefined,
+        applySelected: parsed.command === "upgrade",
+      });
+      process.exitCode =
+        result.summary.verdict === "safe" && result.updates.length === 0 ? 0 : 1;
+      return;
+    }
+
     const result = await runCommand(parsed);
 
     if (
@@ -196,7 +235,10 @@ async function main(): Promise<void> {
     );
 
     const renderStartedAt = Date.now();
-    let rendered = renderResult(result, parsed.options.format);
+    let rendered = renderResult(result, parsed.options.format, {
+      showImpact: parsed.options.showImpact,
+      showHomepage: parsed.options.showHomepage,
+    });
     result.summary.durationMs.render = Math.max(
       0,
       Date.now() - renderStartedAt,
@@ -205,7 +247,10 @@ async function main(): Promise<void> {
       parsed.options.format === "json" ||
       parsed.options.format === "metrics"
     ) {
-      rendered = renderResult(result, parsed.options.format);
+      rendered = renderResult(result, parsed.options.format, {
+        showImpact: parsed.options.showImpact,
+        showHomepage: parsed.options.showHomepage,
+      });
     }
     if (
       parsed.options.onlyChanged &&
@@ -287,6 +332,9 @@ Options:
   --cooldown-days <n>
   --pr-limit <n>
   --only-changed
+  --interactive
+  --show-impact
+  --show-homepage
   --lockfile-mode preserve|update|error
   --log-level error|warn|info|debug
   --ci`;
@@ -336,6 +384,7 @@ Options:
   --fix-dry-run
   --fix-pr-no-checkout
   --fix-pr-batch-size <n>
+  --interactive
   --lockfile-mode preserve|update|error
   --no-pr-report
   --json-file <path>
@@ -424,6 +473,36 @@ Options:
   --registry-timeout-ms <n>`;
   }
 
+  if (isCommand && command === "review") {
+    return `rainy-updates review [options]
+
+Review updates with risk, security, peer, and policy context.
+
+Options:
+  --workspace
+  --interactive
+  --security-only
+  --risk critical|high|medium|low
+  --diff patch|minor|major|latest
+  --apply-selected
+  --policy-file <path>
+  --json-file <path>
+  --concurrency <n>
+  --registry-timeout-ms <n>
+  --registry-retries <n>`;
+  }
+
+  if (isCommand && command === "doctor") {
+    return `rainy-updates doctor [options]
+
+Produce a fast overall dependency verdict.
+
+Options:
+  --workspace
+  --verdict-only
+  --json-file <path>`;
+  }
+
   return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
@@ -440,6 +519,8 @@ Commands:
   resolve     Check peer dependency conflicts (pure-TS, no subprocess)
   licenses    Scan dependency licenses and generate SPDX SBOM
   snapshot    Save, list, restore, and diff dependency state snapshots
+  review      Guided dependency review with risk/security context
+  doctor      Fast dependency verdict for local or CI use
 
 Global options:
   --cwd <path>
@@ -458,6 +539,9 @@ Global options:
   --cooldown-days <n>
   --pr-limit <n>
   --only-changed
+  --interactive
+  --show-impact
+  --show-homepage
   --mode minimal|strict|enterprise
   --fix-pr
   --fix-branch <name>
@@ -484,8 +568,42 @@ async function runCommand(
     | { command: "check"; options: CheckOptions }
     | { command: "upgrade"; options: UpgradeOptions }
     | { command: "warm-cache"; options: CheckOptions }
-    | { command: "ci"; options: CheckOptions },
+    | { command: "ci"; options: CheckOptions }
+    | { command: "review"; options: ReviewOptions }
+    | { command: "doctor"; options: DoctorOptions },
 ): Promise<CheckResult> {
+  if (parsed.command === "review") {
+    const { runReview } = await import("../commands/review/runner.js");
+    const result = await runReview(parsed.options);
+    return {
+      projectPath: result.projectPath,
+      packagePaths: result.items.map((item) => item.update.packagePath),
+      packageManager: "unknown",
+      target: result.target,
+      timestamp: new Date().toISOString(),
+      summary: result.summary,
+      updates: result.updates,
+      errors: result.errors,
+      warnings: result.warnings,
+    };
+  }
+
+  if (parsed.command === "doctor") {
+    const { runDoctor } = await import("../commands/doctor/runner.js");
+    const result = await runDoctor(parsed.options);
+    return {
+      projectPath: result.review.projectPath,
+      packagePaths: result.review.items.map((item) => item.update.packagePath),
+      packageManager: "unknown",
+      target: result.review.target,
+      timestamp: new Date().toISOString(),
+      summary: result.summary,
+      updates: result.review.updates,
+      errors: result.review.errors,
+      warnings: result.review.warnings,
+    };
+  }
+
   if (parsed.command === "upgrade") {
     return await upgrade(parsed.options);
   }

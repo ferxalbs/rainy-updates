@@ -32,6 +32,12 @@ test("createSarifReport includes updates and errors", () => {
       prLimitHit: false,
       streamedEvents: 0,
       policyOverridesApplied: 0,
+      verdict: "actionable",
+      riskPackages: 1,
+      securityPackages: 1,
+      peerConflictPackages: 0,
+      licenseViolationPackages: 0,
+      privateRegistryPackages: 0,
     },
     updates: [
       {
@@ -44,6 +50,8 @@ test("createSarifReport includes updates and errors", () => {
         diffType: "major",
         filtered: false,
         autofix: true,
+        advisoryCount: 1,
+        riskLevel: "critical",
       },
     ],
     errors: ["sample error"],

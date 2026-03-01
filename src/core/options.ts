@@ -20,6 +20,9 @@ import type {
   ResolveOptions,
   LicenseOptions,
   SnapshotOptions,
+  ReviewOptions,
+  DoctorOptions,
+  RiskLevel,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -43,6 +46,8 @@ const KNOWN_COMMANDS = [
   "resolve",
   "licenses",
   "snapshot",
+  "review",
+  "doctor",
 ] as const;
 
 export type ParsedCliArgs =
@@ -69,7 +74,9 @@ export type ParsedCliArgs =
   | { command: "unused"; options: UnusedOptions }
   | { command: "resolve"; options: ResolveOptions }
   | { command: "licenses"; options: LicenseOptions }
-  | { command: "snapshot"; options: SnapshotOptions };
+  | { command: "snapshot"; options: SnapshotOptions }
+  | { command: "review"; options: ReviewOptions }
+  | { command: "doctor"; options: DoctorOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -116,6 +123,14 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       await import("../commands/snapshot/parser.js");
     return { command, options: parseSnapshotArgs(args) };
   }
+  if (command === "review") {
+    const { parseReviewArgs } = await import("../commands/review/parser.js");
+    return { command, options: parseReviewArgs(args) };
+  }
+  if (command === "doctor") {
+    const { parseDoctorArgs } = await import("../commands/doctor/parser.js");
+    return { command, options: parseDoctorArgs(args) };
+  }
 
   const base: CheckOptions = {
     cwd: process.cwd(),
@@ -154,6 +169,9 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     onlyChanged: false,
     ciProfile: "minimal",
     lockfileMode: "preserve",
+    interactive: false,
+    showImpact: false,
+    showHomepage: false,
   };
 
   let force = false;
@@ -527,6 +545,21 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       continue;
     }
 
+    if (current === "--interactive") {
+      base.interactive = true;
+      continue;
+    }
+
+    if (current === "--show-impact") {
+      base.showImpact = true;
+      continue;
+    }
+
+    if (current === "--show-homepage") {
+      base.showHomepage = true;
+      continue;
+    }
+
     if (current === "--lockfile-mode" && next) {
       base.lockfileMode = ensureLockfileMode(next);
       index += 1;
@@ -766,6 +799,15 @@ function applyConfig(
   if (typeof config.lockfileMode === "string") {
     base.lockfileMode = ensureLockfileMode(config.lockfileMode);
   }
+  if (typeof config.interactive === "boolean") {
+    base.interactive = config.interactive;
+  }
+  if (typeof config.showImpact === "boolean") {
+    base.showImpact = config.showImpact;
+  }
+  if (typeof config.showHomepage === "boolean") {
+    base.showHomepage = config.showHomepage;
+  }
 }
 
 function parsePackageManager(args: string[]): "auto" | "npm" | "pnpm" {
@@ -890,4 +932,16 @@ function ensureLockfileMode(value: string): LockfileMode {
     return value;
   }
   throw new Error("--lockfile-mode must be preserve, update or error");
+}
+
+export function ensureRiskLevel(value: string): RiskLevel {
+  if (
+    value === "critical" ||
+    value === "high" ||
+    value === "medium" ||
+    value === "low"
+  ) {
+    return value;
+  }
+  throw new Error("--risk must be critical, high, medium or low");
 }
