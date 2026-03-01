@@ -25,6 +25,8 @@ import type {
   RiskLevel,
   DashboardOptions,
   GaOptions,
+  VerificationMode,
+  CiGate,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -188,6 +190,10 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     showImpact: false,
     showHomepage: false,
     decisionPlanFile: undefined,
+    verify: "none",
+    testCommand: undefined,
+    verificationReportFile: undefined,
+    ciGate: "check",
   };
 
   let force = false;
@@ -618,6 +624,51 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       throw new Error("Missing value for --plan-file");
     }
 
+    if (current === "--from-plan" && next) {
+      base.decisionPlanFile = path.resolve(base.cwd, next);
+      index += 1;
+      continue;
+    }
+    if (current === "--from-plan") {
+      throw new Error("Missing value for --from-plan");
+    }
+
+    if (current === "--verify" && next) {
+      base.verify = ensureVerificationMode(next);
+      index += 1;
+      continue;
+    }
+    if (current === "--verify") {
+      throw new Error("Missing value for --verify");
+    }
+
+    if (current === "--test-command" && next) {
+      base.testCommand = next;
+      index += 1;
+      continue;
+    }
+    if (current === "--test-command") {
+      throw new Error("Missing value for --test-command");
+    }
+
+    if (current === "--verification-report-file" && next) {
+      base.verificationReportFile = path.resolve(base.cwd, next);
+      index += 1;
+      continue;
+    }
+    if (current === "--verification-report-file") {
+      throw new Error("Missing value for --verification-report-file");
+    }
+
+    if (current === "--gate" && next) {
+      base.ciGate = ensureCiGate(next);
+      index += 1;
+      continue;
+    }
+    if (current === "--gate") {
+      throw new Error("Missing value for --gate");
+    }
+
     if (current.startsWith("-")) {
       throw new Error(`Unknown option: ${current}`);
     }
@@ -842,6 +893,21 @@ function applyConfig(
   if (typeof config.decisionPlanFile === "string") {
     base.decisionPlanFile = path.resolve(base.cwd, config.decisionPlanFile);
   }
+  if (typeof config.verify === "string") {
+    base.verify = ensureVerificationMode(config.verify);
+  }
+  if (typeof config.testCommand === "string") {
+    base.testCommand = config.testCommand;
+  }
+  if (typeof config.verificationReportFile === "string") {
+    base.verificationReportFile = path.resolve(
+      base.cwd,
+      config.verificationReportFile,
+    );
+  }
+  if (typeof config.ciGate === "string") {
+    base.ciGate = ensureCiGate(config.ciGate);
+  }
 }
 
 function parsePackageManager(args: string[]): "auto" | "npm" | "pnpm" {
@@ -978,4 +1044,28 @@ export function ensureRiskLevel(value: string): RiskLevel {
     return value;
   }
   throw new Error("--risk must be critical, high, medium or low");
+}
+
+function ensureVerificationMode(value: string): VerificationMode {
+  if (
+    value === "none" ||
+    value === "install" ||
+    value === "test" ||
+    value === "install,test"
+  ) {
+    return value;
+  }
+  throw new Error("--verify must be none, install, test or install,test");
+}
+
+function ensureCiGate(value: string): CiGate {
+  if (
+    value === "check" ||
+    value === "doctor" ||
+    value === "review" ||
+    value === "upgrade"
+  ) {
+    return value;
+  }
+  throw new Error("--gate must be check, doctor, review or upgrade");
 }

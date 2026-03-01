@@ -37,7 +37,8 @@ export async function writeArtifactManifest(
     Boolean(options.jsonFile) ||
     Boolean(options.githubOutputFile) ||
     Boolean(options.sarifFile) ||
-    Boolean(options.prReportFile);
+    Boolean(options.prReportFile) ||
+    Boolean(options.verificationReportFile);
   if (!shouldWrite) return null;
 
   const runId = result.summary.runId ?? createRunId(command, options, result);
@@ -58,6 +59,7 @@ export async function writeArtifactManifest(
       githubOutputFile: options.githubOutputFile,
       sarifFile: options.sarifFile,
       prReportFile: options.prReportFile,
+      verificationReportFile: options.verificationReportFile,
     },
   };
 

@@ -99,8 +99,8 @@ export function createSummary(input: {
     decisionPlan: undefined,
     interactiveSurface: undefined,
     queueFocus: undefined,
-    verificationState: undefined,
-    verificationFailures: undefined,
+    verificationState: "not-run",
+    verificationFailures: 0,
   };
 }
 

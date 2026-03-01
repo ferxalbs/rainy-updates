@@ -44,6 +44,8 @@ export async function writeGitHubOutput(filePath: string, result: CheckResult): 
     `decision_plan=${result.summary.decisionPlan ?? ""}`,
     `interactive_surface=${result.summary.interactiveSurface ?? ""}`,
     `queue_focus=${result.summary.queueFocus ?? ""}`,
+    `verification_state=${result.summary.verificationState ?? "not-run"}`,
+    `verification_failures=${result.summary.verificationFailures ?? 0}`,
     `fix_pr_applied=${result.summary.fixPrApplied === true ? "1" : "0"}`,
     `fix_pr_branches_created=${result.summary.fixPrBranchesCreated}`,
     `fix_pr_branch=${result.summary.fixBranchName ?? ""}`,

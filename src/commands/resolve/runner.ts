@@ -121,6 +121,11 @@ async function fetchProposedVersions(
       interactive: false,
       showImpact: false,
       showHomepage: false,
+      decisionPlanFile: undefined,
+      verify: "none",
+      testCommand: undefined,
+      verificationReportFile: undefined,
+      ciGate: "check",
     });
 
     for (const update of checkResult.updates ?? []) {

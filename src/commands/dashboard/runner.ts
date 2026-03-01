@@ -13,6 +13,7 @@ import {
 } from "../../core/decision-plan.js";
 import { buildReviewResult, renderReviewResult } from "../../core/review-model.js";
 import { applySelectedUpdates } from "../../core/upgrade.js";
+import { runVerification } from "../../core/verification.js";
 import { runTui } from "../../ui/tui.js";
 
 export async function runDashboard(
@@ -55,6 +56,26 @@ export async function runDashboard(
       },
       selectedItems.map((item) => item.update),
     );
+
+    if (options.verify !== "none") {
+      const verification = await runVerification({
+        cwd: options.cwd,
+        verify: options.verify,
+        testCommand: options.testCommand,
+        verificationReportFile: options.verificationReportFile,
+        packageManager: "auto",
+      });
+      if (!verification.passed) {
+        review.errors.push(
+          ...verification.checks
+            .filter((check) => !check.passed)
+            .map(
+              (check) =>
+                `Verification failed for ${check.name}: ${check.error ?? check.command}`,
+            ),
+        );
+      }
+    }
   }
 
   process.stdout.write(

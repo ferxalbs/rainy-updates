@@ -87,6 +87,8 @@ export function renderResult(
       `decision_plan=${result.summary.decisionPlan ?? ""}`,
       `interactive_surface=${result.summary.interactiveSurface ?? ""}`,
       `queue_focus=${result.summary.queueFocus ?? ""}`,
+      `verification_state=${result.summary.verificationState ?? "not-run"}`,
+      `verification_failures=${result.summary.verificationFailures ?? 0}`,
     ].join("\n");
   }
 
@@ -171,6 +173,11 @@ export function renderResult(
   if (result.summary.decisionPlan) {
     lines.push(
       `DecisionPlan=${result.summary.decisionPlan}, surface=${result.summary.interactiveSurface ?? "none"}, focus=${result.summary.queueFocus ?? "all"}`,
+    );
+  }
+  if (result.summary.verificationState && result.summary.verificationState !== "not-run") {
+    lines.push(
+      `Verification=${result.summary.verificationState}, failures=${result.summary.verificationFailures ?? 0}`,
     );
   }
   if (result.summary.runId) {

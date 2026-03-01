@@ -60,6 +60,8 @@ test("writeGitHubOutput writes key-value outputs", async () => {
       decisionPlan: "/tmp/decision-plan.json",
       interactiveSurface: "dashboard",
       queueFocus: "security",
+      verificationState: "passed",
+      verificationFailures: 0,
     },
     updates: [],
     errors: ["x"],
@@ -87,6 +89,8 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   expect(content.includes("decision_plan=/tmp/decision-plan.json")).toBe(true);
   expect(content.includes("interactive_surface=dashboard")).toBe(true);
   expect(content.includes("queue_focus=security")).toBe(true);
+  expect(content.includes("verification_state=passed")).toBe(true);
+  expect(content.includes("verification_failures=0")).toBe(true);
 });
 
 test("renderGitHubAnnotations emits deterministic sorted output", () => {

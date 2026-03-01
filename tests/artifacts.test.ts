@@ -46,6 +46,11 @@ function createOptions(cwd: string): CheckOptions {
     interactive: false,
     showImpact: false,
     showHomepage: false,
+    decisionPlanFile: path.join(cwd, ".artifacts", "decision-plan.json"),
+    verify: "test",
+    testCommand: "npm test",
+    verificationReportFile: path.join(cwd, ".artifacts", "verify.json"),
+    ciGate: "review",
   };
 }
 
@@ -163,4 +168,5 @@ test("writeArtifactManifest writes a manifest with the expected output paths", a
   expect(parsed.outputs.githubOutputFile).toBe(options.githubOutputFile!);
   expect(parsed.outputs.sarifFile).toBe(options.sarifFile!);
   expect(parsed.outputs.prReportFile).toBe(options.prReportFile!);
+  expect(parsed.outputs.verificationReportFile).toBe(options.verificationReportFile!);
 });

@@ -51,6 +51,10 @@ export function parseDashboardArgs(args: string[]): DashboardOptions {
     focus: "all",
     applySelected: false,
     decisionPlanFile: undefined,
+    verify: "none",
+    testCommand: undefined,
+    verificationReportFile: undefined,
+    ciGate: "check",
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -114,6 +118,41 @@ export function parseDashboardArgs(args: string[]): DashboardOptions {
       continue;
     }
 
+    if (arg === "--verify" && nextArg) {
+      if (
+        nextArg === "none" ||
+        nextArg === "install" ||
+        nextArg === "test" ||
+        nextArg === "install,test"
+      ) {
+        options.verify = nextArg;
+        i++;
+        continue;
+      }
+      throw new Error(`Invalid --verify: ${nextArg}`);
+    }
+    if (arg === "--verify") {
+      throw new Error("Missing value for --verify");
+    }
+
+    if (arg === "--test-command" && nextArg) {
+      options.testCommand = nextArg;
+      i++;
+      continue;
+    }
+    if (arg === "--test-command") {
+      throw new Error("Missing value for --test-command");
+    }
+
+    if (arg === "--verification-report-file" && nextArg) {
+      options.verificationReportFile = path.resolve(options.cwd, nextArg);
+      i++;
+      continue;
+    }
+    if (arg === "--verification-report-file") {
+      throw new Error("Missing value for --verification-report-file");
+    }
+
     if (arg === "--plan-file" && nextArg) {
       options.decisionPlanFile = path.resolve(options.cwd, nextArg);
       i++;
@@ -133,6 +172,10 @@ export function parseDashboardArgs(args: string[]): DashboardOptions {
       options.cwd = path.resolve(nextArg);
       i++;
       continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown dashboard option: ${arg}`);
     }
   }
 

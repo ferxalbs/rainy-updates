@@ -8,6 +8,7 @@ import { buildWorkspaceGraph } from "../workspace/graph.js";
 import { captureLockfileSnapshot, changedLockfiles, validateLockfileMode } from "../utils/lockfile.js";
 import { createSummary, finalizeSummary } from "./summary.js";
 import { readDecisionPlan, selectedUpdatesFromPlan } from "./decision-plan.js";
+import { runVerification } from "./verification.js";
 
 export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
   validateLockfileMode(options.lockfileMode, options.install);
@@ -33,6 +34,26 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
   }
   if (lockfileChanges.length > 0 && options.lockfileMode === "update") {
     checkResult.warnings.push(`Lockfiles changed: ${lockfileChanges.map((item) => item.split("/").pop()).join(", ")}`);
+  }
+
+  if (options.verify !== "none") {
+    const verification = await runVerification(options);
+    checkResult.summary.verificationState = verification.passed
+      ? "passed"
+      : "failed";
+    checkResult.summary.verificationFailures = verification.checks.filter(
+      (check) => !check.passed,
+    ).length;
+    if (!verification.passed) {
+      checkResult.errors.push(
+        ...verification.checks
+          .filter((check) => !check.passed)
+          .map(
+            (check) =>
+              `Verification failed for ${check.name}: ${check.error ?? check.command}`,
+          ),
+      );
+    }
   }
 
   return {

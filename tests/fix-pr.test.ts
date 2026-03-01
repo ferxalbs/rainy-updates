@@ -36,6 +36,11 @@ test("applyFixPr supports dry-run branch preparation", async () => {
     interactive: false,
     showImpact: false,
     showHomepage: false,
+    decisionPlanFile: undefined,
+    verify: "none",
+    testCommand: undefined,
+    verificationReportFile: undefined,
+    ciGate: "check",
   };
 
   const result: CheckResult = {
@@ -120,6 +125,11 @@ test("applyFixPr skips updates marked as autofix false", async () => {
     interactive: false,
     showImpact: false,
     showHomepage: false,
+    decisionPlanFile: undefined,
+    verify: "none",
+    testCommand: undefined,
+    verificationReportFile: undefined,
+    ciGate: "check",
   };
 
   const result: CheckResult = {

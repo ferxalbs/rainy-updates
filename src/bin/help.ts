@@ -42,6 +42,9 @@ Options:
   --only-changed
   --interactive
   --plan-file <path>
+  --verify none|install|test|install,test
+  --test-command <cmd>
+  --verification-report-file <path>
   --show-impact
   --show-links
   --show-homepage
@@ -95,7 +98,10 @@ Options:
   --fix-pr-no-checkout
   --fix-pr-batch-size <n>
   --interactive
-  --plan-file <path>
+  --from-plan <path>
+  --verify none|install|test|install,test
+  --test-command <cmd>
+  --verification-report-file <path>
   --lockfile-mode preserve|update|error
   --no-pr-report
   --json-file <path>
@@ -114,6 +120,7 @@ Run CI-oriented automation around the same lifecycle:
 Options:
   --workspace
   --mode minimal|strict|enterprise
+  --gate check|doctor|review|upgrade
   --group-by none|name|scope|kind|risk
   --group-max <n>
   --cooldown-days <n>
@@ -131,6 +138,10 @@ Options:
   --fix-pr-no-checkout
   --fix-pr-batch-size <n>
   --no-pr-report
+  --plan-file <path>
+  --verify none|install|test|install,test
+  --test-command <cmd>
+  --verification-report-file <path>
   --json-file <path>
   --github-output <path>
   --sarif-file <path>
@@ -233,6 +244,9 @@ Options:
   --focus all|security|risk|major|blocked|workspace
   --apply-selected
   --plan-file <path>
+  --verify none|install|test|install,test
+  --test-command <cmd>
+  --verification-report-file <path>
   --cwd <path>`;
   }
 

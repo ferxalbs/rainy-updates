@@ -51,6 +51,10 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     showChangelog: false,
     decisionPlanFile: undefined,
     queueFocus: "all",
+    verify: "none",
+    testCommand: undefined,
+    verificationReportFile: undefined,
+    ciGate: "check",
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -105,6 +109,34 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       continue;
     }
     if (current === "--plan-file") throw new Error("Missing value for --plan-file");
+    if (current === "--verify" && next) {
+      if (
+        next === "none" ||
+        next === "install" ||
+        next === "test" ||
+        next === "install,test"
+      ) {
+        options.verify = next;
+        i += 1;
+        continue;
+      }
+      throw new Error("--verify must be none, install, test or install,test");
+    }
+    if (current === "--verify") throw new Error("Missing value for --verify");
+    if (current === "--test-command" && next) {
+      options.testCommand = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--test-command") throw new Error("Missing value for --test-command");
+    if (current === "--verification-report-file" && next) {
+      options.verificationReportFile = path.resolve(options.cwd, next);
+      i += 1;
+      continue;
+    }
+    if (current === "--verification-report-file") {
+      throw new Error("Missing value for --verification-report-file");
+    }
     if (current === "--show-changelog") {
       options.showChangelog = true;
       continue;
@@ -187,6 +219,8 @@ Options:
   --diff <level>          Filter by patch, minor, major, latest
   --apply-selected        Apply all filtered updates after review
   --plan-file <path>      Write the selected decision set to a reusable plan file
+  --verify <mode>         Run post-apply verification: none, install, test, install,test
+  --test-command <cmd>    Override the command used for test verification
   --show-changelog        Fetch release notes summaries for review output
   --workspace             Scan all workspace packages
   --policy-file <path>    Load policy overrides

@@ -51,6 +51,11 @@ test("warmCache reports misses in offline mode", async () => {
     interactive: false,
     showImpact: false,
     showHomepage: false,
+    decisionPlanFile: undefined,
+    verify: "none",
+    testCommand: undefined,
+    verificationReportFile: undefined,
+    ciGate: "check",
   });
 
   expect(result.summary.warmedPackages).toBe(0);

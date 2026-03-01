@@ -56,6 +56,11 @@ test("offline mode reports cache miss error", async () => {
     interactive: false,
     showImpact: false,
     showHomepage: false,
+    decisionPlanFile: undefined,
+    verify: "none",
+    testCommand: undefined,
+    verificationReportFile: undefined,
+    ciGate: "check",
   });
 
   expect(

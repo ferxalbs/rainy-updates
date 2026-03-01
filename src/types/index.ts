@@ -20,6 +20,8 @@ export type QueueFocus =
   | "workspace";
 export type InteractiveSurface = "dashboard";
 export type VerificationState = "not-run" | "passed" | "failed";
+export type VerificationMode = "none" | "install" | "test" | "install,test";
+export type CiGate = "check" | "doctor" | "review" | "upgrade";
 export type DoctorFindingSeverity = "error" | "warning";
 export type DoctorScoreLabel =
   | "Strong"
@@ -96,6 +98,10 @@ export interface RunOptions {
   showImpact: boolean;
   showHomepage: boolean;
   decisionPlanFile?: string;
+  verify: VerificationMode;
+  testCommand?: string;
+  verificationReportFile?: string;
+  ciGate: CiGate;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -195,7 +201,23 @@ export interface ArtifactManifest {
     githubOutputFile?: string;
     sarifFile?: string;
     prReportFile?: string;
+    verificationReportFile?: string;
   };
+}
+
+export interface VerificationCheck {
+  name: "install" | "test";
+  command: string;
+  passed: boolean;
+  exitCode: number;
+  durationMs: number;
+  error?: string;
+}
+
+export interface VerificationResult {
+  mode: VerificationMode;
+  passed: boolean;
+  checks: VerificationCheck[];
 }
 
 export interface DecisionPlanItem {

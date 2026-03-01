@@ -30,8 +30,14 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     "--stream",
     "--lockfile-mode",
     "update",
-    "--plan-file",
+    "--from-plan",
     "artifacts/decision-plan.json",
+    "--verify",
+    "install,test",
+    "--test-command",
+    "bun test",
+    "--verification-report-file",
+    "artifacts/verify.json",
     "--format",
     "github",
   ]);
@@ -49,6 +55,9 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     expect(parsed.options.format).toBe("github");
     expect(parsed.options.lockfileMode).toBe("update");
     expect(parsed.options.fromPlanFile?.endsWith("artifacts/decision-plan.json")).toBe(true);
+    expect(parsed.options.verify).toBe("install,test");
+    expect(parsed.options.testCommand).toBe("bun test");
+    expect(parsed.options.verificationReportFile?.endsWith("artifacts/verify.json")).toBe(true);
   }
 });
 
@@ -100,6 +109,8 @@ test("parseCliArgs supports ci command orchestration flags", async () => {
     "ci",
     "--mode",
     "strict",
+    "--gate",
+    "upgrade",
     "--group-by",
     "scope",
     "--group-max",
@@ -111,16 +122,23 @@ test("parseCliArgs supports ci command orchestration flags", async () => {
     "--fix-pr-batch-size",
     "3",
     "--only-changed",
+    "--verify",
+    "test",
+    "--test-command",
+    "npm test",
   ]);
   expect(parsed.command).toBe("ci");
   if (parsed.command === "ci") {
     expect(parsed.options.ciProfile).toBe("strict");
+    expect(parsed.options.ciGate).toBe("upgrade");
     expect(parsed.options.groupBy).toBe("scope");
     expect(parsed.options.groupMax).toBe(12);
     expect(parsed.options.cooldownDays).toBe(7);
     expect(parsed.options.prLimit).toBe(20);
     expect(parsed.options.fixPrBatchSize).toBe(3);
     expect(parsed.options.onlyChanged).toBe(true);
+    expect(parsed.options.verify).toBe("test");
+    expect(parsed.options.testCommand).toBe("npm test");
   }
 });
 
@@ -213,6 +231,10 @@ test("parseCliArgs supports dashboard command", async () => {
     "--apply-selected",
     "--plan-file",
     "plans/queue.json",
+    "--verify",
+    "test",
+    "--test-command",
+    "npm test",
   ]);
   expect(parsed.command).toBe("dashboard");
   if (parsed.command === "dashboard") {
@@ -221,6 +243,8 @@ test("parseCliArgs supports dashboard command", async () => {
     expect(parsed.options.focus).toBe("security");
     expect(parsed.options.applySelected).toBe(true);
     expect(parsed.options.decisionPlanFile?.endsWith("plans/queue.json")).toBe(true);
+    expect(parsed.options.verify).toBe("test");
+    expect(parsed.options.testCommand).toBe("npm test");
   }
 });
 
