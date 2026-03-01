@@ -1,17 +1,20 @@
 import path from "node:path";
-import { check } from "./check.js";
 import { createSummary, finalizeSummary } from "./summary.js";
 import type {
   CheckOptions,
   DoctorOptions,
-  DoctorResult,
   ReviewItem,
   ReviewOptions,
   ReviewResult,
   Summary,
-  Verdict,
 } from "../types/index.js";
 import { buildAnalysisBundle } from "./analysis-bundle.js";
+export { createDoctorResult } from "./doctor/result.js";
+export {
+  renderDoctorAgentReport,
+  renderDoctorResult,
+} from "./doctor/render.js";
+import { deriveReviewVerdict } from "./review-verdict.js";
 
 export async function buildReviewResult(
   options: ReviewOptions | DoctorOptions | CheckOptions,
@@ -70,18 +73,6 @@ export async function buildReviewResult(
       ...analysis.licenses.warnings,
       ...analysis.unused.warnings,
     ],
-  };
-}
-
-export function createDoctorResult(review: ReviewResult): DoctorResult {
-  const verdict = review.summary.verdict ?? deriveVerdict(review.items, review.errors);
-  const primaryFindings = buildPrimaryFindings(review);
-  return {
-    verdict,
-    summary: review.summary,
-    review,
-    primaryFindings,
-    recommendedCommand: recommendCommand(review, verdict),
   };
 }
 
@@ -146,20 +137,6 @@ export function renderReviewResult(review: ReviewResult): string {
   lines.push(
     `Summary: ${review.summary.updatesFound} updates, riskPackages=${review.summary.riskPackages ?? 0}, securityPackages=${review.summary.securityPackages ?? 0}, peerConflictPackages=${review.summary.peerConflictPackages ?? 0}`,
   );
-  return lines.join("\n");
-}
-
-export function renderDoctorResult(result: DoctorResult, verdictOnly = false): string {
-  const lines = [
-    `State: ${result.verdict}`,
-    `PrimaryRisk: ${result.primaryFindings[0] ?? "No blocking findings."}`,
-    `NextAction: ${result.recommendedCommand}`,
-  ];
-  if (!verdictOnly) {
-    lines.push(
-      `Counts: updates=${result.summary.updatesFound}, security=${result.summary.securityPackages ?? 0}, risk=${result.summary.riskPackages ?? 0}, peer=${result.summary.peerConflictPackages ?? 0}, license=${result.summary.licenseViolationPackages ?? 0}`,
-    );
-  }
   return lines.join("\n");
 }
 
@@ -253,58 +230,6 @@ function createReviewSummary(
   summary.monitorPackages = items.filter((item) => item.update.policyAction === "monitor").length;
   summary.decisionPackages = items.length;
   summary.degradedSources = degradedSources;
-  summary.verdict = deriveVerdict(items, errors);
+  summary.verdict = deriveReviewVerdict(items, errors);
   return summary;
-}
-
-function deriveVerdict(items: ReviewItem[], errors: string[]): Verdict {
-  if (
-    items.some(
-      (item) =>
-        item.update.peerConflictSeverity === "error" ||
-        item.update.licenseStatus === "denied",
-    )
-  ) {
-    return "blocked";
-  }
-  if (items.some((item) => item.advisories.length > 0 || item.update.riskLevel === "critical")) {
-    return "actionable";
-  }
-  if (
-    errors.length > 0 ||
-    items.some((item) => item.update.riskLevel === "high" || item.update.diffType === "major")
-  ) {
-    return "review";
-  }
-  return "safe";
-}
-
-function buildPrimaryFindings(review: ReviewResult): string[] {
-  const findings: string[] = [];
-  if ((review.summary.peerConflictPackages ?? 0) > 0) {
-    findings.push(`${review.summary.peerConflictPackages} package(s) have peer conflicts.`);
-  }
-  if ((review.summary.licenseViolationPackages ?? 0) > 0) {
-    findings.push(`${review.summary.licenseViolationPackages} package(s) violate license policy.`);
-  }
-  if ((review.summary.securityPackages ?? 0) > 0) {
-    findings.push(`${review.summary.securityPackages} package(s) have security advisories.`);
-  }
-  if ((review.summary.riskPackages ?? 0) > 0) {
-    findings.push(`${review.summary.riskPackages} package(s) are high risk.`);
-  }
-  if (review.errors.length > 0) {
-    findings.push(`${review.errors.length} execution error(s) need review before treating the result as clean.`);
-  }
-  if (findings.length === 0) {
-    findings.push("No blocking findings; remaining updates are low-risk.");
-  }
-  return findings;
-}
-
-function recommendCommand(review: ReviewResult, verdict: Verdict): string {
-  if (verdict === "blocked") return "rup review --interactive";
-  if ((review.summary.securityPackages ?? 0) > 0) return "rup review --security-only";
-  if (review.errors.length > 0 || review.items.length > 0) return "rup review --interactive";
-  return "rup check";
 }

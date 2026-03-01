@@ -2,6 +2,58 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.7] - 2026-03-01
+
+Final stabilization release for the `v0.5` series, focused on modularization, doctor scan quality, and maintainability.
+
+### Added
+
+- **Doctor scan upgrades inspired by high-level audit CLIs**:
+  - normalized doctor findings with categories and severities,
+  - deterministic dependency health score (`0-100`),
+  - score labels and next-action reasoning,
+  - agent-oriented doctor output via `doctor --agent-report`.
+- **New modular doctor core** under `src/core/doctor/`:
+  - findings derivation,
+  - score calculation,
+  - result assembly,
+  - rendering.
+- **New modular analysis helpers** under `src/core/analysis/`:
+  - analysis option adapters,
+  - review item enrichment,
+  - silenced runner wrapper.
+- **New CLI seam modules**:
+  - `src/bin/dispatch.ts`
+  - `src/bin/help.ts`
+  - `src/core/review-verdict.ts`
+- **New help coverage** in `tests/help.test.ts`.
+
+### Changed
+
+- `doctor` now behaves as a stronger high-level scan surface:
+  - `State`
+  - `Score`
+  - `PrimaryRisk`
+  - `NextAction`
+  - `NextActionReason`
+- Summary and machine outputs now carry additive doctor metadata:
+  - `dependencyHealthScore`,
+  - `findingCountsByCategory`,
+  - `findingCountsBySeverity`,
+  - `primaryFindingCode`,
+  - `primaryFindingCategory`,
+  - `nextActionReason`.
+- GitHub output, SARIF, and human-readable metrics/table output now expose the new doctor summary fields additively.
+- `src/core/review-model.ts` was reduced to review aggregation responsibilities, with doctor logic extracted into focused modules.
+- `src/core/analysis-bundle.ts` was reduced to a thin coordinator, with item enrichment and option adaptation moved into dedicated modules.
+- `src/bin/cli.ts` was simplified by extracting command dispatch and help rendering into standalone modules.
+
+### Tests
+
+- Added coverage for doctor score/findings behavior and agent report rendering.
+- Added coverage for new GitHub output and SARIF fields.
+- Added help rendering coverage after extracting CLI help into its own module.
+
 ## [0.5.6] - 2026-03-01
 
 GA readiness, shared analysis plumbing, and richer review operations.

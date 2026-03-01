@@ -38,6 +38,10 @@ test("createSarifReport includes updates and errors", () => {
       peerConflictPackages: 0,
       licenseViolationPackages: 0,
       privateRegistryPackages: 0,
+      dependencyHealthScore: 58,
+      primaryFindingCode: "security-advisory",
+      primaryFindingCategory: "Security",
+      nextActionReason: "Security advisories are present, so the next step should focus on the secure subset first.",
     },
     updates: [
       {
@@ -68,4 +72,6 @@ test("createSarifReport includes updates and errors", () => {
   expect(json.includes("react")).toBe(true);
   expect(json.includes("riskScore")).toBe(true);
   expect(json.includes("recommendedAction")).toBe(true);
+  expect(json.includes("dependencyHealthScore")).toBe(true);
+  expect(json.includes("primaryFindingCategory")).toBe(true);
 });

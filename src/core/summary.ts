@@ -89,6 +89,12 @@ export function createSummary(input: {
     cacheBackend: undefined,
     binaryRecommended: false,
     gaReady: undefined,
+    dependencyHealthScore: undefined,
+    findingCountsByCategory: undefined,
+    findingCountsBySeverity: undefined,
+    primaryFindingCode: undefined,
+    primaryFindingCategory: undefined,
+    nextActionReason: undefined,
   };
 }
 

@@ -79,6 +79,10 @@ export function renderResult(
       `cache_backend=${result.summary.cacheBackend ?? ""}`,
       `degraded_sources=${(result.summary.degradedSources ?? []).join(",")}`,
       `ga_ready=${result.summary.gaReady === true ? "1" : "0"}`,
+      `dependency_health_score=${result.summary.dependencyHealthScore ?? ""}`,
+      `primary_finding_code=${result.summary.primaryFindingCode ?? ""}`,
+      `primary_finding_category=${result.summary.primaryFindingCategory ?? ""}`,
+      `next_action_reason=${result.summary.nextActionReason ?? ""}`,
     ].join("\n");
   }
 
@@ -150,6 +154,11 @@ export function renderResult(
   if (result.summary.verdict) {
     lines.push(
       `Verdict=${result.summary.verdict}, riskPackages=${result.summary.riskPackages ?? 0}, securityPackages=${result.summary.securityPackages ?? 0}, peerConflictPackages=${result.summary.peerConflictPackages ?? 0}, licenseViolationPackages=${result.summary.licenseViolationPackages ?? 0}`,
+    );
+  }
+  if (typeof result.summary.dependencyHealthScore === "number") {
+    lines.push(
+      `DependencyHealthScore=${result.summary.dependencyHealthScore}, primaryFinding=${result.summary.primaryFindingCode ?? "none"}, category=${result.summary.primaryFindingCategory ?? "none"}`,
     );
   }
   if (result.summary.runId) {

@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { createDoctorResult } from "../src/core/review-model.js";
+import {
+  createDoctorResult,
+  renderDoctorAgentReport,
+  renderDoctorResult,
+} from "../src/core/review-model.js";
 import type { ReviewResult } from "../src/types/index.js";
 
 test("doctor recommends review when the aggregated result contains execution errors", () => {
@@ -115,6 +119,15 @@ test("doctor recommends review when the aggregated result contains execution err
   const doctor = createDoctorResult(review);
 
   expect(doctor.verdict).toBe("review");
+  expect(doctor.score).toBeLessThan(100);
+  expect(doctor.scoreLabel).toBe("Strong");
+  expect(doctor.findings[0]?.category).toBe("Registry / Execution");
   expect(doctor.recommendedCommand).toBe("rup review --interactive");
-  expect(doctor.primaryFindings[0]).toContain("execution error");
+  expect(doctor.primaryFindings[0]).toContain("Unable to resolve react");
+  expect(doctor.summary.dependencyHealthScore).toBe(88);
+  expect(doctor.summary.primaryFindingCode).toBe("execution-error");
+  expect(doctor.summary.primaryFindingCategory).toBe("Registry / Execution");
+  expect(doctor.summary.findingCountsBySeverity?.error).toBe(1);
+  expect(renderDoctorResult(doctor, true)).toContain("Score: 88/100");
+  expect(renderDoctorAgentReport(doctor)).toContain("Priority findings:");
 });

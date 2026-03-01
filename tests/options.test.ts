@@ -188,12 +188,14 @@ test("parseCliArgs supports doctor command", async () => {
     "--workspace",
     "--verdict-only",
     "--include-changelog",
+    "--agent-report",
   ]);
   expect(parsed.command).toBe("doctor");
   if (parsed.command === "doctor") {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.verdictOnly).toBe(true);
     expect(parsed.options.includeChangelog).toBe(true);
+    expect(parsed.options.agentReport).toBe(true);
   }
 });
 

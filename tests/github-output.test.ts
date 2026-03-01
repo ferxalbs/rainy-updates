@@ -52,6 +52,10 @@ test("writeGitHubOutput writes key-value outputs", async () => {
       degradedSources: ["github"],
       cacheBackend: "sqlite",
       gaReady: true,
+      dependencyHealthScore: 72,
+      primaryFindingCode: "security-advisory",
+      primaryFindingCategory: "Security",
+      nextActionReason: "Security advisories are present, so the next step should focus on the secure subset first.",
     },
     updates: [],
     errors: ["x"],
@@ -72,6 +76,9 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   expect(content.includes("artifact_manifest=/tmp/manifest.json")).toBe(true);
   expect(content.includes("cache_backend=sqlite")).toBe(true);
   expect(content.includes("ga_ready=1")).toBe(true);
+  expect(content.includes("dependency_health_score=72")).toBe(true);
+  expect(content.includes("primary_finding_code=security-advisory")).toBe(true);
+  expect(content.includes("primary_finding_category=Security")).toBe(true);
 });
 
 test("renderGitHubAnnotations emits deterministic sorted output", () => {

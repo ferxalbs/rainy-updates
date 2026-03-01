@@ -10,6 +10,22 @@ export type CiProfile = "minimal" | "strict" | "enterprise";
 export type LockfileMode = "preserve" | "update" | "error";
 export type Verdict = "safe" | "review" | "blocked" | "actionable";
 export type RiskLevel = "critical" | "high" | "medium" | "low";
+export type DoctorFindingSeverity = "error" | "warning";
+export type DoctorScoreLabel =
+  | "Strong"
+  | "Needs Review"
+  | "Action Needed"
+  | "Blocked / Critical";
+export type DoctorFindingCategory =
+  | "Security"
+  | "Compatibility"
+  | "Policy"
+  | "Operational Health"
+  | "Licensing"
+  | "Unused / Cleanup"
+  | "Release Risk"
+  | "Registry / Execution"
+  | "Workspace Integrity";
 export type RiskCategory =
   | "known-vulnerability"
   | "behavioral-risk"
@@ -229,6 +245,12 @@ export interface Summary {
   cacheBackend?: "sqlite" | "file";
   binaryRecommended?: boolean;
   gaReady?: boolean;
+  dependencyHealthScore?: number;
+  findingCountsByCategory?: Partial<Record<DoctorFindingCategory, number>>;
+  findingCountsBySeverity?: Partial<Record<DoctorFindingSeverity, number>>;
+  primaryFindingCode?: string;
+  primaryFindingCategory?: DoctorFindingCategory;
+  nextActionReason?: string;
 }
 
 export interface CheckResult {
@@ -496,14 +518,34 @@ export interface ReviewOptions extends CheckOptions {
 export interface DoctorOptions extends CheckOptions {
   verdictOnly: boolean;
   includeChangelog?: boolean;
+  agentReport?: boolean;
+}
+
+export interface DoctorFinding {
+  id: string;
+  code: string;
+  category: DoctorFindingCategory;
+  severity: DoctorFindingSeverity;
+  scope: "project" | "package";
+  packageName?: string;
+  workspace?: string;
+  summary: string;
+  details?: string;
+  help?: string;
+  recommendedAction?: string;
+  evidence?: string[];
 }
 
 export interface DoctorResult {
   verdict: Verdict;
+  score: number;
+  scoreLabel: DoctorScoreLabel;
   summary: Summary;
   review: ReviewResult;
+  findings: DoctorFinding[];
   primaryFindings: string[];
   recommendedCommand: string;
+  nextActionReason: string;
 }
 
 export interface AnalysisBundle {
