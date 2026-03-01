@@ -30,6 +30,8 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     "--stream",
     "--lockfile-mode",
     "update",
+    "--plan-file",
+    "artifacts/decision-plan.json",
     "--format",
     "github",
   ]);
@@ -46,6 +48,7 @@ test("parseCliArgs supports upgrade install and pm", async () => {
     expect(parsed.options.stream).toBe(true);
     expect(parsed.options.format).toBe("github");
     expect(parsed.options.lockfileMode).toBe("update");
+    expect(parsed.options.fromPlanFile?.endsWith("artifacts/decision-plan.json")).toBe(true);
   }
 });
 
@@ -196,6 +199,28 @@ test("parseCliArgs supports doctor command", async () => {
     expect(parsed.options.verdictOnly).toBe(true);
     expect(parsed.options.includeChangelog).toBe(true);
     expect(parsed.options.agentReport).toBe(true);
+  }
+});
+
+test("parseCliArgs supports dashboard command", async () => {
+  const parsed = await parseCliArgs([
+    "dashboard",
+    "--workspace",
+    "--mode",
+    "upgrade",
+    "--focus",
+    "security",
+    "--apply-selected",
+    "--plan-file",
+    "plans/queue.json",
+  ]);
+  expect(parsed.command).toBe("dashboard");
+  if (parsed.command === "dashboard") {
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.mode).toBe("upgrade");
+    expect(parsed.options.focus).toBe("security");
+    expect(parsed.options.applySelected).toBe(true);
+    expect(parsed.options.decisionPlanFile?.endsWith("plans/queue.json")).toBe(true);
   }
 });
 

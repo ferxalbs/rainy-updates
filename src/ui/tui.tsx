@@ -33,6 +33,8 @@ type DetailTab = (typeof DETAIL_TABS)[number];
 
 interface TuiAppProps {
   items: ReviewItem[];
+  title?: string;
+  subtitle?: string;
   onComplete: (selected: ReviewItem[]) => void;
 }
 
@@ -42,7 +44,7 @@ interface VisibleRow {
   index?: number;
 }
 
-function TuiApp({ items, onComplete }: TuiAppProps) {
+function TuiApp({ items, title, subtitle, onComplete }: TuiAppProps) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [filterIndex, setFilterIndex] = useState(0);
   const [sortIndex, setSortIndex] = useState(0);
@@ -169,10 +171,11 @@ function TuiApp({ items, onComplete }: TuiAppProps) {
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold color="cyan">
-        Rainy Review Queue
+        {title ?? "Rainy Dashboard"}
       </Text>
       <Text color="gray">
-        Detect with check, summarize with doctor, decide here in review, then apply with upgrade.
+        {subtitle ??
+          "Check detects, doctor summarizes, dashboard decides, upgrade applies."}
       </Text>
       <Text color="gray">
         Filters: ←/→  Sort: o  Group: g  Tabs: Tab  Search: /  Help: ?  Space: toggle  Enter: confirm
@@ -554,11 +557,16 @@ function decisionColor(label: DecisionState): string {
   }
 }
 
-export async function runTui(items: ReviewItem[]): Promise<ReviewItem[]> {
+export async function runTui(
+  items: ReviewItem[],
+  options?: { title?: string; subtitle?: string },
+): Promise<ReviewItem[]> {
   return new Promise((resolve) => {
     const { unmount } = render(
       <TuiApp
         items={items}
+        title={options?.title}
+        subtitle={options?.subtitle}
         onComplete={(selected) => {
           unmount();
           resolve(selected);

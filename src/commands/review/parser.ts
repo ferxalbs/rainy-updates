@@ -49,6 +49,8 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     diff: undefined,
     applySelected: false,
     showChangelog: false,
+    decisionPlanFile: undefined,
+    queueFocus: "all",
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -97,6 +99,12 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       options.applySelected = true;
       continue;
     }
+    if (current === "--plan-file" && next) {
+      options.decisionPlanFile = path.resolve(options.cwd, next);
+      i += 1;
+      continue;
+    }
+    if (current === "--plan-file") throw new Error("Missing value for --plan-file");
     if (current === "--show-changelog") {
       options.showChangelog = true;
       continue;
@@ -155,6 +163,14 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     throw new Error(`Unexpected review argument: ${current}`);
   }
 
+  if (options.securityOnly) {
+    options.queueFocus = "security";
+  } else if (options.risk === "critical" || options.risk === "high") {
+    options.queueFocus = "risk";
+  } else if (options.diff === "major") {
+    options.queueFocus = "major";
+  }
+
   return options;
 }
 
@@ -170,6 +186,7 @@ Options:
   --risk <level>          Minimum risk: critical, high, medium, low
   --diff <level>          Filter by patch, minor, major, latest
   --apply-selected        Apply all filtered updates after review
+  --plan-file <path>      Write the selected decision set to a reusable plan file
   --show-changelog        Fetch release notes summaries for review output
   --workspace             Scan all workspace packages
   --policy-file <path>    Load policy overrides

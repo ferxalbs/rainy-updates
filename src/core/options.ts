@@ -187,6 +187,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     interactive: false,
     showImpact: false,
     showHomepage: false,
+    decisionPlanFile: undefined,
   };
 
   let force = false;
@@ -608,6 +609,15 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       throw new Error("Missing value for --file");
     }
 
+    if (current === "--plan-file" && next) {
+      base.decisionPlanFile = path.resolve(base.cwd, next);
+      index += 1;
+      continue;
+    }
+    if (current === "--plan-file") {
+      throw new Error("Missing value for --plan-file");
+    }
+
     if (current.startsWith("-")) {
       throw new Error(`Unknown option: ${current}`);
     }
@@ -645,6 +655,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       install: args.includes("--install") || resolvedConfig.install === true,
       packageManager: cliPm === "auto" ? (configPm ?? "auto") : cliPm,
       sync: args.includes("--sync") || resolvedConfig.sync === true,
+      fromPlanFile: base.decisionPlanFile,
     };
 
     return { command, options: upgradeOptions };
@@ -827,6 +838,9 @@ function applyConfig(
   }
   if (typeof config.showHomepage === "boolean") {
     base.showHomepage = config.showHomepage;
+  }
+  if (typeof config.decisionPlanFile === "string") {
+    base.decisionPlanFile = path.resolve(base.cwd, config.decisionPlanFile);
   }
 }
 

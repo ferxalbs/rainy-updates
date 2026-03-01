@@ -10,6 +10,16 @@ export type CiProfile = "minimal" | "strict" | "enterprise";
 export type LockfileMode = "preserve" | "update" | "error";
 export type Verdict = "safe" | "review" | "blocked" | "actionable";
 export type RiskLevel = "critical" | "high" | "medium" | "low";
+export type DashboardMode = "check" | "review" | "upgrade";
+export type QueueFocus =
+  | "all"
+  | "security"
+  | "risk"
+  | "major"
+  | "blocked"
+  | "workspace";
+export type InteractiveSurface = "dashboard";
+export type VerificationState = "not-run" | "passed" | "failed";
 export type DoctorFindingSeverity = "error" | "warning";
 export type DoctorScoreLabel =
   | "Strong"
@@ -85,6 +95,7 @@ export interface RunOptions {
   interactive: boolean;
   showImpact: boolean;
   showHomepage: boolean;
+  decisionPlanFile?: string;
 }
 
 export interface CheckOptions extends RunOptions {}
@@ -93,6 +104,7 @@ export interface UpgradeOptions extends RunOptions {
   install: boolean;
   packageManager: "auto" | "npm" | "pnpm";
   sync: boolean;
+  fromPlanFile?: string;
 }
 
 export interface BaselineOptions {
@@ -186,6 +198,37 @@ export interface ArtifactManifest {
   };
 }
 
+export interface DecisionPlanItem {
+  packagePath: string;
+  name: string;
+  kind: DependencyKind;
+  fromRange: string;
+  toRange: string;
+  toVersionResolved: string;
+  diffType: TargetLevel;
+  riskLevel?: RiskLevel;
+  riskScore?: number;
+  policyAction?: PolicyAction;
+  decisionState?: DecisionState;
+  selected: boolean;
+}
+
+export interface DecisionPlan {
+  contractVersion: "1";
+  createdAt: string;
+  sourceCommand: string;
+  mode: DashboardMode;
+  focus: QueueFocus;
+  projectPath: string;
+  target: TargetLevel;
+  interactiveSurface: InteractiveSurface;
+  summary: {
+    totalItems: number;
+    selectedItems: number;
+  };
+  items: DecisionPlanItem[];
+}
+
 export interface Summary {
   contractVersion: "2";
   scannedPackages: number;
@@ -251,6 +294,12 @@ export interface Summary {
   primaryFindingCode?: string;
   primaryFindingCategory?: DoctorFindingCategory;
   nextActionReason?: string;
+  suggestedCommand?: string;
+  decisionPlan?: string;
+  interactiveSurface?: InteractiveSurface;
+  queueFocus?: QueueFocus;
+  verificationState?: VerificationState;
+  verificationFailures?: number;
 }
 
 export interface CheckResult {
@@ -505,6 +554,7 @@ export interface ReviewResult {
   updates: PackageUpdate[];
   errors: string[];
   warnings: string[];
+  decisionPlan?: DecisionPlan;
 }
 
 export interface ReviewOptions extends CheckOptions {
@@ -513,6 +563,7 @@ export interface ReviewOptions extends CheckOptions {
   diff?: TargetLevel;
   applySelected: boolean;
   showChangelog?: boolean;
+  queueFocus?: QueueFocus;
 }
 
 export interface DoctorOptions extends CheckOptions {
@@ -562,14 +613,18 @@ export interface AnalysisBundle {
 // dashboard ───────────────────────────────────────────────────────────────────
 
 export interface DashboardOptions extends CheckOptions {
-  // Add any specific options here, e.g. default view
   view?: "dependencies" | "security" | "health";
+  mode: DashboardMode;
+  focus: QueueFocus;
+  applySelected: boolean;
 }
 
 export interface DashboardResult {
   completed: boolean;
   errors: string[];
   warnings: string[];
+  selectedUpdates: number;
+  decisionPlanFile?: string;
 }
 
 // unused ──────────────────────────────────────────────────────────────────────

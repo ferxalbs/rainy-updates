@@ -95,6 +95,12 @@ export function createSummary(input: {
     primaryFindingCode: undefined,
     primaryFindingCategory: undefined,
     nextActionReason: undefined,
+    suggestedCommand: undefined,
+    decisionPlan: undefined,
+    interactiveSurface: undefined,
+    queueFocus: undefined,
+    verificationState: undefined,
+    verificationFailures: undefined,
   };
 }
 

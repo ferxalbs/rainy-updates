@@ -25,6 +25,7 @@ export function createDoctorResult(review: ReviewResult): DoctorResult {
   review.summary.primaryFindingCode = findings[0]?.code;
   review.summary.primaryFindingCategory = findings[0]?.category;
   review.summary.nextActionReason = nextActionReason;
+  review.summary.suggestedCommand = recommendedCommand;
 
   return {
     verdict,
@@ -40,9 +41,13 @@ export function createDoctorResult(review: ReviewResult): DoctorResult {
 }
 
 function recommendDoctorCommand(review: ReviewResult, verdict: Verdict): string {
-  if (verdict === "blocked") return "rup review --interactive";
-  if ((review.summary.securityPackages ?? 0) > 0) return "rup review --security-only";
-  if (review.errors.length > 0 || review.items.length > 0) return "rup review --interactive";
+  if (verdict === "blocked") return "rup dashboard --mode review --focus blocked";
+  if ((review.summary.securityPackages ?? 0) > 0) {
+    return "rup dashboard --mode review --focus security";
+  }
+  if (review.errors.length > 0 || review.items.length > 0) {
+    return "rup dashboard --mode review";
+  }
   return "rup check";
 }
 

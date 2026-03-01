@@ -8,6 +8,13 @@ test("renderHelp returns command-specific help", () => {
   expect(output).toContain("--include-changelog");
 });
 
+test("renderHelp includes dashboard-specific help", () => {
+  const output = renderHelp("dashboard");
+  expect(output).toContain("rainy-updates dashboard [options]");
+  expect(output).toContain("--mode check|review|upgrade");
+  expect(output).toContain("--focus all|security|risk|major|blocked|workspace");
+});
+
 test("renderHelp returns global help for unknown command context", () => {
   const output = renderHelp(undefined);
   expect(output).toContain("rainy-updates (rup / rainy-up) <command> [options]");

@@ -56,6 +56,10 @@ test("writeGitHubOutput writes key-value outputs", async () => {
       primaryFindingCode: "security-advisory",
       primaryFindingCategory: "Security",
       nextActionReason: "Security advisories are present, so the next step should focus on the secure subset first.",
+      suggestedCommand: "rup dashboard --mode review --focus security",
+      decisionPlan: "/tmp/decision-plan.json",
+      interactiveSurface: "dashboard",
+      queueFocus: "security",
     },
     updates: [],
     errors: ["x"],
@@ -79,6 +83,10 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   expect(content.includes("dependency_health_score=72")).toBe(true);
   expect(content.includes("primary_finding_code=security-advisory")).toBe(true);
   expect(content.includes("primary_finding_category=Security")).toBe(true);
+  expect(content.includes("suggested_command=rup dashboard --mode review --focus security")).toBe(true);
+  expect(content.includes("decision_plan=/tmp/decision-plan.json")).toBe(true);
+  expect(content.includes("interactive_surface=dashboard")).toBe(true);
+  expect(content.includes("queue_focus=security")).toBe(true);
 });
 
 test("renderGitHubAnnotations emits deterministic sorted output", () => {

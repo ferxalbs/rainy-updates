@@ -83,6 +83,10 @@ export function renderResult(
       `primary_finding_code=${result.summary.primaryFindingCode ?? ""}`,
       `primary_finding_category=${result.summary.primaryFindingCategory ?? ""}`,
       `next_action_reason=${result.summary.nextActionReason ?? ""}`,
+      `suggested_command=${result.summary.suggestedCommand ?? ""}`,
+      `decision_plan=${result.summary.decisionPlan ?? ""}`,
+      `interactive_surface=${result.summary.interactiveSurface ?? ""}`,
+      `queue_focus=${result.summary.queueFocus ?? ""}`,
     ].join("\n");
   }
 
@@ -159,6 +163,14 @@ export function renderResult(
   if (typeof result.summary.dependencyHealthScore === "number") {
     lines.push(
       `DependencyHealthScore=${result.summary.dependencyHealthScore}, primaryFinding=${result.summary.primaryFindingCode ?? "none"}, category=${result.summary.primaryFindingCategory ?? "none"}`,
+    );
+  }
+  if (result.summary.suggestedCommand) {
+    lines.push(`SuggestedCommand=${result.summary.suggestedCommand}`);
+  }
+  if (result.summary.decisionPlan) {
+    lines.push(
+      `DecisionPlan=${result.summary.decisionPlan}, surface=${result.summary.interactiveSurface ?? "none"}, focus=${result.summary.queueFocus ?? "all"}`,
     );
   }
   if (result.summary.runId) {

@@ -6,11 +6,15 @@ import { detectPackageManager } from "../pm/detect.js";
 import { applyRangeStyle, parseVersion, compareVersions } from "../utils/semver.js";
 import { buildWorkspaceGraph } from "../workspace/graph.js";
 import { captureLockfileSnapshot, changedLockfiles, validateLockfileMode } from "../utils/lockfile.js";
+import { createSummary, finalizeSummary } from "./summary.js";
+import { readDecisionPlan, selectedUpdatesFromPlan } from "./decision-plan.js";
 
 export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
   validateLockfileMode(options.lockfileMode, options.install);
   const lockfilesBefore = await captureLockfileSnapshot(options.cwd);
-  const checkResult = await check(options);
+  const checkResult = options.fromPlanFile
+    ? await createUpgradeResultFromPlan(options)
+    : await check(options);
   if (checkResult.updates.length === 0) {
     return {
       ...checkResult,
@@ -18,7 +22,10 @@ export async function upgrade(options: UpgradeOptions): Promise<UpgradeResult> {
     };
   }
 
-  await applySelectedUpdates(options, checkResult.updates);
+  const selectedUpdates = options.fromPlanFile
+    ? checkResult.updates
+    : checkResult.updates;
+  await applySelectedUpdates(options, selectedUpdates);
 
   const lockfileChanges = await changedLockfiles(options.cwd, lockfilesBefore);
   if (lockfileChanges.length > 0 && (options.lockfileMode === "preserve" || options.lockfileMode === "error")) {
@@ -79,6 +86,56 @@ export async function applySelectedUpdates(
     const detected = await detectPackageManager(options.cwd);
     await installDependencies(options.cwd, options.packageManager, detected);
   }
+}
+
+async function createUpgradeResultFromPlan(
+  options: UpgradeOptions,
+): Promise<UpgradeResult> {
+  if (!options.fromPlanFile) {
+    throw new Error("Missing decision plan file.");
+  }
+  const plan = await readDecisionPlan(options.fromPlanFile);
+  const packageManager = await detectPackageManager(options.cwd);
+  const updates = selectedUpdatesFromPlan(plan);
+  const packagePaths = Array.from(
+    new Set(updates.map((update) => update.packagePath)),
+  ).sort((left, right) => left.localeCompare(right));
+  const summary = finalizeSummary(
+    createSummary({
+      scannedPackages: packagePaths.length,
+      totalDependencies: updates.length,
+      checkedDependencies: updates.length,
+      updatesFound: updates.length,
+      upgraded: 0,
+      skipped: 0,
+      warmedPackages: 0,
+      errors: [],
+      warnings: [],
+      durations: {
+        totalMs: 0,
+        discoveryMs: 0,
+        registryMs: 0,
+        cacheMs: 0,
+      },
+    }),
+  );
+  summary.decisionPlan = options.fromPlanFile;
+  summary.interactiveSurface = plan.interactiveSurface;
+  summary.queueFocus = plan.focus;
+  summary.updatesFound = updates.length;
+
+  return {
+    projectPath: options.cwd,
+    packagePaths,
+    packageManager,
+    target: plan.target,
+    timestamp: new Date().toISOString(),
+    summary,
+    updates,
+    errors: [],
+    warnings: [],
+    changed: false,
+  };
 }
 
 function applyWorkspaceSync(

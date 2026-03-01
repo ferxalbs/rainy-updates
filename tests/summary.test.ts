@@ -38,6 +38,8 @@ test("createSummary includes fix-pr defaults", () => {
   expect(summary.prLimitHit).toBe(false);
   expect(summary.streamedEvents).toBe(0);
   expect(summary.policyOverridesApplied).toBe(0);
+  expect(summary.suggestedCommand).toBeUndefined();
+  expect(summary.decisionPlan).toBeUndefined();
 });
 
 test("resolveFailReason applies severity threshold for minor", () => {

@@ -122,12 +122,13 @@ test("doctor recommends review when the aggregated result contains execution err
   expect(doctor.score).toBeLessThan(100);
   expect(doctor.scoreLabel).toBe("Strong");
   expect(doctor.findings[0]?.category).toBe("Registry / Execution");
-  expect(doctor.recommendedCommand).toBe("rup review --interactive");
+  expect(doctor.recommendedCommand).toBe("rup dashboard --mode review");
   expect(doctor.primaryFindings[0]).toContain("Unable to resolve react");
   expect(doctor.summary.dependencyHealthScore).toBe(88);
   expect(doctor.summary.primaryFindingCode).toBe("execution-error");
   expect(doctor.summary.primaryFindingCategory).toBe("Registry / Execution");
   expect(doctor.summary.findingCountsBySeverity?.error).toBe(1);
+  expect(doctor.summary.suggestedCommand).toBe("rup dashboard --mode review");
   expect(renderDoctorResult(doctor, true)).toContain("Score: 88/100");
   expect(renderDoctorAgentReport(doctor)).toContain("Priority findings:");
 });

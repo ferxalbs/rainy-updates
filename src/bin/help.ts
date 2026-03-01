@@ -41,6 +41,7 @@ Options:
   --pr-limit <n>
   --only-changed
   --interactive
+  --plan-file <path>
   --show-impact
   --show-links
   --show-homepage
@@ -94,6 +95,7 @@ Options:
   --fix-pr-no-checkout
   --fix-pr-batch-size <n>
   --interactive
+  --plan-file <path>
   --lockfile-mode preserve|update|error
   --no-pr-report
   --json-file <path>
@@ -199,6 +201,7 @@ Options:
   --risk critical|high|medium|low
   --diff patch|minor|major|latest
   --apply-selected
+  --plan-file <path>
   --show-changelog
   --policy-file <path>
   --json-file <path>
@@ -219,6 +222,20 @@ Options:
   --json-file <path>`;
   }
 
+  if (isCommand && command === "dashboard") {
+    return `rainy-updates dashboard [options]
+
+Open the primary interactive dependency operations console.
+
+Options:
+  --workspace
+  --mode check|review|upgrade
+  --focus all|security|risk|major|blocked|workspace
+  --apply-selected
+  --plan-file <path>
+  --cwd <path>`;
+  }
+
   if (isCommand && command === "ga") {
     return `rainy-updates ga [options]
 
@@ -237,7 +254,7 @@ Commands:
   doctor      Summarize what matters
   review      Decide what to do
   upgrade     Apply the approved change set
-  dashboard   Open the interactive DevOps dashboard (Ink TUI)
+  dashboard   Open the primary interactive dependency dashboard
   ci          Run CI-focused orchestration
   warm-cache  Warm local cache for fast/offline checks
   init-ci     Scaffold GitHub Actions workflow

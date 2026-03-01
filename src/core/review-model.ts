@@ -137,6 +137,9 @@ export function renderReviewResult(review: ReviewResult): string {
   lines.push(
     `Summary: ${review.summary.updatesFound} updates, riskPackages=${review.summary.riskPackages ?? 0}, securityPackages=${review.summary.securityPackages ?? 0}, peerConflictPackages=${review.summary.peerConflictPackages ?? 0}`,
   );
+  if (review.summary.decisionPlan) {
+    lines.push(`DecisionPlan: ${review.summary.decisionPlan}`);
+  }
   return lines.join("\n");
 }
 

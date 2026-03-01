@@ -143,16 +143,14 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
       parsed.command === "upgrade" ||
       parsed.command === "ci")
   ) {
-    const { runReview } = await import("../commands/review/runner.js");
-    const result = await runReview({
+    const { runDashboard } = await import("../commands/dashboard/runner.js");
+    const result = await runDashboard({
       ...parsed.options,
-      securityOnly: false,
-      risk: undefined,
-      diff: undefined,
+      mode: parsed.command === "upgrade" ? "upgrade" : "review",
+      focus: "all",
       applySelected: parsed.command === "upgrade",
     });
-    process.exitCode =
-      result.summary.verdict === "safe" && result.updates.length === 0 ? 0 : 1;
+    process.exitCode = result.errors.length > 0 ? 1 : 0;
     return true;
   }
 

@@ -1,67 +1,96 @@
-import React from "react";
-import { render } from "ink";
-import type { DashboardOptions, DashboardResult } from "../../types/index.js";
-import { loadConfig } from "../../config/loader.js";
-import { DashboardTUI } from "../../ui/dashboard/DashboardTUI.js";
-
-// We'll need to load initial state or data before or during the render
-import { check } from "../../core/check.js";
+import process from "node:process";
+import type {
+  DashboardOptions,
+  DashboardResult,
+  ReviewItem,
+  ReviewResult,
+} from "../../types/index.js";
+import {
+  createDecisionPlan,
+  defaultDecisionPlanPath,
+  filterReviewItemsByFocus,
+  writeDecisionPlan,
+} from "../../core/decision-plan.js";
+import { buildReviewResult, renderReviewResult } from "../../core/review-model.js";
+import { applySelectedUpdates } from "../../core/upgrade.js";
+import { runTui } from "../../ui/tui.js";
 
 export async function runDashboard(
   options: DashboardOptions,
+  prebuiltReview?: ReviewResult,
 ): Promise<DashboardResult> {
-  // Load configuration
-  const resolvedConfig = await loadConfig(options.cwd);
-
-  // Create an initial check result. In a real scenario, this could run
-  // progressively in the TUI, but for simplicity we fetch initial data first.
-  const checkResult = await check({
+  const review = prebuiltReview ?? (await buildReviewResult({
     ...options,
-    // We do not want `check` to exit or log heavily here, the UI will take over.
-    logLevel: "error",
+    interactive: false,
+  }));
+  const visibleItems = filterReviewItemsByFocus(review.items, options.focus);
+  const selectedItems = await selectDashboardItems(options, visibleItems);
+  const decisionPlan = createDecisionPlan({
+    review,
+    selectedItems,
+    sourceCommand: "dashboard",
+    mode: options.mode,
+    focus: options.focus,
   });
+  const decisionPlanFile =
+    options.decisionPlanFile ?? defaultDecisionPlanPath(options.cwd);
 
-  // Render the interactive Ink Dashboard
-  const { waitUntilExit } = render(
-    React.createElement(DashboardTUI, {
-      options,
-      initialResult: checkResult,
-    }),
-  );
+  await writeDecisionPlan(decisionPlanFile, decisionPlan);
+  review.decisionPlan = decisionPlan;
+  review.summary.decisionPlan = decisionPlanFile;
+  review.summary.interactiveSurface = "dashboard";
+  review.summary.queueFocus = options.focus;
+  review.summary.suggestedCommand =
+    options.mode === "upgrade" || options.applySelected
+      ? `rup upgrade --from-plan ${decisionPlanFile}`
+      : `rup upgrade --from-plan ${decisionPlanFile}`;
 
-  await waitUntilExit();
-
-  const finalStore = await import("../../ui/dashboard/store.js");
-  const finalState = finalStore.getStore()?.getState();
-
-  if (finalState?.shouldApply) {
-    process.stderr.write("[dashboard] Applying updates...\n");
-    const { applySelectedUpdates } = await import("../../core/upgrade.js");
-    const { detectPackageManager } = await import("../../pm/detect.js");
-    const { installDependencies } = await import("../../pm/install.js");
-
+  if ((options.mode === "upgrade" || options.applySelected) && selectedItems.length > 0) {
     await applySelectedUpdates(
       {
         ...options,
-        install: false, // We handle installation explicitly below
+        install: false,
         packageManager: "auto",
-        sync: true,
-        lockfileMode: options.lockfileMode || "preserve",
+        sync: options.workspace,
       },
-      finalState.updates,
-    );
-
-    // Install using the correct package manager if desired
-    const detected = await detectPackageManager(options.cwd);
-    await installDependencies(options.cwd, "auto", detected);
-    process.stderr.write(
-      "[dashboard] Successfully applied updates and installed dependencies.\n",
+      selectedItems.map((item) => item.update),
     );
   }
 
+  process.stdout.write(
+    renderReviewResult({
+      ...review,
+      items: selectedItems,
+      updates: selectedItems.map((item) => item.update),
+    }) + "\n",
+  );
+
+  process.stderr.write(
+    `[dashboard] decision plan written to ${decisionPlanFile}\n`,
+  );
+
   return {
     completed: true,
-    errors: [],
-    warnings: [],
+    errors: review.errors,
+    warnings: review.warnings,
+    selectedUpdates: selectedItems.length,
+    decisionPlanFile,
   };
+}
+
+async function selectDashboardItems(
+  options: DashboardOptions,
+  visibleItems: ReviewItem[],
+): Promise<ReviewItem[]> {
+  if (visibleItems.length === 0) {
+    return [];
+  }
+
+  return runTui(visibleItems, {
+    title:
+      options.mode === "upgrade"
+        ? "Rainy Dashboard: Upgrade Queue"
+        : "Rainy Dashboard: Review Queue",
+    subtitle: `focus=${options.focus}  mode=${options.mode}  Enter confirms the selected decision set`,
+  });
 }
