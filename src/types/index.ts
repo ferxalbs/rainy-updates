@@ -15,6 +15,8 @@ export type RiskCategory =
   | "behavioral-risk"
   | "operational-health";
 export type MaintainerChurnStatus = "unknown" | "stable" | "elevated-change";
+export type PolicyAction = "allow" | "review" | "block" | "monitor";
+export type DecisionState = "safe" | "review" | "blocked" | "actionable";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
@@ -129,6 +131,43 @@ export interface PackageUpdate {
   peerConflictSeverity?: "none" | PeerConflictSeverity;
   licenseStatus?: "allowed" | "review" | "denied";
   healthStatus?: "healthy" | HealthFlag;
+  policyAction?: PolicyAction;
+  decisionState?: DecisionState;
+  releaseNotesSummary?: ReleaseNotesSummary;
+  engineStatus?: EngineStatus;
+  workspaceGroup?: string;
+  groupKey?: string;
+  selectedByDefault?: boolean;
+  blockedReason?: string;
+  monitorReason?: string;
+}
+
+export interface ReleaseNotesSummary {
+  source: "github-release" | "changelog-file" | "none";
+  title: string;
+  excerpt: string;
+}
+
+export interface EngineStatus {
+  state: "compatible" | "review" | "blocked" | "unknown";
+  required?: string;
+  current?: string;
+  reason?: string;
+}
+
+export interface ArtifactManifest {
+  runId: string;
+  createdAt: string;
+  command: string;
+  projectPath: string;
+  ciProfile: CiProfile;
+  artifactManifestPath: string;
+  outputs: {
+    jsonFile?: string;
+    githubOutputFile?: string;
+    sarifFile?: string;
+    prReportFile?: string;
+  };
 }
 
 export interface Summary {
@@ -177,6 +216,19 @@ export interface Summary {
   peerConflictPackages?: number;
   licenseViolationPackages?: number;
   privateRegistryPackages?: number;
+  runId?: string;
+  artifactManifest?: string;
+  policyActionCounts?: Record<PolicyAction, number>;
+  blockedPackages?: number;
+  reviewPackages?: number;
+  monitorPackages?: number;
+  decisionPackages?: number;
+  releaseVolatilityPackages?: number;
+  engineConflictPackages?: number;
+  degradedSources?: string[];
+  cacheBackend?: "sqlite" | "file";
+  binaryRecommended?: boolean;
+  gaReady?: boolean;
 }
 
 export interface CheckResult {
@@ -426,6 +478,7 @@ export interface ReviewResult {
   projectPath: string;
   target: TargetLevel;
   summary: Summary;
+  analysis: AnalysisBundle;
   items: ReviewItem[];
   updates: PackageUpdate[];
   errors: string[];
@@ -437,10 +490,12 @@ export interface ReviewOptions extends CheckOptions {
   risk?: RiskLevel;
   diff?: TargetLevel;
   applySelected: boolean;
+  showChangelog?: boolean;
 }
 
 export interface DoctorOptions extends CheckOptions {
   verdictOnly: boolean;
+  includeChangelog?: boolean;
 }
 
 export interface DoctorResult {
@@ -449,6 +504,17 @@ export interface DoctorResult {
   review: ReviewResult;
   primaryFindings: string[];
   recommendedCommand: string;
+}
+
+export interface AnalysisBundle {
+  check: CheckResult;
+  audit: AuditResult;
+  resolve: ResolveResult;
+  health: HealthResult;
+  licenses: LicenseResult;
+  unused: UnusedResult;
+  items: ReviewItem[];
+  degradedSources: string[];
 }
 
 // dashboard ───────────────────────────────────────────────────────────────────
@@ -581,4 +647,34 @@ export interface SnapshotResult {
   diff?: Array<{ name: string; from: string; to: string }>;
   errors: string[];
   warnings: string[];
+}
+
+export interface GaOptions {
+  cwd: string;
+  workspace: boolean;
+  jsonFile?: string;
+}
+
+export interface GaCheck {
+  name:
+    | "package-manager"
+    | "workspace-discovery"
+    | "lockfile"
+    | "cache-backend"
+    | "dist-build"
+    | "benchmark-gates"
+    | "docs-contract";
+  status: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+export interface GaResult {
+  ready: boolean;
+  projectPath: string;
+  packageManager: "npm" | "pnpm" | "unknown";
+  workspacePackages: number;
+  cacheBackend: "sqlite" | "file";
+  checks: GaCheck[];
+  warnings: string[];
+  errors: string[];
 }

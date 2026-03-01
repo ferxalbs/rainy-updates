@@ -107,6 +107,7 @@ npx @rainy-updates/cli ci --workspace --mode strict
 - `doctor` — summarize the current dependency situation
 - `review` — decide what to do with security, risk, peer, and policy context
 - `upgrade` — apply the approved change set
+- `ga` — audit GA and CI readiness for the current checkout
 
 ### Supporting workflow
 
@@ -136,6 +137,7 @@ rup doctor --workspace
 # 3) Review and decide
 npx @rainy-updates/cli review --security-only
 rup review --interactive
+rup review --show-changelog
 
 # 4) Apply upgrades with workspace sync
 npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
@@ -181,6 +183,9 @@ rup bisect axios --cmd "bun test"           # if installed
 
 # 12) Focus review on high-risk changes
 rup review --risk high --diff major
+
+# 13) Audit GA / CI readiness
+rup ga --workspace
 ```
 
 ## What it does in production

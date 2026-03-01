@@ -12,6 +12,7 @@ import { initCiWorkflow } from "../core/init-ci.js";
 import { diffBaseline, saveBaseline } from "../core/baseline.js";
 import { applyFixPr } from "../core/fix-pr.js";
 import { applyFixPrBatches } from "../core/fix-pr-batch.js";
+import { createRunId, writeArtifactManifest } from "../core/artifacts.js";
 import { renderResult } from "../output/format.js";
 import { writeGitHubOutput } from "../output/github.js";
 import { createSarifReport } from "../output/sarif.js";
@@ -21,6 +22,7 @@ import type {
   CheckResult,
   FailReason,
   UpgradeOptions,
+  GaOptions,
 } from "../types/index.js";
 import { writeFileAtomic } from "../utils/io.js";
 import { resolveFailReason } from "../core/summary.js";
@@ -176,6 +178,13 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (parsed.command === "ga") {
+      const { runGa } = await import("../commands/ga/runner.js");
+      const result = await runGa(parsed.options);
+      process.exitCode = result.ready ? 0 : 1;
+      return;
+    }
+
     if (
       parsed.options.interactive &&
       (parsed.command === "check" ||
@@ -198,6 +207,7 @@ async function main(): Promise<void> {
     }
 
     const result = await runCommand(parsed);
+    result.summary.runId = createRunId(parsed.command, parsed.options, result);
 
     if (
       parsed.options.fixPr &&
@@ -237,6 +247,15 @@ async function main(): Promise<void> {
     if (parsed.options.prReportFile) {
       const markdown = renderPrReport(result);
       await writeFileAtomic(parsed.options.prReportFile, markdown + "\n");
+    }
+
+    const artifactManifest = await writeArtifactManifest(
+      parsed.command,
+      parsed.options,
+      result,
+    );
+    if (artifactManifest) {
+      result.summary.artifactManifest = artifactManifest.artifactManifestPath;
     }
 
     result.summary.failReason = resolveFailReason(
@@ -351,6 +370,7 @@ Options:
   --only-changed
   --interactive
   --show-impact
+  --show-links
   --show-homepage
   --lockfile-mode preserve|update|error
   --log-level error|warn|info|debug
@@ -507,6 +527,7 @@ Options:
   --risk critical|high|medium|low
   --diff patch|minor|major|latest
   --apply-selected
+  --show-changelog
   --policy-file <path>
   --json-file <path>
   --concurrency <n>
@@ -522,7 +543,19 @@ Produce a fast summary verdict and point the operator to review when action is n
 Options:
   --workspace
   --verdict-only
+  --include-changelog
   --json-file <path>`;
+  }
+
+  if (isCommand && command === "ga") {
+    return `rainy-updates ga [options]
+
+Audit release and CI readiness for Rainy Updates.
+
+Options:
+  --workspace
+  --json-file <path>
+  --cwd <path>`;
   }
 
   return `rainy-updates (rup / rainy-up) <command> [options]
@@ -544,6 +577,7 @@ Commands:
   resolve     Check peer dependency conflicts (pure-TS, no subprocess)
   licenses    Scan dependency licenses and generate SPDX SBOM
   snapshot    Save, list, restore, and diff dependency state snapshots
+  ga          Audit GA and CI readiness for this checkout
 
 Global options:
   --cwd <path>
@@ -564,6 +598,7 @@ Global options:
   --only-changed
   --interactive
   --show-impact
+  --show-links
   --show-homepage
   --mode minimal|strict|enterprise
   --fix-pr

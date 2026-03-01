@@ -9,10 +9,11 @@ import type { ReviewOptions, ReviewResult } from "../../types/index.js";
 export async function runReview(options: ReviewOptions): Promise<ReviewResult> {
   const review = await buildReviewResult(options);
 
-  let selectedUpdates = review.updates;
+  let selectedItems = review.items;
   if (options.interactive && review.updates.length > 0) {
-    selectedUpdates = await runTui(review.updates);
+    selectedItems = await runTui(review.items);
   }
+  const selectedUpdates = selectedItems.map((item) => item.update);
 
   if (options.applySelected && selectedUpdates.length > 0) {
     await applySelectedUpdates(
@@ -28,10 +29,8 @@ export async function runReview(options: ReviewOptions): Promise<ReviewResult> {
 
   process.stdout.write(renderReviewResult({
     ...review,
+    items: selectedItems,
     updates: selectedUpdates,
-    items: review.items.filter((item) =>
-      selectedUpdates.some((selected) => selected.name === item.update.name && selected.packagePath === item.update.packagePath),
-    ),
   }) + "\n");
 
   if (options.jsonFile) {

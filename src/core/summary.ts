@@ -76,6 +76,19 @@ export function createSummary(input: {
     peerConflictPackages: 0,
     licenseViolationPackages: 0,
     privateRegistryPackages: 0,
+    runId: undefined,
+    artifactManifest: undefined,
+    policyActionCounts: undefined,
+    blockedPackages: 0,
+    reviewPackages: 0,
+    monitorPackages: 0,
+    decisionPackages: 0,
+    releaseVolatilityPackages: 0,
+    engineConflictPackages: 0,
+    degradedSources: [],
+    cacheBackend: undefined,
+    binaryRecommended: false,
+    gaReady: undefined,
   };
 }
 

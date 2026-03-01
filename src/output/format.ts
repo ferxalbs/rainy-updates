@@ -71,6 +71,14 @@ export function renderResult(
       `security_packages=${result.summary.securityPackages ?? 0}`,
       `peer_conflict_packages=${result.summary.peerConflictPackages ?? 0}`,
       `license_violation_packages=${result.summary.licenseViolationPackages ?? 0}`,
+      `run_id=${result.summary.runId ?? ""}`,
+      `artifact_manifest=${result.summary.artifactManifest ?? ""}`,
+      `blocked_packages=${result.summary.blockedPackages ?? 0}`,
+      `review_packages=${result.summary.reviewPackages ?? 0}`,
+      `monitor_packages=${result.summary.monitorPackages ?? 0}`,
+      `cache_backend=${result.summary.cacheBackend ?? ""}`,
+      `degraded_sources=${(result.summary.degradedSources ?? []).join(",")}`,
+      `ga_ready=${result.summary.gaReady === true ? "1" : "0"}`,
     ].join("\n");
   }
 
@@ -99,12 +107,16 @@ export function renderResult(
           display.showHomepage && update.homepage ? update.homepage : undefined,
           update.riskLevel ? `risk=${update.riskLevel}` : undefined,
           typeof update.riskScore === "number" ? `score=${update.riskScore}` : undefined,
+          update.policyAction ? `policy=${update.policyAction}` : undefined,
         ]
           .filter(Boolean)
           .join(", ")})`,
       );
       if (update.recommendedAction) {
         lines.push(`  action: ${update.recommendedAction}`);
+      }
+      if (update.releaseNotesSummary) {
+        lines.push(`  notes: ${update.releaseNotesSummary.title} — ${update.releaseNotesSummary.excerpt}`);
       }
     }
   }
@@ -138,6 +150,11 @@ export function renderResult(
   if (result.summary.verdict) {
     lines.push(
       `Verdict=${result.summary.verdict}, riskPackages=${result.summary.riskPackages ?? 0}, securityPackages=${result.summary.securityPackages ?? 0}, peerConflictPackages=${result.summary.peerConflictPackages ?? 0}, licenseViolationPackages=${result.summary.licenseViolationPackages ?? 0}`,
+    );
+  }
+  if (result.summary.runId) {
+    lines.push(
+      `RunId=${result.summary.runId}, artifactManifest=${result.summary.artifactManifest ?? "none"}, blockedPackages=${result.summary.blockedPackages ?? 0}, reviewPackages=${result.summary.reviewPackages ?? 0}, monitorPackages=${result.summary.monitorPackages ?? 0}`,
     );
   }
   lines.push(

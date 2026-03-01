@@ -44,6 +44,14 @@ test("writeGitHubOutput writes key-value outputs", async () => {
       peerConflictPackages: 0,
       licenseViolationPackages: 0,
       privateRegistryPackages: 0,
+      runId: "abc123",
+      artifactManifest: "/tmp/manifest.json",
+      blockedPackages: 0,
+      reviewPackages: 1,
+      monitorPackages: 0,
+      degradedSources: ["github"],
+      cacheBackend: "sqlite",
+      gaReady: true,
     },
     updates: [],
     errors: ["x"],
@@ -60,6 +68,10 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   expect(content.includes("grouped_updates=0")).toBe(true);
   expect(content.includes("verdict=review")).toBe(true);
   expect(content.includes("risk_packages=1")).toBe(true);
+  expect(content.includes("run_id=abc123")).toBe(true);
+  expect(content.includes("artifact_manifest=/tmp/manifest.json")).toBe(true);
+  expect(content.includes("cache_backend=sqlite")).toBe(true);
+  expect(content.includes("ga_ready=1")).toBe(true);
 });
 
 test("renderGitHubAnnotations emits deterministic sorted output", () => {

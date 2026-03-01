@@ -48,6 +48,7 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     risk: undefined,
     diff: undefined,
     applySelected: false,
+    showChangelog: false,
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -94,6 +95,10 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     if (current === "--diff") throw new Error("Missing value for --diff");
     if (current === "--apply-selected") {
       options.applySelected = true;
+      continue;
+    }
+    if (current === "--show-changelog") {
+      options.showChangelog = true;
       continue;
     }
     if (current === "--json-file" && next) {
@@ -165,6 +170,7 @@ Options:
   --risk <level>          Minimum risk: critical, high, medium, low
   --diff <level>          Filter by patch, minor, major, latest
   --apply-selected        Apply all filtered updates after review
+  --show-changelog        Fetch release notes summaries for review output
   --workspace             Scan all workspace packages
   --policy-file <path>    Load policy overrides
   --json-file <path>      Write JSON review report to file

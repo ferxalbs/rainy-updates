@@ -253,6 +253,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
 
     updates.push({
       packagePath: path.resolve(task.packageDir),
+      workspaceGroup: path.basename(task.packageDir),
       name: task.dependency.name,
       kind: task.dependency.kind,
       fromRange: task.dependency.range,
@@ -326,6 +327,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     }),
   );
   summary.streamedEvents = streamedEvents;
+  summary.cacheBackend = cache.backend;
   summary.riskPackages = limitedUpdates.filter(
     (item) =>
       item.impactScore?.rank === "critical" || item.impactScore?.rank === "high",
@@ -382,7 +384,10 @@ function groupUpdates(updates: PackageUpdate[], groupBy: CheckOptions["groupBy"]
     byGroup.set(key, current);
   }
   return Array.from(byGroup.entries())
-    .map(([key, items]) => ({ key, items: sortUpdates(items) }))
+    .map(([key, items]) => ({
+      key,
+      items: sortUpdates(items).map((item) => ({ ...item, groupKey: key })),
+    }))
     .sort((left, right) => left.key.localeCompare(right.key));
 }
 

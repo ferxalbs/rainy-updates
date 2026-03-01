@@ -2,6 +2,70 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.6] - 2026-03-01
+
+GA readiness, shared analysis plumbing, and richer review operations.
+
+### Added
+
+- **New `ga` command** for release and CI readiness auditing:
+  - package manager detection,
+  - workspace discovery,
+  - lockfile presence checks,
+  - cache backend inspection,
+  - dist build verification,
+  - benchmark gate presence,
+  - README / CHANGELOG contract checks.
+- **Artifact run metadata**:
+  - stable `runId`,
+  - generated artifact manifests under `.artifacts/`,
+  - additive JSON / SARIF / GitHub output fields for run and decision metadata.
+- **Review and doctor changelog-aware flags**:
+  - `review --show-changelog`
+  - `doctor --include-changelog`
+- **Interactive review console upgrades**:
+  - filter rail,
+  - grouping and sorting modes,
+  - inline search,
+  - detail tabs,
+  - help overlay,
+  - bulk selection shortcuts,
+  - explicit policy and decision-state rendering.
+
+### Changed
+
+- `review` and `doctor` now consume a single shared analysis bundle across check, audit, resolve, health, licenses, and unused dependency signals.
+- Update records now carry additive operator metadata:
+  - `policyAction`,
+  - `decisionState`,
+  - `releaseNotesSummary`,
+  - `workspaceGroup`,
+  - `groupKey`,
+  - `selectedByDefault`,
+  - `blockedReason`,
+  - `monitorReason`.
+- Summary/output contracts now add:
+  - `runId`,
+  - `artifactManifest`,
+  - `blockedPackages`,
+  - `reviewPackages`,
+  - `monitorPackages`,
+  - `cacheBackend`,
+  - `degradedSources`,
+  - `gaReady`.
+- `check` now records the active cache backend in summary output and attaches workspace grouping metadata to updates.
+- CLI help now documents:
+  - `ga`,
+  - `--show-changelog`,
+  - `--include-changelog`,
+  - `--show-links`.
+
+### Tests
+
+- Added parser coverage for `ga`, `review --show-changelog`, and `doctor --include-changelog`.
+- Added output coverage for new GitHub output fields.
+- Added GA readiness command coverage.
+
 ## [0.5.5] - 2026-03-01
 
 Interactive Dashboard TUI overhaul and domain logic integration.

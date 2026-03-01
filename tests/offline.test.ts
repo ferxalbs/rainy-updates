@@ -11,7 +11,7 @@ test("offline mode reports cache miss error", async () => {
     JSON.stringify({
       name: "offline-test",
       dependencies: {
-        react: "^18.2.0",
+        "rainy-offline-fixture-package": "^1.0.0",
       },
     }),
     "utf8",
@@ -58,5 +58,9 @@ test("offline mode reports cache miss error", async () => {
     showHomepage: false,
   });
 
-  expect(result.errors.some((item) => item.includes("Offline cache miss for react"))).toBe(true);
+  expect(
+    result.errors.some((item) =>
+      item.includes("Offline cache miss for rainy-offline-fixture-package"),
+    ),
+  ).toBe(true);
 });

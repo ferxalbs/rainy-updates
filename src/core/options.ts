@@ -24,6 +24,7 @@ import type {
   DoctorOptions,
   RiskLevel,
   DashboardOptions,
+  GaOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -50,6 +51,7 @@ const KNOWN_COMMANDS = [
   "review",
   "doctor",
   "dashboard",
+  "ga",
 ] as const;
 
 export type ParsedCliArgs =
@@ -79,7 +81,8 @@ export type ParsedCliArgs =
   | { command: "snapshot"; options: SnapshotOptions }
   | { command: "review"; options: ReviewOptions }
   | { command: "doctor"; options: DoctorOptions }
-  | { command: "dashboard"; options: DashboardOptions };
+  | { command: "dashboard"; options: DashboardOptions }
+  | { command: "ga"; options: GaOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -138,6 +141,10 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     const { parseDashboardArgs } =
       await import("../commands/dashboard/parser.js");
     return { command, options: parseDashboardArgs(args) };
+  }
+  if (command === "ga") {
+    const { parseGaArgs } = await import("../commands/ga/parser.js");
+    return { command, options: parseGaArgs(args) };
   }
 
   const base: CheckOptions = {
@@ -560,6 +567,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
 
     if (current === "--show-impact") {
       base.showImpact = true;
+      continue;
+    }
+
+    if (current === "--show-links") {
+      base.showHomepage = true;
       continue;
     }
 

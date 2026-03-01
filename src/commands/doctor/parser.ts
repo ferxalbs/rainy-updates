@@ -44,6 +44,7 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
     showImpact: true,
     showHomepage: true,
     verdictOnly: false,
+    includeChangelog: false,
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -61,6 +62,10 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
     }
     if (current === "--verdict-only") {
       options.verdictOnly = true;
+      continue;
+    }
+    if (current === "--include-changelog") {
+      options.includeChangelog = true;
       continue;
     }
     if (current === "--json-file" && next) {
@@ -88,6 +93,7 @@ Usage:
 
 Options:
   --verdict-only         Print the 3-line quick verdict without counts
+  --include-changelog    Include release note summaries in the aggregated review data
   --workspace            Scan all workspace packages
   --json-file <path>     Write JSON doctor report to file
   --cwd <path>

@@ -165,6 +165,7 @@ test("parseCliArgs supports review command filters", async () => {
     "--workspace",
     "--interactive",
     "--security-only",
+    "--show-changelog",
     "--risk",
     "high",
     "--diff",
@@ -175,16 +176,32 @@ test("parseCliArgs supports review command filters", async () => {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.interactive).toBe(true);
     expect(parsed.options.securityOnly).toBe(true);
+    expect(parsed.options.showChangelog).toBe(true);
     expect(parsed.options.risk).toBe("high");
     expect(parsed.options.diff).toBe("major");
   }
 });
 
 test("parseCliArgs supports doctor command", async () => {
-  const parsed = await parseCliArgs(["doctor", "--workspace", "--verdict-only"]);
+  const parsed = await parseCliArgs([
+    "doctor",
+    "--workspace",
+    "--verdict-only",
+    "--include-changelog",
+  ]);
   expect(parsed.command).toBe("doctor");
   if (parsed.command === "doctor") {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.verdictOnly).toBe(true);
+    expect(parsed.options.includeChangelog).toBe(true);
+  }
+});
+
+test("parseCliArgs supports ga command", async () => {
+  const parsed = await parseCliArgs(["ga", "--workspace", "--json-file", "ga.json"]);
+  expect(parsed.command).toBe("ga");
+  if (parsed.command === "ga") {
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.jsonFile?.endsWith("ga.json")).toBe(true);
   }
 });

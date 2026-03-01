@@ -1,144 +1,75 @@
 import path from "node:path";
-import process from "node:process";
 import { check } from "./check.js";
 import { createSummary, finalizeSummary } from "./summary.js";
 import type {
-  AuditOptions,
-  AuditResult,
   CheckOptions,
   DoctorOptions,
   DoctorResult,
-  HealthOptions,
-  HealthResult,
-  LicenseOptions,
-  LicenseResult,
-  PackageUpdate,
-  ResolveOptions,
-  ResolveResult,
   ReviewItem,
   ReviewOptions,
   ReviewResult,
   Summary,
-  UnusedOptions,
-  UnusedResult,
   Verdict,
 } from "../types/index.js";
-import { applyImpactScores } from "./impact.js";
-import { applyRiskAssessments } from "../risk/index.js";
+import { buildAnalysisBundle } from "./analysis-bundle.js";
 
 export async function buildReviewResult(
   options: ReviewOptions | DoctorOptions | CheckOptions,
 ): Promise<ReviewResult> {
-  const baseCheckOptions: CheckOptions = {
-    ...options,
-    interactive: false,
-    showImpact: true,
-    showHomepage: true,
-  };
-  const checkResult = await check(baseCheckOptions);
-
-  const [auditResult, resolveResult, healthResult, licenseResult, unusedResult] =
-    await runSilenced(() =>
-      Promise.all([
-        import("../commands/audit/runner.js").then((mod) =>
-          mod.runAudit(toAuditOptions(options)),
-        ),
-        import("../commands/resolve/runner.js").then((mod) =>
-          mod.runResolve(toResolveOptions(options)),
-        ),
-        import("../commands/health/runner.js").then((mod) =>
-          mod.runHealth(toHealthOptions(options)),
-        ),
-        import("../commands/licenses/runner.js").then((mod) =>
-          mod.runLicenses(toLicenseOptions(options)),
-        ),
-        import("../commands/unused/runner.js").then((mod) =>
-          mod.runUnused(toUnusedOptions(options)),
-        ),
-      ]),
-    );
-
-  const advisoryPackages = new Set(auditResult.packages.map((pkg) => pkg.packageName));
-  const impactedUpdates = applyImpactScores(checkResult.updates, {
-    advisoryPackages,
-    workspaceDependentCount: (name) =>
-      checkResult.updates.filter((item) => item.name === name).length,
-  });
-
-  const healthByName = new Map(healthResult.metrics.map((metric) => [metric.name, metric]));
-  const advisoriesByName = new Map<string, AuditResult["advisories"]>();
-  const conflictsByName = new Map<string, ResolveResult["conflicts"]>();
-  const licenseByName = new Map(licenseResult.packages.map((pkg) => [pkg.name, pkg]));
-  const licenseViolationNames = new Set(licenseResult.violations.map((pkg) => pkg.name));
-  const unusedByName = new Map<string, UnusedResult["unused"]>();
-
-  for (const advisory of auditResult.advisories) {
-    const list = advisoriesByName.get(advisory.packageName) ?? [];
-    list.push(advisory);
-    advisoriesByName.set(advisory.packageName, list);
-  }
-  for (const conflict of resolveResult.conflicts) {
-    const list = conflictsByName.get(conflict.requester) ?? [];
-    list.push(conflict);
-    conflictsByName.set(conflict.requester, list);
-    const peerList = conflictsByName.get(conflict.peer) ?? [];
-    peerList.push(conflict);
-    conflictsByName.set(conflict.peer, peerList);
-  }
-  for (const issue of [...unusedResult.unused, ...unusedResult.missing]) {
-    const list = unusedByName.get(issue.name) ?? [];
-    list.push(issue);
-    unusedByName.set(issue.name, list);
-  }
-
-  const baseItems = impactedUpdates
-    .map((update) =>
-      enrichUpdate(
-        update,
-        advisoriesByName,
-        conflictsByName,
-        healthByName,
-        licenseByName,
-        licenseViolationNames,
-        unusedByName,
-      ),
-    )
-    .filter((item) => matchesReviewFilters(item, options));
-
-  const items = applyRiskAssessments(baseItems, {
-    knownPackageNames: new Set(checkResult.updates.map((item) => item.name)),
-  }).filter((item) => matchesReviewFilters(item, options));
+  const includeChangelog =
+    ("showChangelog" in options && options.showChangelog === true) ||
+    ("includeChangelog" in options && options.includeChangelog === true) ||
+    options.interactive === true;
+  const analysis = await buildAnalysisBundle(options, { includeChangelog });
+  const items = analysis.items.filter((item) => matchesReviewFilters(item, options));
+  const checkResult = analysis.check;
 
   const summary = createReviewSummary(
     checkResult.summary,
     items,
     [
       ...checkResult.errors,
-      ...auditResult.errors,
-      ...resolveResult.errors,
-      ...healthResult.errors,
-      ...licenseResult.errors,
-      ...unusedResult.errors,
+      ...analysis.audit.errors,
+      ...analysis.resolve.errors,
+      ...analysis.health.errors,
+      ...analysis.licenses.errors,
+      ...analysis.unused.errors,
     ],
     [
       ...checkResult.warnings,
-      ...auditResult.warnings,
-      ...resolveResult.warnings,
-      ...healthResult.warnings,
-      ...licenseResult.warnings,
-      ...unusedResult.warnings,
+      ...analysis.audit.warnings,
+      ...analysis.resolve.warnings,
+      ...analysis.health.warnings,
+      ...analysis.licenses.warnings,
+      ...analysis.unused.warnings,
     ],
     options.interactive === true,
+    analysis.degradedSources,
   );
 
   return {
     projectPath: checkResult.projectPath,
     target: checkResult.target,
     summary,
+    analysis,
     items,
     updates: items.map((item) => item.update),
-    errors: [...checkResult.errors, ...auditResult.errors, ...resolveResult.errors, ...healthResult.errors, ...licenseResult.errors, ...unusedResult.errors],
-    warnings: [...checkResult.warnings, ...auditResult.warnings, ...resolveResult.warnings, ...healthResult.warnings, ...licenseResult.warnings, ...unusedResult.warnings],
+    errors: [
+      ...checkResult.errors,
+      ...analysis.audit.errors,
+      ...analysis.resolve.errors,
+      ...analysis.health.errors,
+      ...analysis.licenses.errors,
+      ...analysis.unused.errors,
+    ],
+    warnings: [
+      ...checkResult.warnings,
+      ...analysis.audit.warnings,
+      ...analysis.resolve.warnings,
+      ...analysis.health.warnings,
+      ...analysis.licenses.warnings,
+      ...analysis.unused.warnings,
+    ],
   };
 }
 
@@ -178,6 +109,7 @@ export function renderReviewResult(review: ReviewResult): string {
         item.update.licenseStatus && item.update.licenseStatus !== "allowed"
           ? `license=${item.update.licenseStatus}`
           : undefined,
+        item.update.policyAction ? `policy=${item.update.policyAction}` : undefined,
       ].filter(Boolean);
       lines.push(
         `- ${path.basename(item.update.packagePath)} :: ${item.update.name} ${item.update.fromRange} -> ${item.update.toRange} (${notes.join(", ")})`,
@@ -187,6 +119,9 @@ export function renderReviewResult(review: ReviewResult): string {
       }
       if (item.update.recommendedAction) {
         lines.push(`  action: ${item.update.recommendedAction}`);
+      }
+      if (item.update.releaseNotesSummary) {
+        lines.push(`  notes: ${item.update.releaseNotesSummary.title} - ${item.update.releaseNotesSummary.excerpt}`);
       }
       if (item.update.homepage) {
         lines.push(`  homepage: ${item.update.homepage}`);
@@ -228,45 +163,6 @@ export function renderDoctorResult(result: DoctorResult, verdictOnly = false): s
   return lines.join("\n");
 }
 
-function enrichUpdate(
-  update: PackageUpdate,
-  advisoriesByName: Map<string, AuditResult["advisories"]>,
-  conflictsByName: Map<string, ResolveResult["conflicts"]>,
-  healthByName: Map<string, HealthResult["metrics"][number]>,
-  licenseByName: Map<string, LicenseResult["packages"][number]>,
-  licenseViolationNames: Set<string>,
-  unusedByName: Map<string, UnusedResult["unused"]>,
-): ReviewItem {
-  const advisories = advisoriesByName.get(update.name) ?? [];
-  const peerConflicts = conflictsByName.get(update.name) ?? [];
-  const health = healthByName.get(update.name);
-  const license = licenseByName.get(update.name);
-  const unusedIssues = unusedByName.get(update.name) ?? [];
-  return {
-    update: {
-      ...update,
-      advisoryCount: advisories.length,
-      peerConflictSeverity: peerConflicts.some((item) => item.severity === "error")
-        ? "error"
-        : peerConflicts.length > 0
-          ? "warning"
-          : "none",
-      licenseStatus: licenseViolationNames.has(update.name)
-        ? "denied"
-        : license
-          ? "allowed"
-          : "review",
-      healthStatus: health?.flags[0] ?? "healthy",
-    },
-    advisories,
-    health,
-    peerConflicts,
-    license,
-    unusedIssues,
-    selected: true,
-  };
-}
-
 function matchesReviewFilters(
   item: ReviewItem,
   options: ReviewOptions | DoctorOptions | CheckOptions,
@@ -302,6 +198,7 @@ function createReviewSummary(
   errors: string[],
   warnings: string[],
   interactiveSession: boolean,
+  degradedSources: string[],
 ): Summary {
   const summary = finalizeSummary(
     createSummary({
@@ -345,6 +242,17 @@ function createReviewSummary(
   summary.licenseViolationPackages = items.filter(
     (item) => item.update.licenseStatus === "denied",
   ).length;
+  summary.policyActionCounts = {
+    allow: items.filter((item) => item.update.policyAction === "allow").length,
+    review: items.filter((item) => item.update.policyAction === "review").length,
+    block: items.filter((item) => item.update.policyAction === "block").length,
+    monitor: items.filter((item) => item.update.policyAction === "monitor").length,
+  };
+  summary.blockedPackages = items.filter((item) => item.update.decisionState === "blocked").length;
+  summary.reviewPackages = items.filter((item) => item.update.decisionState === "review").length;
+  summary.monitorPackages = items.filter((item) => item.update.policyAction === "monitor").length;
+  summary.decisionPackages = items.length;
+  summary.degradedSources = degradedSources;
   summary.verdict = deriveVerdict(items, errors);
   return summary;
 }
@@ -399,89 +307,4 @@ function recommendCommand(review: ReviewResult, verdict: Verdict): string {
   if ((review.summary.securityPackages ?? 0) > 0) return "rup review --security-only";
   if (review.errors.length > 0 || review.items.length > 0) return "rup review --interactive";
   return "rup check";
-}
-
-async function runSilenced<T>(fn: () => Promise<T>): Promise<T> {
-  const stdoutWrite = process.stdout.write.bind(process.stdout);
-  const stderrWrite = process.stderr.write.bind(process.stderr);
-  process.stdout.write = (() => true) as typeof process.stdout.write;
-  process.stderr.write = (() => true) as typeof process.stderr.write;
-  try {
-    return await fn();
-  } finally {
-    process.stdout.write = stdoutWrite;
-    process.stderr.write = stderrWrite;
-  }
-}
-
-function toAuditOptions(options: CheckOptions): AuditOptions {
-  return {
-    cwd: options.cwd,
-    workspace: options.workspace,
-    severity: undefined,
-    fix: false,
-    dryRun: true,
-    commit: false,
-    packageManager: "auto",
-    reportFormat: "json",
-    sourceMode: "auto",
-    jsonFile: undefined,
-    concurrency: options.concurrency,
-    registryTimeoutMs: options.registryTimeoutMs,
-  };
-}
-
-function toResolveOptions(options: CheckOptions): ResolveOptions {
-  return {
-    cwd: options.cwd,
-    workspace: options.workspace,
-    afterUpdate: true,
-    safe: false,
-    jsonFile: undefined,
-    concurrency: options.concurrency,
-    registryTimeoutMs: options.registryTimeoutMs,
-    cacheTtlSeconds: options.cacheTtlSeconds,
-  };
-}
-
-function toHealthOptions(options: CheckOptions): HealthOptions {
-  return {
-    cwd: options.cwd,
-    workspace: options.workspace,
-    staleDays: 365,
-    includeDeprecated: true,
-    includeAlternatives: false,
-    reportFormat: "json",
-    jsonFile: undefined,
-    concurrency: options.concurrency,
-    registryTimeoutMs: options.registryTimeoutMs,
-  };
-}
-
-function toLicenseOptions(options: CheckOptions): LicenseOptions {
-  return {
-    cwd: options.cwd,
-    workspace: options.workspace,
-    allow: undefined,
-    deny: undefined,
-    sbomFile: undefined,
-    jsonFile: undefined,
-    diffMode: false,
-    concurrency: options.concurrency,
-    registryTimeoutMs: options.registryTimeoutMs,
-    cacheTtlSeconds: options.cacheTtlSeconds,
-  };
-}
-
-function toUnusedOptions(options: CheckOptions): UnusedOptions {
-  return {
-    cwd: options.cwd,
-    workspace: options.workspace,
-    srcDirs: ["src", "."],
-    includeDevDependencies: true,
-    fix: false,
-    dryRun: true,
-    jsonFile: undefined,
-    concurrency: options.concurrency,
-  };
 }
