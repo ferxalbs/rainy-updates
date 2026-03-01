@@ -1,18 +1,33 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const HARD_IGNORE_DIRS = new Set(["node_modules", ".git", ".turbo", ".next", "dist", "coverage"]);
+const HARD_IGNORE_DIRS = new Set([
+  "node_modules",
+  ".git",
+  ".turbo",
+  ".next",
+  "dist",
+  "coverage",
+]);
 const MAX_DISCOVERED_DIRS = 20000;
 
-export async function discoverPackageDirs(cwd: string, workspaceMode: boolean): Promise<string[]> {
+export async function discoverPackageDirs(
+  cwd: string,
+  workspaceMode: boolean,
+): Promise<string[]> {
   if (!workspaceMode) {
     return [cwd];
   }
 
   const roots = new Set<string>([cwd]);
-  const patterns = [...(await readPackageJsonWorkspacePatterns(cwd)), ...(await readPnpmWorkspacePatterns(cwd))];
+  const patterns = [
+    ...(await readPackageJsonWorkspacePatterns(cwd)),
+    ...(await readPnpmWorkspacePatterns(cwd)),
+  ];
   const include = patterns.filter((item) => !item.startsWith("!"));
-  const exclude = patterns.filter((item) => item.startsWith("!")).map((item) => item.slice(1));
+  const exclude = patterns
+    .filter((item) => item.startsWith("!"))
+    .map((item) => item.slice(1));
 
   for (const pattern of include) {
     const dirs = await expandWorkspacePattern(cwd, pattern);
@@ -42,12 +57,13 @@ export async function discoverPackageDirs(cwd: string, workspaceMode: boolean): 
   return existing.sort();
 }
 
-async function readPackageJsonWorkspacePatterns(cwd: string): Promise<string[]> {
+async function readPackageJsonWorkspacePatterns(
+  cwd: string,
+): Promise<string[]> {
   const packagePath = path.join(cwd, "package.json");
 
   try {
-    const content = await fs.readFile(packagePath, "utf8");
-    const parsed = JSON.parse(content) as {
+    const parsed = (await Bun.file(packagePath).json()) as {
       workspaces?: string[] | { packages?: string[] };
     };
 
@@ -69,7 +85,7 @@ async function readPnpmWorkspacePatterns(cwd: string): Promise<string[]> {
   const workspacePath = path.join(cwd, "pnpm-workspace.yaml");
 
   try {
-    const content = await fs.readFile(workspacePath, "utf8");
+    const content = await Bun.file(workspacePath).text();
     const lines = content.split(/\r?\n/);
     const patterns: string[] = [];
 
@@ -88,8 +104,14 @@ async function readPnpmWorkspacePatterns(cwd: string): Promise<string[]> {
   }
 }
 
-async function expandWorkspacePattern(cwd: string, pattern: string): Promise<string[]> {
-  const normalized = pattern.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+async function expandWorkspacePattern(
+  cwd: string,
+  pattern: string,
+): Promise<string[]> {
+  const normalized = pattern
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/\/+$/, "");
   if (normalized.length === 0) return [];
 
   if (!normalized.includes("*")) {
@@ -102,9 +124,16 @@ async function expandWorkspacePattern(cwd: string, pattern: string): Promise<str
   return Array.from(results);
 }
 
-async function collectMatches(baseDir: string, segments: string[], index: number, out: Set<string>): Promise<void> {
+async function collectMatches(
+  baseDir: string,
+  segments: string[],
+  index: number,
+  out: Set<string>,
+): Promise<void> {
   if (out.size > MAX_DISCOVERED_DIRS) {
-    throw new Error(`Workspace discovery exceeded ${MAX_DISCOVERED_DIRS} directories. Refine workspace patterns.`);
+    throw new Error(
+      `Workspace discovery exceeded ${MAX_DISCOVERED_DIRS} directories. Refine workspace patterns.`,
+    );
   }
 
   if (index >= segments.length) {

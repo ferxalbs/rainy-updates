@@ -26,7 +26,8 @@ export function filterReviewItemsByFocus(
   if (focus === "risk") {
     return items.filter(
       (item) =>
-        item.update.riskLevel === "critical" || item.update.riskLevel === "high",
+        item.update.riskLevel === "critical" ||
+        item.update.riskLevel === "high",
     );
   }
   if (focus === "major") {
@@ -81,9 +82,10 @@ export async function writeDecisionPlan(
   await writeFileAtomic(filePath, stableStringify(plan, 2) + "\n");
 }
 
-export async function readDecisionPlan(filePath: string): Promise<DecisionPlan> {
-  const { readFile } = await import("node:fs/promises");
-  const parsed = JSON.parse(await readFile(filePath, "utf8")) as DecisionPlan;
+export async function readDecisionPlan(
+  filePath: string,
+): Promise<DecisionPlan> {
+  const parsed = (await Bun.file(filePath).json()) as DecisionPlan;
 
   if (
     parsed.contractVersion !== "1" ||
@@ -104,7 +106,9 @@ export function resolveDecisionPlanPath(
   options: Pick<UpgradeOptions, "cwd" | "decisionPlanFile">,
   explicit?: string,
 ): string {
-  return explicit ?? options.decisionPlanFile ?? defaultDecisionPlanPath(options.cwd);
+  return (
+    explicit ?? options.decisionPlanFile ?? defaultDecisionPlanPath(options.cwd)
+  );
 }
 
 function toDecisionPlanItem(update: PackageUpdate): DecisionPlanItem {

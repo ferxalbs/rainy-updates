@@ -1,6 +1,9 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { DependencyKind, PackageDependency, PackageManifest } from "../types/index.js";
+import type {
+  DependencyKind,
+  PackageDependency,
+  PackageManifest,
+} from "../types/index.js";
 
 const DEPENDENCY_KINDS: DependencyKind[] = [
   "dependencies",
@@ -15,17 +18,22 @@ export function getPackageJsonPath(cwd: string): string {
 
 export async function readManifest(cwd: string): Promise<PackageManifest> {
   const filePath = getPackageJsonPath(cwd);
-  const content = await fs.readFile(filePath, "utf8");
-  return JSON.parse(content) as PackageManifest;
+  return (await Bun.file(filePath).json()) as PackageManifest;
 }
 
-export async function writeManifest(cwd: string, manifest: PackageManifest): Promise<void> {
+export async function writeManifest(
+  cwd: string,
+  manifest: PackageManifest,
+): Promise<void> {
   const filePath = getPackageJsonPath(cwd);
   const content = JSON.stringify(manifest, null, 2) + "\n";
-  await fs.writeFile(filePath, content, "utf8");
+  await Bun.write(filePath, content);
 }
 
-export function collectDependencies(manifest: PackageManifest, includeKinds: DependencyKind[]): PackageDependency[] {
+export function collectDependencies(
+  manifest: PackageManifest,
+  includeKinds: DependencyKind[],
+): PackageDependency[] {
   const deps: PackageDependency[] = [];
 
   for (const kind of DEPENDENCY_KINDS) {
@@ -33,7 +41,9 @@ export function collectDependencies(manifest: PackageManifest, includeKinds: Dep
     const section = manifest[kind];
     if (!section || typeof section !== "object") continue;
 
-    for (const [name, range] of Object.entries(section as Record<string, string>)) {
+    for (const [name, range] of Object.entries(
+      section as Record<string, string>,
+    )) {
       deps.push({ name, range, kind });
     }
   }

@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { BaselineOptions, DependencyKind } from "../types/index.js";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
@@ -29,16 +28,21 @@ export interface BaselineDiffResult {
   changed: Array<{ before: BaselineEntry; after: BaselineEntry }>;
 }
 
-export async function saveBaseline(options: BaselineOptions): Promise<BaselineSaveResult> {
-  const entries = await collectBaselineEntries(options.cwd, options.workspace, options.includeKinds);
+export async function saveBaseline(
+  options: BaselineOptions,
+): Promise<BaselineSaveResult> {
+  const entries = await collectBaselineEntries(
+    options.cwd,
+    options.workspace,
+    options.includeKinds,
+  );
   const payload: BaselineFile = {
     version: 1,
     createdAt: new Date().toISOString(),
     entries,
   };
 
-  await fs.mkdir(path.dirname(options.filePath), { recursive: true });
-  await fs.writeFile(options.filePath, JSON.stringify(payload, null, 2) + "\n", "utf8");
+  await Bun.write(options.filePath, JSON.stringify(payload, null, 2) + "\n");
 
   return {
     filePath: options.filePath,
@@ -46,13 +50,22 @@ export async function saveBaseline(options: BaselineOptions): Promise<BaselineSa
   };
 }
 
-export async function diffBaseline(options: BaselineOptions): Promise<BaselineDiffResult> {
-  const content = await fs.readFile(options.filePath, "utf8");
-  const baseline = JSON.parse(content) as BaselineFile;
-  const currentEntries = await collectBaselineEntries(options.cwd, options.workspace, options.includeKinds);
+export async function diffBaseline(
+  options: BaselineOptions,
+): Promise<BaselineDiffResult> {
+  const baseline = (await Bun.file(options.filePath).json()) as BaselineFile;
+  const currentEntries = await collectBaselineEntries(
+    options.cwd,
+    options.workspace,
+    options.includeKinds,
+  );
 
-  const baselineMap = new Map(baseline.entries.map((entry) => [toKey(entry), entry]));
-  const currentMap = new Map(currentEntries.map((entry) => [toKey(entry), entry]));
+  const baselineMap = new Map(
+    baseline.entries.map((entry) => [toKey(entry), entry]),
+  );
+  const currentMap = new Map(
+    currentEntries.map((entry) => [toKey(entry), entry]),
+  );
 
   const added: BaselineEntry[] = [];
   const removed: BaselineEntry[] = [];
@@ -79,7 +92,9 @@ export async function diffBaseline(options: BaselineOptions): Promise<BaselineDi
     filePath: options.filePath,
     added: sortEntries(added),
     removed: sortEntries(removed),
-    changed: changed.sort((a, b) => toKey(a.after).localeCompare(toKey(b.after))),
+    changed: changed.sort((a, b) =>
+      toKey(a.after).localeCompare(toKey(b.after)),
+    ),
   };
 }
 

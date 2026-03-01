@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { $ } from "bun";
 import path from "node:path";
 import type { CheckResult, RunOptions } from "../types/index.js";
 
@@ -14,7 +14,9 @@ export async function applyFixPr(
   extraFiles: string[],
 ): Promise<FixPrResult> {
   if (!options.fixPr) return { applied: false };
-  const autofixUpdates = result.updates.filter((update) => update.autofix !== false);
+  const autofixUpdates = result.updates.filter(
+    (update) => update.autofix !== false,
+  );
   if (autofixUpdates.length === 0) {
     return {
       applied: false,
@@ -29,13 +31,23 @@ export async function applyFixPr(
   }
 
   const branch = options.fixBranch ?? "chore/rainy-updates";
-  const headRef = await runGit(options.cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"], true);
+  const headRef = await runGit(
+    options.cwd,
+    ["symbolic-ref", "--quiet", "--short", "HEAD"],
+    true,
+  );
   if (headRef.code !== 0 && !options.fixPrNoCheckout) {
-    throw new Error("Cannot run --fix-pr in detached HEAD state without --fix-pr-no-checkout.");
+    throw new Error(
+      "Cannot run --fix-pr in detached HEAD state without --fix-pr-no-checkout.",
+    );
   }
 
   if (!options.fixPrNoCheckout) {
-    const branchCheck = await runGit(options.cwd, ["rev-parse", "--verify", "--quiet", branch], true);
+    const branchCheck = await runGit(
+      options.cwd,
+      ["rev-parse", "--verify", "--quiet", branch],
+      true,
+    );
     if (branchCheck.code === 0) {
       await runGit(options.cwd, ["checkout", branch]);
     } else {
@@ -52,24 +64,38 @@ export async function applyFixPr(
   }
 
   const manifestFiles = Array.from(
-    new Set(autofixUpdates.map((update) => path.resolve(update.packagePath, "package.json"))),
+    new Set(
+      autofixUpdates.map((update) =>
+        path.resolve(update.packagePath, "package.json"),
+      ),
+    ),
   );
   const lockfileFiles =
     options.lockfileMode === "update"
-      ? (await collectChangedLockfiles(options.cwd)).map((entry) => path.resolve(options.cwd, entry))
+      ? (await collectChangedLockfiles(options.cwd)).map((entry) =>
+          path.resolve(options.cwd, entry),
+        )
       : [];
   const filesToStage = Array.from(
     new Set(
       [...manifestFiles, ...extraFiles, ...lockfileFiles]
         .map((entry) => path.resolve(options.cwd, entry))
-        .filter((entry) => entry.startsWith(path.resolve(options.cwd) + path.sep) || entry === path.resolve(options.cwd)),
+        .filter(
+          (entry) =>
+            entry.startsWith(path.resolve(options.cwd) + path.sep) ||
+            entry === path.resolve(options.cwd),
+        ),
     ),
   ).sort((a, b) => a.localeCompare(b));
   if (filesToStage.length > 0) {
     await runGit(options.cwd, ["add", "--", ...filesToStage]);
   }
 
-  const stagedCheck = await runGit(options.cwd, ["diff", "--cached", "--quiet"], true);
+  const stagedCheck = await runGit(
+    options.cwd,
+    ["diff", "--cached", "--quiet"],
+    true,
+  );
   if (stagedCheck.code === 0) {
     return {
       applied: false,
@@ -78,7 +104,9 @@ export async function applyFixPr(
     };
   }
 
-  const message = options.fixCommitMessage ?? `chore(deps): apply rainy-updates (${autofixUpdates.length} updates)`;
+  const message =
+    options.fixCommitMessage ??
+    `chore(deps): apply rainy-updates (${autofixUpdates.length} updates)`;
   await runGit(options.cwd, ["commit", "-m", message]);
   const rev = await runGit(options.cwd, ["rev-parse", "HEAD"]);
 
@@ -95,33 +123,37 @@ interface GitResult {
   stderr: string;
 }
 
-async function runGit(cwd: string, args: string[], allowNonZero = false): Promise<GitResult> {
-  return await new Promise<GitResult>((resolve, reject) => {
-    const child = spawn("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (chunk: string | Uint8Array) => {
-      stdout += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    });
-    child.stderr.on("data", (chunk: string | Uint8Array) => {
-      stderr += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    });
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      const normalized = code ?? 1;
-      if (normalized !== 0 && !allowNonZero) {
-        reject(new Error(`git ${args.join(" ")} failed (${normalized}): ${stderr.trim()}`));
-        return;
-      }
-      resolve({ code: normalized, stdout, stderr });
-    });
-  });
+async function runGit(
+  cwd: string,
+  args: string[],
+  allowNonZero = false,
+): Promise<GitResult> {
+  try {
+    const res = await $`git ${args}`.cwd(cwd).quiet().nothrow();
+    const code = res.exitCode;
+    const stdout = res.stdout.toString();
+    const stderr = res.stderr.toString();
+    if (code !== 0 && !allowNonZero) {
+      throw new Error(
+        `git ${args.join(" ")} failed (${code}): ${stderr.trim()}`,
+      );
+    }
+    return { code, stdout, stderr };
+  } catch (err) {
+    if (allowNonZero) return { code: 1, stdout: "", stderr: "" };
+    throw err instanceof Error ? err : new Error(String(err));
+  }
 }
 
 async function collectChangedLockfiles(cwd: string): Promise<string[]> {
   const status = await runGit(cwd, ["status", "--porcelain"], true);
-  const allowed = new Set(["package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock"]);
+  const allowed = new Set([
+    "package-lock.json",
+    "npm-shrinkwrap.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+  ]);
   const changed = status.stdout
     .split(/\r?\n/)
     .map((line) => line.trim())

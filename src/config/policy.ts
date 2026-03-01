@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { TargetLevel } from "../types/index.js";
 
@@ -42,24 +41,37 @@ export interface ResolvedPolicy {
   matchRules: PolicyRule[];
 }
 
-export async function loadPolicy(cwd: string, policyFile?: string): Promise<ResolvedPolicy> {
-  const candidates = policyFile ? [policyFile] : [
-    path.join(cwd, ".rainyupdates-policy.json"),
-    path.join(cwd, "rainy-updates.policy.json"),
-  ];
+export async function loadPolicy(
+  cwd: string,
+  policyFile?: string,
+): Promise<ResolvedPolicy> {
+  const candidates = policyFile
+    ? [policyFile]
+    : [
+        path.join(cwd, ".rainyupdates-policy.json"),
+        path.join(cwd, "rainy-updates.policy.json"),
+      ];
 
   for (const candidate of candidates) {
-    const filePath = path.isAbsolute(candidate) ? candidate : path.resolve(cwd, candidate);
+    const filePath = path.isAbsolute(candidate)
+      ? candidate
+      : path.resolve(cwd, candidate);
     try {
-      const content = await fs.readFile(filePath, "utf8");
-      const parsed = JSON.parse(content) as PolicyConfig;
+      const parsed = (await Bun.file(filePath).json()) as PolicyConfig;
       return {
         ignorePatterns: parsed.ignore ?? [],
         cooldownDays: asNonNegativeInt(parsed.cooldownDays),
-        packageRules: new Map(Object.entries(parsed.packageRules ?? {}).map(([pkg, rule]) => [pkg, normalizeRule(rule)])),
+        packageRules: new Map(
+          Object.entries(parsed.packageRules ?? {}).map(([pkg, rule]) => [
+            pkg,
+            normalizeRule(rule),
+          ]),
+        ),
         matchRules: Object.values(parsed.packageRules ?? {})
           .map((rule) => normalizeRule(rule))
-          .filter((rule) => typeof rule.match === "string" && rule.match.length > 0),
+          .filter(
+            (rule) => typeof rule.match === "string" && rule.match.length > 0,
+          ),
       };
     } catch {
       // noop
@@ -74,10 +86,15 @@ export async function loadPolicy(cwd: string, policyFile?: string): Promise<Reso
   };
 }
 
-export function resolvePolicyRule(packageName: string, policy: ResolvedPolicy): PolicyRule | undefined {
+export function resolvePolicyRule(
+  packageName: string,
+  policy: ResolvedPolicy,
+): PolicyRule | undefined {
   const exact = policy.packageRules.get(packageName);
   if (exact) return exact;
-  return policy.matchRules.find((rule) => matchesPattern(packageName, rule.match));
+  return policy.matchRules.find((rule) =>
+    matchesPattern(packageName, rule.match),
+  );
 }
 
 function normalizeRule(rule: {
@@ -99,7 +116,10 @@ function normalizeRule(rule: {
     maxUpdatesPerRun: asNonNegativeInt(rule.maxUpdatesPerRun),
     cooldownDays: asNonNegativeInt(rule.cooldownDays),
     allowPrerelease: rule.allowPrerelease === true,
-    group: typeof rule.group === "string" && rule.group.trim().length > 0 ? rule.group.trim() : undefined,
+    group:
+      typeof rule.group === "string" && rule.group.trim().length > 0
+        ? rule.group.trim()
+        : undefined,
     priority: asNonNegativeInt(rule.priority),
     target: rule.target,
     autofix: rule.autofix !== false,
@@ -107,14 +127,17 @@ function normalizeRule(rule: {
 }
 
 function asNonNegativeInt(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0)
+    return undefined;
   return value;
 }
 
 function matchesPattern(value: string, pattern?: string): boolean {
   if (!pattern || pattern.length === 0) return false;
   if (pattern === "*") return true;
-  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*");
   const regex = new RegExp(`^${escaped}$`);
   return regex.test(value);
 }

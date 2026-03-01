@@ -1,8 +1,14 @@
-import { spawn } from "node:child_process";
+import { $ } from "bun";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { CheckResult, GroupBy, PackageManifest, PackageUpdate, RunOptions } from "../types/index.js";
+import type {
+  CheckResult,
+  GroupBy,
+  PackageManifest,
+  PackageUpdate,
+  RunOptions,
+} from "../types/index.js";
 import { readManifest, writeManifest } from "../parsers/package-json.js";
 
 export interface FixPrBatchResult {
@@ -23,27 +29,49 @@ interface PlannedBatch {
   branchName: string;
 }
 
-export async function applyFixPrBatches(options: RunOptions, result: CheckResult): Promise<FixPrBatchResult> {
-  const autofixUpdates = result.updates.filter((update) => update.autofix !== false);
+export async function applyFixPrBatches(
+  options: RunOptions,
+  result: CheckResult,
+): Promise<FixPrBatchResult> {
+  const autofixUpdates = result.updates.filter(
+    (update) => update.autofix !== false,
+  );
   if (!options.fixPr || autofixUpdates.length === 0) {
     return { applied: false, branches: [], commits: [] };
   }
 
   const baseRef = await resolveBaseRef(options.cwd, options.fixPrNoCheckout);
   const groups = groupUpdates(autofixUpdates, options.groupBy);
-  const plans = planFixPrBatches(groups, options.fixBranch ?? "chore/rainy-updates", options.fixPrBatchSize ?? 1);
+  const plans = planFixPrBatches(
+    groups,
+    options.fixBranch ?? "chore/rainy-updates",
+    options.fixPrBatchSize ?? 1,
+  );
 
   if (options.fixDryRun) {
-    return { applied: false, branches: plans.map((plan) => plan.branchName), commits: [] };
+    return {
+      applied: false,
+      branches: plans.map((plan) => plan.branchName),
+      commits: [],
+    };
   }
 
   const branches: string[] = [];
   const commits: string[] = [];
 
   for (const plan of plans) {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "rainy-fix-pr-batch-"));
+    const tempDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), "rainy-fix-pr-batch-"),
+    );
     try {
-      await runGit(options.cwd, ["worktree", "add", "-B", plan.branchName, tempDir, baseRef]);
+      await runGit(options.cwd, [
+        "worktree",
+        "add",
+        "-B",
+        plan.branchName,
+        tempDir,
+        baseRef,
+      ]);
       await applyUpdatesInWorktree(options.cwd, tempDir, plan.updates);
       await stageUpdatedManifests(options.cwd, tempDir, plan.updates);
       const message = renderCommitMessage(options, plan, plans.length);
@@ -52,7 +80,11 @@ export async function applyFixPrBatches(options: RunOptions, result: CheckResult
       branches.push(plan.branchName);
       commits.push(rev.stdout.trim());
     } finally {
-      await runGit(options.cwd, ["worktree", "remove", "--force", tempDir], true);
+      await runGit(
+        options.cwd,
+        ["worktree", "remove", "--force", tempDir],
+        true,
+      );
     }
   }
 
@@ -63,7 +95,11 @@ export async function applyFixPrBatches(options: RunOptions, result: CheckResult
   };
 }
 
-export function planFixPrBatches(groups: UpdateGroup[], baseBranch: string, batchSize: number): PlannedBatch[] {
+export function planFixPrBatches(
+  groups: UpdateGroup[],
+  baseBranch: string,
+  batchSize: number,
+): PlannedBatch[] {
   if (groups.length === 0) return [];
   const size = Math.max(1, Math.floor(batchSize));
   const chunks: UpdateGroup[][] = [];
@@ -72,7 +108,10 @@ export function planFixPrBatches(groups: UpdateGroup[], baseBranch: string, batc
   }
 
   return chunks.map((chunk, index) => {
-    const suffix = chunk.length === 1 ? sanitizeBranchToken(chunk[0]?.key ?? `batch-${index + 1}`) : `batch-${index + 1}`;
+    const suffix =
+      chunk.length === 1
+        ? sanitizeBranchToken(chunk[0]?.key ?? `batch-${index + 1}`)
+        : `batch-${index + 1}`;
     return {
       index: index + 1,
       groups: chunk,
@@ -82,7 +121,10 @@ export function planFixPrBatches(groups: UpdateGroup[], baseBranch: string, batc
   });
 }
 
-function groupUpdates(updates: PackageUpdate[], groupBy: GroupBy): UpdateGroup[] {
+function groupUpdates(
+  updates: PackageUpdate[],
+  groupBy: GroupBy,
+): UpdateGroup[] {
   if (updates.length === 0) return [];
   if (groupBy === "none") {
     return [{ key: "all", items: sortUpdates(updates) }];
@@ -123,24 +165,37 @@ function sortUpdates(updates: PackageUpdate[]): PackageUpdate[] {
   });
 }
 
-async function resolveBaseRef(cwd: string, allowDetached: boolean | undefined): Promise<string> {
+async function resolveBaseRef(
+  cwd: string,
+  allowDetached: boolean | undefined,
+): Promise<string> {
   const status = await runGit(cwd, ["status", "--porcelain"]);
   if (status.stdout.trim().length > 0) {
     throw new Error("Cannot run --fix-pr with a dirty git working tree.");
   }
 
-  const headRef = await runGit(cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"], true);
+  const headRef = await runGit(
+    cwd,
+    ["symbolic-ref", "--quiet", "--short", "HEAD"],
+    true,
+  );
   if (headRef.code === 0) {
     return headRef.stdout.trim();
   }
   if (!allowDetached) {
-    throw new Error("Cannot run --fix-pr in detached HEAD state without --fix-pr-no-checkout.");
+    throw new Error(
+      "Cannot run --fix-pr in detached HEAD state without --fix-pr-no-checkout.",
+    );
   }
   const rev = await runGit(cwd, ["rev-parse", "HEAD"]);
   return rev.stdout.trim();
 }
 
-async function applyUpdatesInWorktree(rootCwd: string, worktreeCwd: string, updates: PackageUpdate[]): Promise<void> {
+async function applyUpdatesInWorktree(
+  rootCwd: string,
+  worktreeCwd: string,
+  updates: PackageUpdate[],
+): Promise<void> {
   const manifestsByPath = new Map<string, PackageManifest>();
 
   for (const update of updates) {
@@ -162,7 +217,11 @@ async function applyUpdatesInWorktree(rootCwd: string, worktreeCwd: string, upda
   }
 }
 
-async function stageUpdatedManifests(rootCwd: string, worktreeCwd: string, updates: PackageUpdate[]): Promise<void> {
+async function stageUpdatedManifests(
+  rootCwd: string,
+  worktreeCwd: string,
+  updates: PackageUpdate[],
+): Promise<void> {
   const files = Array.from(
     new Set(
       updates.map((update) => {
@@ -177,13 +236,23 @@ async function stageUpdatedManifests(rootCwd: string, worktreeCwd: string, updat
   }
 }
 
-function renderCommitMessage(options: RunOptions, plan: PlannedBatch, totalBatches: number): string {
-  const baseMessage = options.fixCommitMessage ?? `chore(deps): apply rainy-updates batch`;
+function renderCommitMessage(
+  options: RunOptions,
+  plan: PlannedBatch,
+  totalBatches: number,
+): string {
+  const baseMessage =
+    options.fixCommitMessage ?? `chore(deps): apply rainy-updates batch`;
   return `${baseMessage} (${plan.index}/${totalBatches}, ${plan.updates.length} updates)`;
 }
 
 function sanitizeBranchToken(value: string): string {
-  return value.replace(/^@/, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "batch";
+  return (
+    value
+      .replace(/^@/, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "batch"
+  );
 }
 
 interface GitResult {
@@ -192,25 +261,24 @@ interface GitResult {
   stderr: string;
 }
 
-async function runGit(cwd: string, args: string[], allowNonZero = false): Promise<GitResult> {
-  return await new Promise<GitResult>((resolve, reject) => {
-    const child = spawn("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk: string | Uint8Array) => {
-      stdout += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    });
-    child.stderr.on("data", (chunk: string | Uint8Array) => {
-      stderr += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    });
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      const normalized = code ?? 1;
-      if (normalized !== 0 && !allowNonZero) {
-        reject(new Error(`git ${args.join(" ")} failed (${normalized}): ${stderr.trim()}`));
-        return;
-      }
-      resolve({ code: normalized, stdout, stderr });
-    });
-  });
+async function runGit(
+  cwd: string,
+  args: string[],
+  allowNonZero = false,
+): Promise<GitResult> {
+  try {
+    const res = await $`git ${args}`.cwd(cwd).quiet().nothrow();
+    const code = res.exitCode;
+    const stdout = res.stdout.toString();
+    const stderr = res.stderr.toString();
+    if (code !== 0 && !allowNonZero) {
+      throw new Error(
+        `git ${args.join(" ")} failed (${code}): ${stderr.trim()}`,
+      );
+    }
+    return { code, stdout, stderr };
+  } catch (err) {
+    if (allowNonZero) return { code: 1, stdout: "", stderr: "" };
+    throw err instanceof Error ? err : new Error(String(err));
+  }
 }

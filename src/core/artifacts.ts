@@ -1,12 +1,19 @@
-import crypto from "node:crypto";
 import path from "node:path";
-import type { ArtifactManifest, CheckResult, RunOptions } from "../types/index.js";
+import type {
+  ArtifactManifest,
+  CheckResult,
+  RunOptions,
+} from "../types/index.js";
 import { stableStringify } from "../utils/stable-json.js";
 import { writeFileAtomic } from "../utils/io.js";
 
-export function createRunId(command: string, options: RunOptions, result: CheckResult): string {
-  const hash = crypto.createHash("sha256");
-  hash.update(
+export function createRunId(
+  command: string,
+  options: RunOptions,
+  result: CheckResult,
+): string {
+  const hasher = new Bun.CryptoHasher("sha256");
+  hasher.update(
     stableStringify(
       {
         command,
@@ -24,7 +31,7 @@ export function createRunId(command: string, options: RunOptions, result: CheckR
       0,
     ),
   );
-  return hash.digest("hex").slice(0, 16);
+  return hasher.digest("hex").slice(0, 16);
 }
 
 export async function writeArtifactManifest(
@@ -63,6 +70,9 @@ export async function writeArtifactManifest(
     },
   };
 
-  await writeFileAtomic(artifactManifestPath, stableStringify(manifest, 2) + "\n");
+  await writeFileAtomic(
+    artifactManifestPath,
+    stableStringify(manifest, 2) + "\n",
+  );
   return manifest;
 }

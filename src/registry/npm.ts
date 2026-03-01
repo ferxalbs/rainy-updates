@@ -8,7 +8,10 @@ const DEFAULT_TIMEOUT_MS = 8000;
 const USER_AGENT = "@rainy-updates/cli";
 const DEFAULT_REGISTRY = "https://registry.npmjs.org/";
 
-type RequestLike = (packageName: string, timeoutMs: number) => Promise<{
+type RequestLike = (
+  packageName: string,
+  timeoutMs: number,
+) => Promise<{
   status: number;
   data: PackumentData | null;
   retryAfterMs: number | null;
@@ -47,15 +50,18 @@ export interface RegistryClientOptions {
 }
 
 export interface ResolveManyResult {
-  metadata: Map<string, {
-    latestVersion: string | null;
-    versions: string[];
-    publishedAtByVersion: Record<string, number>;
-    homepage?: string;
-    repository?: string;
-    installScriptByVersion: Record<string, boolean>;
-    maintainerCount: number | null;
-  }>;
+  metadata: Map<
+    string,
+    {
+      latestVersion: string | null;
+      versions: string[];
+      publishedAtByVersion: Record<string, number>;
+      homepage?: string;
+      repository?: string;
+      installScriptByVersion: Record<string, boolean>;
+      maintainerCount: number | null;
+    }
+  >;
   errors: Map<string, string>;
 }
 
@@ -70,7 +76,11 @@ export class NpmRegistryClient {
     this.defaultRetries = Math.max(1, options?.retries ?? 3);
   }
 
-  async resolvePackageMetadata(packageName: string, timeoutMs = this.defaultTimeoutMs, retries = this.defaultRetries): Promise<{
+  async resolvePackageMetadata(
+    packageName: string,
+    timeoutMs = this.defaultTimeoutMs,
+    retries = this.defaultRetries,
+  ): Promise<{
     latestVersion: string | null;
     versions: string[];
     publishedAtByVersion: Record<string, number>;
@@ -121,17 +131,29 @@ export class NpmRegistryClient {
       } catch (error) {
         lastError = String(error);
         if (attempt < retries) {
-          const backoffMs = error instanceof RetryableRegistryError ? error.waitMs : computeBackoffMs(attempt);
+          const backoffMs =
+            error instanceof RetryableRegistryError
+              ? error.waitMs
+              : computeBackoffMs(attempt);
           await sleep(backoffMs);
         }
       }
     }
 
-    throw new Error(`Unable to resolve ${packageName}: ${lastError ?? "unknown error"}`);
+    throw new Error(
+      `Unable to resolve ${packageName}: ${lastError ?? "unknown error"}`,
+    );
   }
 
-  async resolveLatestVersion(packageName: string, timeoutMs = this.defaultTimeoutMs): Promise<string | null> {
-    const metadata = await this.resolvePackageMetadata(packageName, timeoutMs, this.defaultRetries);
+  async resolveLatestVersion(
+    packageName: string,
+    timeoutMs = this.defaultTimeoutMs,
+  ): Promise<string | null> {
+    const metadata = await this.resolvePackageMetadata(
+      packageName,
+      timeoutMs,
+      this.defaultRetries,
+    );
     return metadata.latestVersion;
   }
 
@@ -140,15 +162,18 @@ export class NpmRegistryClient {
     options: ResolveManyOptions,
   ): Promise<ResolveManyResult> {
     const unique = Array.from(new Set(packageNames));
-    const metadata = new Map<string, {
-      latestVersion: string | null;
-      versions: string[];
-      publishedAtByVersion: Record<string, number>;
-      homepage?: string;
-      repository?: string;
-      installScriptByVersion: Record<string, boolean>;
-      maintainerCount: number | null;
-    }>();
+    const metadata = new Map<
+      string,
+      {
+        latestVersion: string | null;
+        versions: string[];
+        publishedAtByVersion: Record<string, number>;
+        homepage?: string;
+        repository?: string;
+        installScriptByVersion: Record<string, boolean>;
+        maintainerCount: number | null;
+      }
+    >();
     const errors = new Map<string, string>();
     const timeoutMs = options.timeoutMs ?? this.defaultTimeoutMs;
     const retries = options.retries ?? this.defaultRetries;
@@ -157,7 +182,11 @@ export class NpmRegistryClient {
       options.concurrency,
       unique.map((pkg) => async () => {
         try {
-          const packageMetadata = await this.resolvePackageMetadata(pkg, timeoutMs, retries);
+          const packageMetadata = await this.resolvePackageMetadata(
+            pkg,
+            timeoutMs,
+            retries,
+          );
           return { pkg, packageMetadata, error: null as string | null };
         } catch (error) {
           return { pkg, packageMetadata: null, error: String(error) };
@@ -182,8 +211,14 @@ export class NpmRegistryClient {
   async resolveManyLatestVersions(
     packageNames: string[],
     options: ResolveManyOptions,
-  ): Promise<{ versions: Map<string, string | null>; errors: Map<string, string> }> {
-    const metadataResult = await this.resolveManyPackageMetadata(packageNames, options);
+  ): Promise<{
+    versions: Map<string, string | null>;
+    errors: Map<string, string>;
+  }> {
+    const metadataResult = await this.resolveManyPackageMetadata(
+      packageNames,
+      options,
+    );
     const versions = new Map<string, string | null>();
     for (const [name, value] of metadataResult.metadata) {
       versions.set(name, value.latestVersion);
@@ -199,7 +234,9 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function normalizeRepository(value: { url?: string } | string | undefined): string | undefined {
+function normalizeRepository(
+  value: { url?: string } | string | undefined,
+): string | undefined {
   if (!value) return undefined;
   if (typeof value === "string") return value;
   return value.url;
@@ -236,8 +273,6 @@ class RetryableRegistryError extends Error {
 
 async function createRequester(cwd?: string): Promise<RequestLike> {
   const registryConfig = await loadRegistryConfig(cwd ?? process.cwd());
-  const undiciRequester = await tryCreateUndiciRequester(registryConfig);
-  if (undiciRequester) return undiciRequester;
 
   return async (packageName: string, timeoutMs: number) => {
     const controller = new AbortController();
@@ -259,71 +294,20 @@ async function createRequester(cwd?: string): Promise<RequestLike> {
         signal: controller.signal,
       });
 
-      const data = (await response.json().catch(() => null)) as PackumentData | null;
+      const data = (await response
+        .json()
+        .catch(() => null)) as PackumentData | null;
       return {
         status: response.status,
         data,
-        retryAfterMs: parseRetryAfterHeader(response.headers.get("retry-after")),
+        retryAfterMs: parseRetryAfterHeader(
+          response.headers.get("retry-after"),
+        ),
       };
     } finally {
       clearTimeout(timeout);
     }
   };
-}
-
-async function tryCreateUndiciRequester(registryConfig: RegistryConfig): Promise<RequestLike | null> {
-  try {
-    const dynamicImport = Function("specifier", "return import(specifier)") as (specifier: string) => Promise<any>;
-    const undici = await dynamicImport("undici");
-
-    return async (packageName: string, timeoutMs: number) => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      const registry = resolveRegistryForPackage(packageName, registryConfig);
-      const url = buildRegistryUrl(registry, packageName);
-      const authHeader = resolveAuthHeader(registry, registryConfig);
-      const headers: Record<string, string> = {
-        accept: "application/json",
-        "user-agent": USER_AGENT,
-      };
-      if (authHeader) {
-        headers.authorization = authHeader;
-      }
-
-      try {
-        const res = await undici.request(url, {
-          method: "GET",
-          headers,
-          signal: controller.signal,
-        });
-
-        const bodyText = await res.body.text();
-        let data: PackumentData | null = null;
-        try {
-          data = JSON.parse(bodyText) as PackumentData;
-        } catch {
-          data = null;
-        }
-
-        const retryAfter = (() => {
-          const header = res.headers["retry-after"];
-          if (Array.isArray(header)) return header[0] ?? null;
-          if (typeof header === "string") return header;
-          return null;
-        })();
-
-        return {
-          status: res.statusCode,
-          data,
-          retryAfterMs: parseRetryAfterHeader(retryAfter),
-        };
-      } finally {
-        clearTimeout(timeout);
-      }
-    };
-  } catch {
-    return null;
-  }
 }
 
 export async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
@@ -343,7 +327,9 @@ export async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
     }
   }
 
-  const defaultRegistry = normalizeRegistryUrl(merged.get("registry") ?? DEFAULT_REGISTRY);
+  const defaultRegistry = normalizeRegistryUrl(
+    merged.get("registry") ?? DEFAULT_REGISTRY,
+  );
   const scopedRegistries = new Map<string, string>();
   const authByRegistry = new Map<string, RegistryAuth>();
   for (const [key, value] of merged) {
@@ -372,7 +358,9 @@ export async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
   }
 
   if (merged.get("always-auth") === "true") {
-    const current = authByRegistry.get(defaultRegistry) ?? { alwaysAuth: false };
+    const current = authByRegistry.get(defaultRegistry) ?? {
+      alwaysAuth: false,
+    };
     current.alwaysAuth = true;
     authByRegistry.set(defaultRegistry, current);
   }
@@ -385,7 +373,12 @@ function parseNpmrc(content: string): Map<string, string> {
   const lines = content.split(/\r?\n/);
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith(";")) continue;
+    if (
+      trimmed.length === 0 ||
+      trimmed.startsWith("#") ||
+      trimmed.startsWith(";")
+    )
+      continue;
     const separator = trimmed.indexOf("=");
     if (separator <= 0) continue;
     const key = trimmed.slice(0, separator).trim();
@@ -398,7 +391,10 @@ function parseNpmrc(content: string): Map<string, string> {
 }
 
 function substituteEnvValue(value: string): string {
-  return value.replace(/\$\{([^}]+)\}/g, (_match, name: string) => process.env[name] ?? "");
+  return value.replace(
+    /\$\{([^}]+)\}/g,
+    (_match, name: string) => process.env[name] ?? "",
+  );
 }
 
 function normalizeRegistryUrl(value: string): string {
@@ -406,7 +402,10 @@ function normalizeRegistryUrl(value: string): string {
   return normalized;
 }
 
-export function resolveRegistryForPackage(packageName: string, config: RegistryConfig): string {
+export function resolveRegistryForPackage(
+  packageName: string,
+  config: RegistryConfig,
+): string {
   const scope = extractScope(packageName);
   if (scope) {
     const scoped = config.scopedRegistries.get(scope);
@@ -427,7 +426,10 @@ function buildRegistryUrl(registry: string, packageName: string): string {
   return new URL(encodeURIComponent(packageName), base).toString();
 }
 
-export function resolveAuthHeader(registry: string, config: RegistryConfig): string | undefined {
+export function resolveAuthHeader(
+  registry: string,
+  config: RegistryConfig,
+): string | undefined {
   const registryUrl = normalizeRegistryUrl(registry);
   const auth = findRegistryAuth(registryUrl, config.authByRegistry);
   if (!auth) return undefined;
@@ -437,7 +439,10 @@ export function resolveAuthHeader(registry: string, config: RegistryConfig): str
   return undefined;
 }
 
-function findRegistryAuth(registry: string, authByRegistry: Map<string, RegistryAuth>): RegistryAuth | undefined {
+function findRegistryAuth(
+  registry: string,
+  authByRegistry: Map<string, RegistryAuth>,
+): RegistryAuth | undefined {
   let matched: RegistryAuth | undefined;
   let longest = -1;
   for (const [candidate, auth] of authByRegistry) {
@@ -464,7 +469,9 @@ function parseRetryAfterHeader(value: string | null): number | null {
   return delta;
 }
 
-function extractPublishTimes(timeMap: Record<string, string> | undefined): Record<string, number> {
+function extractPublishTimes(
+  timeMap: Record<string, string> | undefined,
+): Record<string, number> {
   if (!timeMap) return {};
   const publishedAtByVersion: Record<string, number> = {};
   for (const [version, rawDate] of Object.entries(timeMap)) {

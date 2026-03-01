@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import path from "node:path";
 import type { BisectOptions, BisectOutcome } from "../../types/index.js";
 
@@ -39,15 +38,16 @@ export async function bisectOracle(
   return outcome;
 }
 
-function runShell(command: string, cwd: string): Promise<number> {
-  return new Promise((resolve) => {
-    const [bin, ...args] = command.split(" ");
-    const child = spawn(bin, args, {
+async function runShell(command: string, cwd: string): Promise<number> {
+  try {
+    const shellCmd = process.env.SHELL || "sh";
+    const proc = Bun.spawn([shellCmd, "-c", command], {
       cwd: path.resolve(cwd),
-      shell: true,
-      stdio: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
     });
-    child.on("close", (code) => resolve(code ?? 1));
-    child.on("error", () => resolve(1));
-  });
+    return await proc.exited;
+  } catch {
+    return 1;
+  }
 }

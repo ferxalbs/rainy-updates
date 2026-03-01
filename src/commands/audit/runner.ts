@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import {
@@ -317,22 +316,23 @@ function runCommand(
   cwd: string,
   ignoreErrors = false,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, {
-      cwd,
-      stdio: "inherit", // stream stdout/stderr live
-      shell: process.platform === "win32",
-    });
-    child.on("close", (code) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const proc = Bun.spawn([cmd, ...args], {
+        cwd,
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+      const code = await proc.exited;
       if (code === 0 || ignoreErrors) {
         resolve();
       } else {
         reject(new Error(`${cmd} exited with code ${code}`));
       }
-    });
-    child.on("error", (err) => {
+    } catch (err) {
       if (ignoreErrors) resolve();
       else reject(err);
-    });
+    }
   });
 }

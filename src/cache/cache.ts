@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -16,28 +15,34 @@ class FileCacheStore implements CacheStore {
     this.filePath = filePath;
   }
 
-  async get(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {
+  async get(
+    packageName: string,
+    target: TargetLevel,
+  ): Promise<CachedVersion | null> {
     const entries = await this.readEntries();
     const key = this.getKey(packageName, target);
     const entry = entries[key];
     if (!entry) return null;
     return {
       ...entry,
-      availableVersions: Array.isArray(entry.availableVersions) ? entry.availableVersions : [entry.latestVersion],
+      availableVersions: Array.isArray(entry.availableVersions)
+        ? entry.availableVersions
+        : [entry.latestVersion],
     };
   }
 
   async set(entry: CachedVersion): Promise<void> {
     const entries = await this.readEntries();
     entries[this.getKey(entry.packageName, entry.target)] = entry;
-    await fs.mkdir(path.dirname(this.filePath), { recursive: true });
-    await fs.writeFile(this.filePath, JSON.stringify(entries), "utf8");
+    await Bun.write(this.filePath, JSON.stringify(entries));
   }
 
   private async readEntries(): Promise<Record<string, CachedVersion>> {
     try {
-      const content = await fs.readFile(this.filePath, "utf8");
-      return JSON.parse(content) as Record<string, CachedVersion>;
+      return (await Bun.file(this.filePath).json()) as Record<
+        string,
+        CachedVersion
+      >;
     } catch {
       return {};
     }
@@ -67,7 +72,10 @@ class SqliteCacheStore implements CacheStore {
     this.ensureSchema();
   }
 
-  async get(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {
+  async get(
+    packageName: string,
+    target: TargetLevel,
+  ): Promise<CachedVersion | null> {
     let row: any;
     try {
       row = this.db
@@ -89,7 +97,10 @@ class SqliteCacheStore implements CacheStore {
       packageName: row.package_name,
       target: row.target,
       latestVersion: row.latest_version,
-      availableVersions: parseJsonArray(row.available_versions ?? row.latest_version, row.latest_version),
+      availableVersions: parseJsonArray(
+        row.available_versions ?? row.latest_version,
+        row.latest_version,
+      ),
       fetchedAt: row.fetched_at,
       ttlSeconds: row.ttl_seconds,
     };
@@ -116,18 +127,32 @@ class SqliteCacheStore implements CacheStore {
           `INSERT OR REPLACE INTO versions (package_name, target, latest_version, fetched_at, ttl_seconds)
            VALUES (?, ?, ?, ?, ?)`,
         )
-        .run(entry.packageName, entry.target, entry.latestVersion, entry.fetchedAt, entry.ttlSeconds);
+        .run(
+          entry.packageName,
+          entry.target,
+          entry.latestVersion,
+          entry.fetchedAt,
+          entry.ttlSeconds,
+        );
     }
   }
 
   private ensureSchema(): void {
     try {
-      const columns = this.db.prepare("PRAGMA table_info(versions);").all() as Array<{ name?: string }>;
-      const hasAvailableVersions = columns.some((column) => column.name === "available_versions");
+      const columns = this.db
+        .prepare("PRAGMA table_info(versions);")
+        .all() as Array<{ name?: string }>;
+      const hasAvailableVersions = columns.some(
+        (column) => column.name === "available_versions",
+      );
       if (!hasAvailableVersions) {
-        this.db.exec("ALTER TABLE versions ADD COLUMN available_versions TEXT;");
+        this.db.exec(
+          "ALTER TABLE versions ADD COLUMN available_versions TEXT;",
+        );
       }
-      this.db.exec("UPDATE versions SET available_versions = latest_version WHERE available_versions IS NULL;");
+      this.db.exec(
+        "UPDATE versions SET available_versions = latest_version WHERE available_versions IS NULL;",
+      );
     } catch {
       // Best-effort migration.
     }
@@ -153,7 +178,8 @@ export class VersionCache {
   }
 
   static async create(customPath?: string): Promise<VersionCache> {
-    const basePath = customPath ?? path.join(os.homedir(), ".cache", "rainy-updates");
+    const basePath =
+      customPath ?? path.join(os.homedir(), ".cache", "rainy-updates");
     if (process.env.RAINY_UPDATES_CACHE_BACKEND === "file") {
       const jsonPath = path.join(basePath, "cache.json");
       return new VersionCache(
@@ -178,7 +204,10 @@ export class VersionCache {
     );
   }
 
-  async getValid(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {
+  async getValid(
+    packageName: string,
+    target: TargetLevel,
+  ): Promise<CachedVersion | null> {
     const entry = await this.store.get(packageName, target);
     if (!entry) return null;
     const expiresAt = entry.fetchedAt + entry.ttlSeconds * 1000;
@@ -186,7 +215,10 @@ export class VersionCache {
     return entry;
   }
 
-  async getAny(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {
+  async getAny(
+    packageName: string,
+    target: TargetLevel,
+  ): Promise<CachedVersion | null> {
     return this.store.get(packageName, target);
   }
 
@@ -208,7 +240,9 @@ export class VersionCache {
   }
 }
 
-async function tryCreateSqliteStore(dbPath: string): Promise<SqliteCacheStore | null> {
+async function tryCreateSqliteStore(
+  dbPath: string,
+): Promise<SqliteCacheStore | null> {
   try {
     if (typeof Bun !== "undefined") {
       const mod = await import("bun:sqlite");
@@ -227,7 +261,9 @@ function parseJsonArray(raw: unknown, fallback: string): string[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [fallback];
-    const values = parsed.filter((value): value is string => typeof value === "string");
+    const values = parsed.filter(
+      (value): value is string => typeof value === "string",
+    );
     return values.length > 0 ? values : [fallback];
   } catch {
     return [fallback];

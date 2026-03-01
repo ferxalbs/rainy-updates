@@ -1,26 +1,33 @@
-import { spawn } from "node:child_process";
-
-export async function installDependencies(cwd: string, packageManager: "auto" | "npm" | "pnpm", detected: "npm" | "pnpm" | "unknown"): Promise<void> {
-  const selected = packageManager === "auto" ? (detected === "unknown" ? "npm" : detected) : packageManager;
+export async function installDependencies(
+  cwd: string,
+  packageManager: "auto" | "npm" | "pnpm",
+  detected: "npm" | "pnpm" | "unknown",
+): Promise<void> {
+  const selected =
+    packageManager === "auto"
+      ? detected === "unknown"
+        ? "npm"
+        : detected
+      : packageManager;
 
   const command = selected;
   const args = ["install"];
 
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(command, args, {
+  try {
+    const proc = Bun.spawn([command, ...args], {
       cwd,
-      stdio: "inherit",
-      shell: process.platform === "win32",
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: "inherit",
     });
 
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`${command} ${args.join(" ")} failed with exit code ${code ?? "unknown"}`));
-    });
-
-    child.on("error", reject);
-  });
+    const code = await proc.exited;
+    if (code !== 0) {
+      throw new Error(
+        `${command} ${args.join(" ")} failed with exit code ${code}`,
+      );
+    }
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err));
+  }
 }
