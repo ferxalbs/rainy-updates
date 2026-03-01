@@ -8,6 +8,7 @@ export { createSarifReport } from "./output/sarif.js";
 export { writeGitHubOutput, renderGitHubAnnotations } from "./output/github.js";
 export { renderPrReport } from "./output/pr-report.js";
 export { buildReviewResult, createDoctorResult } from "./core/review-model.js";
+export { applyRiskAssessments } from "./risk/index.js";
 export type {
   CheckOptions,
   CheckResult,
@@ -27,4 +28,8 @@ export type {
   DoctorResult,
   Verdict,
   RiskLevel,
+  RiskCategory,
+  RiskAssessment,
+  RiskFactor,
+  MaintainerChurnStatus,
 } from "./types/index.js";

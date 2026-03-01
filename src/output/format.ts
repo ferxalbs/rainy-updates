@@ -15,12 +15,21 @@ export function renderResult(
     if (result.updates.length === 0 && result.summary.warmedPackages > 0) {
       return `Cache warmed for ${result.summary.warmedPackages} package(s).`;
     }
+    if (result.updates.length === 0 && result.errors.length > 0) {
+      const [firstError] = result.errors;
+      const suffix =
+        result.errors.length > 1 ? ` (+${result.errors.length - 1} more errors)` : "";
+      return `${firstError}${suffix}`;
+    }
     if (result.updates.length === 0) return "No updates found.";
     return result.updates
       .map((item) => {
         const parts = [`${item.packagePath} :: ${item.name}: ${item.fromRange} -> ${item.toRange}`];
         if (display.showImpact && item.impactScore) {
           parts.push(`impact=${item.impactScore.rank}:${item.impactScore.score}`);
+        }
+        if (typeof item.riskScore === "number") {
+          parts.push(`risk=${item.riskLevel}:${item.riskScore}`);
         }
         if (display.showHomepage && item.homepage) {
           parts.push(item.homepage);
@@ -89,10 +98,14 @@ export function renderResult(
             : undefined,
           display.showHomepage && update.homepage ? update.homepage : undefined,
           update.riskLevel ? `risk=${update.riskLevel}` : undefined,
+          typeof update.riskScore === "number" ? `score=${update.riskScore}` : undefined,
         ]
           .filter(Boolean)
           .join(", ")})`,
       );
+      if (update.recommendedAction) {
+        lines.push(`  action: ${update.recommendedAction}`);
+      }
     }
   }
 

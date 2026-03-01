@@ -45,6 +45,32 @@ function diffColor(level: TargetLevel): string {
   }
 }
 
+function decisionLabel(update: PackageUpdate): string {
+  if (update.peerConflictSeverity === "error" || update.licenseStatus === "denied") {
+    return "blocked";
+  }
+  if (update.advisoryCount && update.advisoryCount > 0) {
+    return "actionable";
+  }
+  if (update.riskLevel === "critical" || update.riskLevel === "high") {
+    return "review";
+  }
+  return "safe";
+}
+
+function decisionColor(label: string): string {
+  switch (label) {
+    case "blocked":
+      return "red";
+    case "actionable":
+      return "yellow";
+    case "review":
+      return "cyan";
+    default:
+      return "green";
+  }
+}
+
 interface TuiAppProps {
   updates: PackageUpdate[];
   onComplete: (selected: PackageUpdate[]) => void;
@@ -116,10 +142,13 @@ function TuiApp({ updates, onComplete }: TuiAppProps) {
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold color="cyan">
-        Rainy Review TUI
+        Rainy Review Queue
       </Text>
       <Text color="gray">
-        Left/Right filter  Up/Down move  Space toggle  A select all view  N clear  Enter confirm
+        Detect with check, summarize with doctor, decide here in review, then apply with upgrade.
+      </Text>
+      <Text color="gray">
+        Left/Right filter  Up/Down move  Space toggle  A select visible  N clear  Enter confirm
       </Text>
 
       <Box marginTop={1}>
@@ -134,14 +163,15 @@ function TuiApp({ updates, onComplete }: TuiAppProps) {
 
       <Box marginTop={1} flexDirection="row">
         <Box width={72} flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
-          <Text bold>Updates</Text>
+          <Text bold>Review Queue</Text>
           {filteredIndices.length === 0 ? (
-            <Text color="gray">No updates match this filter.</Text>
+            <Text color="gray">No review candidates match this filter.</Text>
           ) : (
             filteredIndices.map((index, visibleIndex) => {
               const update = updates[index];
               const isFocused = visibleIndex === boundedCursor;
               const isSelected = selectedIndices.has(index);
+              const decision = decisionLabel(update);
               return (
                 <Box key={`${update.packagePath}:${update.name}`} flexDirection="row">
                   <Text color={isFocused ? "cyan" : "gray"}>
@@ -156,6 +186,14 @@ function TuiApp({ updates, onComplete }: TuiAppProps) {
                   <Box width={18}>
                     <Text color={riskColor(update.riskLevel)}>
                       {update.riskLevel ?? update.impactScore?.rank ?? "low"}
+                    </Text>
+                  </Box>
+                  <Box width={12}>
+                    <Text color={decisionColor(decision)}>{decision}</Text>
+                  </Box>
+                  <Box width={10}>
+                    <Text color={decisionColor(decision)}>
+                      {typeof update.riskScore === "number" ? update.riskScore : "--"}
                     </Text>
                   </Box>
                   <VersionDiff from={update.fromRange} to={update.toVersionResolved} />
@@ -173,22 +211,35 @@ function TuiApp({ updates, onComplete }: TuiAppProps) {
           borderColor="gray"
           paddingX={1}
         >
-          <Text bold>Details</Text>
+          <Text bold>Decision Panel</Text>
           {focusedUpdate ? (
             <>
               <Text>{focusedUpdate.name}</Text>
               <Text color="gray">package: {focusedUpdate.packagePath}</Text>
+              <Text>
+                state:{" "}
+                <Text color={decisionColor(decisionLabel(focusedUpdate))}>
+                  {decisionLabel(focusedUpdate)}
+                </Text>
+              </Text>
               <Text>
                 diff: <Text color={diffColor(focusedUpdate.diffType)}>{focusedUpdate.diffType}</Text>
               </Text>
               <Text>
                 risk: <Text color={riskColor(focusedUpdate.riskLevel)}>{focusedUpdate.riskLevel ?? focusedUpdate.impactScore?.rank ?? "low"}</Text>
               </Text>
-              <Text>impact: {focusedUpdate.impactScore?.score ?? 0}</Text>
+              <Text>risk score: {focusedUpdate.riskScore ?? 0}</Text>
+              <Text>impact score: {focusedUpdate.impactScore?.score ?? 0}</Text>
               <Text>advisories: {focusedUpdate.advisoryCount ?? 0}</Text>
               <Text>peer: {focusedUpdate.peerConflictSeverity ?? "none"}</Text>
               <Text>license: {focusedUpdate.licenseStatus ?? "allowed"}</Text>
               <Text>health: {focusedUpdate.healthStatus ?? "healthy"}</Text>
+              <Text>
+                action:{" "}
+                <Text color={decisionColor(decisionLabel(focusedUpdate))}>
+                  {focusedUpdate.recommendedAction ?? "Safe to keep in the review queue."}
+                </Text>
+              </Text>
               {focusedUpdate.homepage ? (
                 <Text color="blue">homepage: {focusedUpdate.homepage}</Text>
               ) : (
@@ -208,14 +259,14 @@ function TuiApp({ updates, onComplete }: TuiAppProps) {
               )}
             </>
           ) : (
-            <Text color="gray">No update selected.</Text>
+            <Text color="gray">No review candidate selected.</Text>
           )}
         </Box>
       </Box>
 
       <Box marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
         <Text color="gray">
-          {selectedIndices.size} selected of {updates.length}. Filter: {activeFilter}.
+          {selectedIndices.size} selected for apply of {updates.length}. Filter: {activeFilter}. Enter confirms the review decision set.
         </Text>
       </Box>
     </Box>

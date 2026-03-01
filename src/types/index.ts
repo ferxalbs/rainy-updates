@@ -10,6 +10,14 @@ export type CiProfile = "minimal" | "strict" | "enterprise";
 export type LockfileMode = "preserve" | "update" | "error";
 export type Verdict = "safe" | "review" | "blocked" | "actionable";
 export type RiskLevel = "critical" | "high" | "medium" | "low";
+export type RiskCategory =
+  | "known-vulnerability"
+  | "behavioral-risk"
+  | "operational-health";
+export type MaintainerChurnStatus =
+  | "unknown"
+  | "stable"
+  | "elevated-change";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
@@ -109,8 +117,17 @@ export interface PackageUpdate {
   reason?: string;
   impactScore?: ImpactScore;
   homepage?: string;
+  repository?: string;
+  publishedAt?: string;
+  publishAgeDays?: number | null;
+  hasInstallScript?: boolean;
+  maintainerCount?: number | null;
+  maintainerChurn?: MaintainerChurnStatus;
   riskLevel?: RiskLevel;
+  riskScore?: number;
   riskReasons?: string[];
+  riskCategories?: RiskCategory[];
+  recommendedAction?: string;
   advisoryCount?: number;
   peerConflictSeverity?: "none" | PeerConflictSeverity;
   licenseStatus?: "allowed" | "review" | "denied";
@@ -373,8 +390,27 @@ export interface ResolveResult {
 
 export interface RiskSignal {
   packageName: string;
+  code: string;
+  weight: number;
+  category: RiskCategory;
   level: RiskLevel;
   reasons: string[];
+}
+
+export interface RiskFactor {
+  code: string;
+  weight: number;
+  category: RiskCategory;
+  message: string;
+}
+
+export interface RiskAssessment {
+  score: number;
+  level: RiskLevel;
+  reasons: string[];
+  categories: RiskCategory[];
+  recommendedAction: string;
+  factors: RiskFactor[];
 }
 
 export interface ReviewItem {

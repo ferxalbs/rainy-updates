@@ -18,13 +18,13 @@ import type {
   ReviewItem,
   ReviewOptions,
   ReviewResult,
-  RiskLevel,
   Summary,
   UnusedOptions,
   UnusedResult,
   Verdict,
 } from "../types/index.js";
 import { applyImpactScores } from "./impact.js";
+import { applyRiskAssessments } from "../risk/index.js";
 
 export async function buildReviewResult(
   options: ReviewOptions | DoctorOptions | CheckOptions,
@@ -79,7 +79,7 @@ export async function buildReviewResult(
     unusedByName.set(issue.name, list);
   }
 
-  const items = impactedUpdates
+  const baseItems = impactedUpdates
     .map((update) =>
       enrichUpdate(
         update,
@@ -92,6 +92,10 @@ export async function buildReviewResult(
       ),
     )
     .filter((item) => matchesReviewFilters(item, options));
+
+  const items = applyRiskAssessments(baseItems, {
+    knownPackageNames: new Set(checkResult.updates.map((item) => item.name)),
+  }).filter((item) => matchesReviewFilters(item, options));
 
   const summary = createReviewSummary(
     checkResult.summary,
@@ -152,6 +156,9 @@ export function renderReviewResult(review: ReviewResult): string {
       const notes = [
         item.update.diffType,
         item.update.riskLevel ? `risk=${item.update.riskLevel}` : undefined,
+        typeof item.update.riskScore === "number"
+          ? `score=${item.update.riskScore}`
+          : undefined,
         item.update.advisoryCount ? `security=${item.update.advisoryCount}` : undefined,
         item.update.peerConflictSeverity && item.update.peerConflictSeverity !== "none"
           ? `peer=${item.update.peerConflictSeverity}`
@@ -165,6 +172,9 @@ export function renderReviewResult(review: ReviewResult): string {
       );
       if (item.update.riskReasons && item.update.riskReasons.length > 0) {
         lines.push(`  reasons: ${item.update.riskReasons.join("; ")}`);
+      }
+      if (item.update.recommendedAction) {
+        lines.push(`  action: ${item.update.recommendedAction}`);
       }
       if (item.update.homepage) {
         lines.push(`  homepage: ${item.update.homepage}`);
@@ -220,18 +230,6 @@ function enrichUpdate(
   const health = healthByName.get(update.name);
   const license = licenseByName.get(update.name);
   const unusedIssues = unusedByName.get(update.name) ?? [];
-  const riskReasons = [
-    advisories.length > 0 ? `${advisories.length} advisory finding(s)` : undefined,
-    peerConflicts.some((item) => item.severity === "error") ? "peer conflict requires review" : undefined,
-    health?.flags.includes("deprecated") ? "package is deprecated" : undefined,
-    health?.flags.includes("stale") ? "package is stale" : undefined,
-    licenseViolationNames.has(update.name) ? "license policy violation" : undefined,
-    unusedIssues.length > 0 ? `${unusedIssues.length} unused/missing dependency signal(s)` : undefined,
-    update.diffType === "major" ? "major version jump" : undefined,
-  ].filter((value): value is string => Boolean(value));
-
-  const riskLevel = deriveRiskLevel(update, advisories.length, peerConflicts.length, licenseViolationNames.has(update.name), health?.flags ?? []);
-
   return {
     update: {
       ...update,
@@ -247,8 +245,6 @@ function enrichUpdate(
           ? "allowed"
           : "review",
       healthStatus: health?.flags[0] ?? "healthy",
-      riskLevel,
-      riskReasons,
     },
     advisories,
     health,
@@ -275,8 +271,11 @@ function matchesReviewFilters(
   return true;
 }
 
-function riskMatches(current: RiskLevel | undefined, threshold: RiskLevel): boolean {
-  const order: Record<RiskLevel, number> = {
+function riskMatches(
+  current: ReviewItem["update"]["riskLevel"] | undefined,
+  threshold: NonNullable<ReviewOptions["risk"]>,
+): boolean {
+  const order: Record<NonNullable<ReviewOptions["risk"]>, number> = {
     critical: 4,
     high: 3,
     medium: 2,
@@ -357,25 +356,6 @@ function deriveVerdict(items: ReviewItem[]): Verdict {
   return "safe";
 }
 
-function deriveRiskLevel(
-  update: PackageUpdate,
-  advisories: number,
-  conflicts: number,
-  hasLicenseViolation: boolean,
-  healthFlags: string[],
-): RiskLevel {
-  if (hasLicenseViolation || conflicts > 0 || advisories > 0) {
-    return update.diffType === "major" || advisories > 0 ? "critical" : "high";
-  }
-  if (healthFlags.includes("deprecated") || update.diffType === "major") {
-    return "high";
-  }
-  if (healthFlags.length > 0 || update.diffType === "minor") {
-    return "medium";
-  }
-  return update.impactScore?.rank ?? "low";
-}
-
 function buildPrimaryFindings(review: ReviewResult): string[] {
   const findings: string[] = [];
   if ((review.summary.peerConflictPackages ?? 0) > 0) {
@@ -397,8 +377,8 @@ function buildPrimaryFindings(review: ReviewResult): string[] {
 }
 
 function recommendCommand(review: ReviewResult, verdict: Verdict): string {
-  if (verdict === "blocked") return "rup resolve --after-update";
-  if ((review.summary.securityPackages ?? 0) > 0) return "rup audit --fix";
+  if (verdict === "blocked") return "rup review --interactive";
+  if ((review.summary.securityPackages ?? 0) > 0) return "rup review --security-only";
   if (review.items.length > 0) return "rup review --interactive";
   return "rup check";
 }

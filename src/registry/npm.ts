@@ -20,6 +20,7 @@ type PackumentData = {
   time?: Record<string, string>;
   homepage?: string;
   repository?: { url?: string } | string;
+  maintainers?: Array<{ name?: string; email?: string }>;
 };
 
 interface RegistryConfig {
@@ -52,7 +53,8 @@ export interface ResolveManyResult {
     publishedAtByVersion: Record<string, number>;
     homepage?: string;
     repository?: string;
-    hasInstallScript: boolean;
+    installScriptByVersion: Record<string, boolean>;
+    maintainerCount: number | null;
   }>;
   errors: Map<string, string>;
 }
@@ -74,7 +76,8 @@ export class NpmRegistryClient {
     publishedAtByVersion: Record<string, number>;
     homepage?: string;
     repository?: string;
-    hasInstallScript: boolean;
+    installScriptByVersion: Record<string, boolean>;
+    maintainerCount: number | null;
   }> {
     const requester = await this.requesterPromise;
     let lastError: string | null = null;
@@ -83,7 +86,13 @@ export class NpmRegistryClient {
       try {
         const response = await requester(packageName, timeoutMs);
         if (response.status === 404) {
-          return { latestVersion: null, versions: [], publishedAtByVersion: {}, hasInstallScript: false };
+          return {
+            latestVersion: null,
+            versions: [],
+            publishedAtByVersion: {},
+            installScriptByVersion: {},
+            maintainerCount: null,
+          };
         }
         if (response.status === 429 || response.status >= 500) {
           throw new RetryableRegistryError(
@@ -102,7 +111,12 @@ export class NpmRegistryClient {
           publishedAtByVersion: extractPublishTimes(response.data?.time),
           homepage: response.data?.homepage,
           repository: normalizeRepository(response.data?.repository),
-          hasInstallScript: detectInstallScript(response.data?.versions),
+          installScriptByVersion: detectInstallScriptsByVersion(
+            response.data?.versions,
+          ),
+          maintainerCount: Array.isArray(response.data?.maintainers)
+            ? response.data?.maintainers.length
+            : null,
         };
       } catch (error) {
         lastError = String(error);
@@ -132,7 +146,8 @@ export class NpmRegistryClient {
       publishedAtByVersion: Record<string, number>;
       homepage?: string;
       repository?: string;
-      hasInstallScript: boolean;
+      installScriptByVersion: Record<string, boolean>;
+      maintainerCount: number | null;
     }>();
     const errors = new Map<string, string>();
     const timeoutMs = options.timeoutMs ?? this.defaultTimeoutMs;
@@ -190,18 +205,18 @@ function normalizeRepository(value: { url?: string } | string | undefined): stri
   return value.url;
 }
 
-function detectInstallScript(
+function detectInstallScriptsByVersion(
   versions: Record<string, { scripts?: Record<string, string> }> | undefined,
-): boolean {
-  if (!versions) return false;
-  for (const metadata of Object.values(versions)) {
+): Record<string, boolean> {
+  if (!versions) return {};
+  const results: Record<string, boolean> = {};
+  for (const [version, metadata] of Object.entries(versions)) {
     const scripts = metadata?.scripts;
-    if (!scripts) continue;
-    if (scripts.preinstall || scripts.install || scripts.postinstall) {
-      return true;
-    }
+    results[version] = Boolean(
+      scripts?.preinstall || scripts?.install || scripts?.postinstall,
+    );
   }
-  return false;
+  return results;
 }
 
 function computeBackoffMs(attempt: number): number {

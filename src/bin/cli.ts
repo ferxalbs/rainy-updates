@@ -299,7 +299,11 @@ function renderHelp(command?: string): string {
   if (isCommand && command === "check") {
     return `rainy-updates check [options]
 
-Detect available dependency updates.
+Detect candidate dependency updates. This is the first step in the flow:
+  check detects
+  doctor summarizes
+  review decides
+  upgrade applies
 
 Options:
   --workspace
@@ -366,7 +370,7 @@ Options:
   if (isCommand && command === "upgrade") {
     return `rainy-updates upgrade [options]
 
-Apply dependency updates to package.json manifests.
+Apply an approved change set to package.json manifests.
 
 Options:
   --workspace
@@ -394,7 +398,11 @@ Options:
   if (isCommand && command === "ci") {
     return `rainy-updates ci [options]
 
-Run CI-oriented dependency automation pipeline.
+Run CI-oriented automation around the same lifecycle:
+  check detects
+  doctor summarizes
+  review decides
+  upgrade applies
 
 Options:
   --workspace
@@ -476,7 +484,8 @@ Options:
   if (isCommand && command === "review") {
     return `rainy-updates review [options]
 
-Review updates with risk, security, peer, and policy context.
+Review is the decision center of Rainy Updates.
+Use it to inspect risk, security, peer, license, and policy context before applying changes.
 
 Options:
   --workspace
@@ -495,7 +504,7 @@ Options:
   if (isCommand && command === "doctor") {
     return `rainy-updates doctor [options]
 
-Produce a fast overall dependency verdict.
+Produce a fast summary verdict and point the operator to review when action is needed.
 
 Options:
   --workspace
@@ -506,9 +515,11 @@ Options:
   return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
-  check       Detect available updates
-  upgrade     Apply updates to manifests
-  ci          Run CI-focused update pipeline
+  check       Detect candidate updates
+  doctor      Summarize what matters
+  review      Decide what to do
+  upgrade     Apply the approved change set
+  ci          Run CI-focused orchestration
   warm-cache  Warm local cache for fast/offline checks
   init-ci     Scaffold GitHub Actions workflow
   baseline    Save/check dependency baseline snapshots
@@ -519,8 +530,6 @@ Commands:
   resolve     Check peer dependency conflicts (pure-TS, no subprocess)
   licenses    Scan dependency licenses and generate SPDX SBOM
   snapshot    Save, list, restore, and diff dependency state snapshots
-  review      Guided dependency review with risk/security context
-  doctor      Fast dependency verdict for local or CI use
 
 Global options:
   --cwd <path>

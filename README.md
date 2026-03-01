@@ -1,19 +1,65 @@
 # @rainy-updates/cli
 
-The fastest DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and automates npm/pnpm dependencies in CI.
+Rainy Updates is a deterministic dependency review and upgrade operator for Node monorepos and CI.
 
-`@rainy-updates/cli` is built for teams that need fast dependency intelligence, security auditing, policy-aware upgrades, and automation-ready output for CI/CD and pull request workflows.
+`@rainy-updates/cli` is built for teams that need fast dependency detection, trustworthy review, controlled upgrades, and automation-ready outputs for CI/CD.
 
 Comparison:
 [Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
 
-## Why this package
+Command model:
+[Check → Doctor → Review → Upgrade](./docs/command-model.md)
+
+Review workflow:
+[Review workflow guide](./docs/review-workflow.md)
+
+Risk engine:
+[Risk engine guide](./docs/risk-engine.md)
+
+Benchmarks:
+[Benchmark methodology](./docs/benchmarks.md)
+
+## What it is
+
+Rainy Updates gives teams one dependency lifecycle:
+
+- `check` detects candidate updates.
+- `doctor` summarizes the current situation.
+- `review` decides what should happen.
+- `upgrade` applies the approved change set.
+
+Everything else supports that lifecycle: CI orchestration, advisory lookup, peer resolution, licenses, snapshots, baselines, and fix-PR automation.
+
+## Who it is for
+
+- Node monorepo teams that want deterministic CI artifacts.
+- Engineers who want to review dependency risk locally before applying changes.
+- Teams that need fewer, better upgrade decisions instead of noisy automated PR churn.
+
+## 60-second workflow
+
+```bash
+# 1) Detect what changed
+npx @rainy-updates/cli check --workspace --show-impact
+
+# 2) Summarize what matters
+npx @rainy-updates/cli doctor --workspace
+
+# 3) Decide in the review surface
+npx @rainy-updates/cli review --interactive
+
+# 4) Apply the approved set
+npx @rainy-updates/cli upgrade --interactive
+```
+
+## Why teams use it
 
 - Detects updates quickly across single-package repos and workspaces.
+- Centralizes security, peer, license, health, and behavioral risk review.
 - Applies updates safely with configurable targets (`patch`, `minor`, `major`, `latest`).
-- Enforces policy rules per package (ignore rules and max upgrade level).
+- Enforces policy rules per package.
 - Supports offline and cache-warmed execution for deterministic CI runs.
-- Produces machine-readable artifacts (JSON, SARIF, GitHub outputs, PR markdown report).
+- Produces machine-readable artifacts: JSON, SARIF, GitHub outputs, and PR reports.
 
 ## Install
 
@@ -52,15 +98,18 @@ npx @rainy-updates/cli ci --workspace --mode strict
 
 ## Commands
 
-### Dependency management
+### Primary workflow
 
-- `check` — analyze dependencies and report available updates
-- `upgrade` — rewrite dependency ranges in manifests, optionally install lockfile updates
+- `check` — detect candidate dependency updates
+- `doctor` — summarize the current dependency situation
+- `review` — decide what to do with security, risk, peer, and policy context
+- `upgrade` — apply the approved change set
+
+### Supporting workflow
+
 - `ci` — run CI-focused dependency automation (warm cache, check/upgrade, policy gates)
 - `warm-cache` — prefetch package metadata for fast and offline checks
 - `baseline` — save and compare dependency baseline snapshots
-- `review` — guided review across updates, security, peer conflicts, licenses, and risk
-- `doctor` — fast verdict command for local triage and CI summaries
 
 ### Security & health (_new in v0.5.1_)
 
@@ -77,31 +126,35 @@ npx @rainy-updates/cli ci --workspace --mode strict
 npx @rainy-updates/cli check --format table
 rup check --format table                      # if installed
 
-# 2) Strict CI mode (non-zero when updates exist)
-npx @rainy-updates/cli check --workspace --ci --format json --json-file .artifacts/updates.json
-rup check --workspace --ci --format json --json-file .artifacts/updates.json
+# 2) Summarize the state
+npx @rainy-updates/cli doctor --workspace
+rup doctor --workspace
 
-# 3) CI orchestration with policy gates
-npx @rainy-updates/cli ci --workspace --mode strict --format github
-rup ci --workspace --mode strict --format github
+# 3) Review and decide
+npx @rainy-updates/cli review --security-only
+rup review --interactive
 
-# 4) Batch fix branches by scope (enterprise)
-npx @rainy-updates/cli ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
-rup ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
-
-# 5) Apply upgrades with workspace sync
+# 4) Apply upgrades with workspace sync
 npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
 rup upgrade --target latest --workspace --sync --install
 
-# 6) Warm cache → deterministic offline CI check
+# 5) CI orchestration with policy gates
+npx @rainy-updates/cli ci --workspace --mode strict --format github
+rup ci --workspace --mode strict --format github
+
+# 6) Batch fix branches by scope (enterprise)
+npx @rainy-updates/cli ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
+rup ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
+
+# 7) Warm cache → deterministic offline CI check
 npx @rainy-updates/cli warm-cache --workspace --concurrency 32
 npx @rainy-updates/cli check --workspace --offline --ci
 
-# 7) Save and compare baseline drift
+# 8) Save and compare baseline drift
 npx @rainy-updates/cli baseline --save --file .artifacts/deps-baseline.json --workspace
 npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --workspace --ci
 
-# 8) Scan for known CVEs  ── NEW in v0.5.1
+# 9) Scan for known CVEs
 npx @rainy-updates/cli audit
 npx @rainy-updates/cli audit --severity high
 npx @rainy-updates/cli audit --summary
@@ -111,26 +164,20 @@ rup audit --severity high                   # if installed
 
 `audit` prefers npm/pnpm lockfiles today for exact installed-version inference, and now also reads simple `bun.lock` workspace entries when available. It reports source-health warnings when OSV or GitHub returns only partial coverage.
 
-# 9) Check dependency maintenance health  ── NEW in v0.5.1
+# 10) Check dependency maintenance health
 npx @rainy-updates/cli health
 npx @rainy-updates/cli health --stale 6m   # flag packages with no release in 6 months
 npx @rainy-updates/cli health --stale 180d # same but in days
 rup health --stale 6m                       # if installed
 
-# 10) Find which version introduced a breaking change  ── NEW in v0.5.1
+# 11) Find which version introduced a breaking change
 npx @rainy-updates/cli bisect axios --cmd "bun test"
 npx @rainy-updates/cli bisect react --range "18.0.0..19.0.0" --cmd "npm test"
 npx @rainy-updates/cli bisect lodash --cmd "npm run test:unit" --dry-run
 rup bisect axios --cmd "bun test"           # if installed
 
-# 11) Review updates with risk and security context  ── NEW in v0.5.2 GA
-npx @rainy-updates/cli review --security-only
-rup review --interactive
+# 12) Focus review on high-risk changes
 rup review --risk high --diff major
-
-# 12) Get a fast dependency verdict for CI or local triage  ── NEW in v0.5.2 GA
-npx @rainy-updates/cli doctor
-rup doctor --verdict-only
 ```
 
 ## What it does in production
@@ -184,6 +231,13 @@ npx @rainy-updates/cli check --policy-file .rainyupdates-policy.json
 
 - `--format table`
 - `--format minimal`
+
+Review-centered outputs:
+
+- `check` is optimized for detection.
+- `doctor` is optimized for summary.
+- `review` is optimized for decision-making.
+- `upgrade` is optimized for safe application.
 
 ### Automation output
 

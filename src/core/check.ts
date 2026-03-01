@@ -24,7 +24,8 @@ interface ResolvedPackageMetadata {
   publishedAtByVersion: Record<string, number>;
   homepage?: string;
   repository?: string;
-  hasInstallScript: boolean;
+  installScriptByVersion: Record<string, boolean>;
+  maintainerCount: number | null;
 }
 
 export async function check(options: CheckOptions): Promise<CheckResult> {
@@ -122,7 +123,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
         latestVersion: cached.latestVersion,
         availableVersions: cached.availableVersions,
         publishedAtByVersion: {},
-        hasInstallScript: false,
+        installScriptByVersion: {},
+        maintainerCount: null,
       });
     } else {
       unresolvedPackages.push(packageName);
@@ -140,7 +142,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
             latestVersion: stale.latestVersion,
             availableVersions: stale.availableVersions,
             publishedAtByVersion: {},
-            hasInstallScript: false,
+            installScriptByVersion: {},
+            maintainerCount: null,
           });
           warnings.push(`Using stale cache for ${packageName} because --offline is enabled.`);
         } else {
@@ -173,7 +176,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
           publishedAtByVersion: metadata.publishedAtByVersion,
           homepage: metadata.homepage,
           repository: metadata.repository,
-          hasInstallScript: metadata.hasInstallScript,
+          installScriptByVersion: metadata.installScriptByVersion,
+          maintainerCount: metadata.maintainerCount,
         });
         if (metadata.latestVersion) {
           await cache.set(
@@ -195,7 +199,8 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
             latestVersion: stale.latestVersion,
             availableVersions: stale.availableVersions,
             publishedAtByVersion: {},
-            hasInstallScript: false,
+            installScriptByVersion: {},
+            maintainerCount: null,
           });
           warnings.push(`Using stale cache for ${packageName} due to registry error: ${error}`);
         } else {
@@ -258,6 +263,26 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
       autofix: rule?.autofix !== false,
       reason: rule?.maxTarget ? `policy maxTarget=${rule.maxTarget}` : undefined,
       homepage: metadata.homepage,
+      repository: metadata.repository,
+      publishedAt:
+        metadata.publishedAtByVersion[picked]
+          ? new Date(metadata.publishedAtByVersion[picked]!).toISOString()
+          : undefined,
+      publishAgeDays: metadata.publishedAtByVersion[picked]
+        ? Math.max(
+            0,
+            Math.floor(
+              (Date.now() - metadata.publishedAtByVersion[picked]!) /
+                (1000 * 60 * 60 * 24),
+            ),
+          )
+        : null,
+      hasInstallScript: metadata.installScriptByVersion[picked] ?? false,
+      maintainerCount: metadata.maintainerCount,
+      maintainerChurn: deriveMaintainerChurn(
+        metadata.maintainerCount,
+        metadata.publishedAtByVersion[picked],
+      ),
     });
     emitStream(
       `[update] ${task.dependency.name} ${task.dependency.range} -> ${nextRange} (${classifyDiff(task.dependency.range, picked)})`,
@@ -317,6 +342,23 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
     errors: sortedErrors,
     warnings: sortedWarnings,
   };
+}
+
+function deriveMaintainerChurn(
+  maintainerCount: number | null,
+  publishedAt?: number,
+): PackageUpdate["maintainerChurn"] {
+  if (maintainerCount === null || publishedAt === undefined) {
+    return "unknown";
+  }
+  const ageDays = Math.max(
+    0,
+    Math.floor((Date.now() - publishedAt) / (1000 * 60 * 60 * 24)),
+  );
+  if (maintainerCount <= 1 && ageDays <= 30) {
+    return "elevated-change";
+  }
+  return "stable";
 }
 
 interface UpdateGroup {

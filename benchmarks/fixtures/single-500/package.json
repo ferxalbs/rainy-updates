@@ -1,0 +1,7 @@
+{
+  "name": "benchmark-single-500",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}

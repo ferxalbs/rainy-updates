@@ -2,6 +2,59 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.2.a] - 2026-03-01
+
+### Added
+
+- **Dedicated risk engine layer** under `src/risk/`:
+  - formal risk scoring with `riskScore`, `riskLevel`, `riskReasons`, `riskCategories`, and `recommendedAction`,
+  - deterministic scoring for:
+    - known vulnerabilities,
+    - install lifecycle scripts,
+    - typosquatting heuristic,
+    - newly published packages,
+    - suspicious metadata,
+    - mutable git/http dependencies,
+    - maintainer stability heuristic,
+    - peer conflicts,
+    - license violations,
+    - stale/deprecated health signals,
+    - major version jumps.
+- **Benchmark tooling and methodology**:
+  - `scripts/generate-benchmark-fixtures.mjs`,
+  - `scripts/benchmark.mjs`,
+  - generated fixtures under `benchmarks/fixtures/`,
+  - benchmark methodology doc: `docs/benchmarks.md`.
+- **New workflow docs**:
+  - `docs/command-model.md`
+  - `docs/review-workflow.md`
+  - `docs/risk-engine.md`
+
+### Changed
+
+- `review` is now the explicit product center:
+  - `check` detects,
+  - `doctor` summarizes,
+  - `review` decides,
+  - `upgrade` applies.
+- CLI help, README, and docs now reflect the review-centered workflow instead of a flat command surface.
+- Review outputs now carry formal risk engine results instead of ad hoc composite signals.
+- TUI language has been upgraded to decision-oriented semantics:
+  - review queue,
+  - decision panel,
+  - explicit state labels,
+  - recommended action per candidate.
+- GitHub annotations, SARIF, and human-readable output now expose formal risk score/action metadata additively.
+
+### Benchmarks
+
+- Added package scripts for reproducible benchmark runs:
+  - `bench:fixtures`
+  - `bench:check`
+  - `bench:review`
+  - `bench:resolve`
+  - `bench:ci`
+
 ## [0.5.2] - 2026-03-01
 
 ### Added

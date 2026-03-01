@@ -47,7 +47,7 @@ export function renderGitHubAnnotations(result: CheckResult): string {
   });
   for (const update of sortedUpdates) {
     lines.push(
-      `::notice title=Dependency Update::${update.name} ${update.fromRange} -> ${update.toRange} (${update.packagePath})`,
+      `::notice title=Dependency Update::${update.name} ${update.fromRange} -> ${update.toRange} (${update.packagePath})${typeof update.riskScore === "number" ? ` [risk=${update.riskLevel}:${update.riskScore}]` : ""}`,
     );
   }
 
