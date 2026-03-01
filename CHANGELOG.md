@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [0.5.2-ga] - 2026-03-01
+## [0.5.2] - 2026-03-01
 
 ### Added
 
@@ -25,12 +25,34 @@ All notable changes to this project are documented in this file.
   - `--interactive`
   - `--show-impact`
   - `--show-homepage`
+- **RC3 hardening layer on top of GA surfaces**:
+  - centralized classified error taxonomy in `src/core/errors.ts`,
+  - compatibility coverage for scoped private registries and cache backend fallback,
+  - explicit cache fallback reason reporting for SQLite → file cache degradation,
+  - dedicated performance scenarios for `check`, `resolve`, and `ci`,
+  - new comparison document: `docs/why-rainy-vs-dependabot-renovate.md`.
 
 ### Changed
 
 - `check` now computes impact scores in the core pipeline and carries homepage metadata when available.
 - `upgrade --interactive` now routes through the guided review flow before applying selected updates.
 - CLI help and package exports now cover the new review/verdict surfaces.
+- `doctor` output now follows the RC3 quick-verdict shape:
+  - `State`
+  - `PrimaryRisk`
+  - `NextAction`
+- `check`, `warm-cache`, and `audit` now emit RC3-style classified warnings/errors for:
+  - registry failures,
+  - auth failures,
+  - advisory-source degradation/outage,
+  - cache backend fallback.
+
+### Tests
+
+- Added compatibility tests for:
+  - scoped `.npmrc` private registry resolution,
+  - forced cache backend fallback behavior.
+- Updated audit coverage to assert the new classified advisory degradation warning format.
 
 ## [0.5.2-rc.2] - 2026-02-27
 
