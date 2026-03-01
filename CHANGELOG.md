@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.4] - 2026-03-01
+
+Production hotfix for interactive review stability.
+
+### Fixed
+
+- Fixed a production bug where `review --interactive` could leak raw output from aggregated runners such as `resolve` before the Ink TUI rendered.
+- Fixed the review aggregation silencing model so concurrent dependency analysis no longer races on `stdout` / `stderr` restoration.
+- Restored the intended interactive entry experience for review mode:
+  - `Rainy Review Queue`
+  - `Review Queue`
+  - `Decision Panel`
+
+### Changed
+
+- Clarified `doctor --verdict-only` help text so it matches the real 3-line quick-verdict contract.
+- Added dedicated TUI usage documentation in `docs/tui-guide.md` and linked it from the review workflow docs and README.
+
 ## [0.5.3] - 2026-03-01
 
 GA stabilization and review-centered workflow refinement.

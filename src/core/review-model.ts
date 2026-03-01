@@ -38,13 +38,25 @@ export async function buildReviewResult(
   const checkResult = await check(baseCheckOptions);
 
   const [auditResult, resolveResult, healthResult, licenseResult, unusedResult] =
-    await Promise.all([
-      runSilenced(() => import("../commands/audit/runner.js").then((mod) => mod.runAudit(toAuditOptions(options)))),
-      runSilenced(() => import("../commands/resolve/runner.js").then((mod) => mod.runResolve(toResolveOptions(options)))),
-      runSilenced(() => import("../commands/health/runner.js").then((mod) => mod.runHealth(toHealthOptions(options)))),
-      runSilenced(() => import("../commands/licenses/runner.js").then((mod) => mod.runLicenses(toLicenseOptions(options)))),
-      runSilenced(() => import("../commands/unused/runner.js").then((mod) => mod.runUnused(toUnusedOptions(options)))),
-    ]);
+    await runSilenced(() =>
+      Promise.all([
+        import("../commands/audit/runner.js").then((mod) =>
+          mod.runAudit(toAuditOptions(options)),
+        ),
+        import("../commands/resolve/runner.js").then((mod) =>
+          mod.runResolve(toResolveOptions(options)),
+        ),
+        import("../commands/health/runner.js").then((mod) =>
+          mod.runHealth(toHealthOptions(options)),
+        ),
+        import("../commands/licenses/runner.js").then((mod) =>
+          mod.runLicenses(toLicenseOptions(options)),
+        ),
+        import("../commands/unused/runner.js").then((mod) =>
+          mod.runUnused(toUnusedOptions(options)),
+        ),
+      ]),
+    );
 
   const advisoryPackages = new Set(auditResult.packages.map((pkg) => pkg.packageName));
   const impactedUpdates = applyImpactScores(checkResult.updates, {

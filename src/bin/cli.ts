@@ -116,7 +116,7 @@ async function main(): Promise<void> {
       return;
     }
 
-    // ─── v0.5.3 commands ─────────────────────────────────────────────────────
+    // ─── v0.5.4 commands ─────────────────────────────────────────────────────
     if (parsed.command === "unused") {
       const { runUnused } = await import("../commands/unused/runner.js");
       const result = await runUnused(parsed.options);
