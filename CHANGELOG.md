@@ -2,6 +2,69 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.0-rc.1] - 2026-03-01
+
+Dashboard-first release candidate for the `v0.6` series, focused on unifying the interactive surface, introducing replayable decision plans, and tightening CI/apply verification flows.
+
+### Added
+
+- **Decision plan artifact flow**:
+  - new deterministic decision plan model for reviewed update sets,
+  - reusable `.artifacts/decision-plan.json` workflow,
+  - `upgrade --from-plan <path>` replay support,
+  - additive summary/output metadata for:
+    - `suggestedCommand`,
+    - `decisionPlan`,
+    - `interactiveSurface`,
+    - `queueFocus`.
+- **Verification flow for applied plans and upgrades**:
+  - `--verify none|install|test|install,test`,
+  - `--test-command "<cmd>"`,
+  - `--verification-report-file <path>`,
+  - additive verification metadata in summary and GitHub/metrics outputs:
+    - `verificationState`,
+    - `verificationFailures`.
+- **New CI gate model**:
+  - `ci --gate check|doctor|review|upgrade`,
+  - review gate emits a decision plan artifact without mutating manifests,
+  - upgrade gate replays a prior decision plan and can run verification.
+- **New verification core** under `src/core/verification.ts`.
+- **New decision plan core** under `src/core/decision-plan.ts`.
+- **New test coverage** for:
+  - decision plan serialization and replay,
+  - CI upgrade gate plan replay,
+  - verification report generation.
+
+### Changed
+
+- `dashboard` is now the primary interactive dependency decision surface.
+- `review --interactive` now routes into the shared dashboard flow instead of maintaining a separate interactive implementation path.
+- `doctor` now recommends dashboard-first next steps:
+  - `rup dashboard --mode review`
+  - `rup dashboard --mode review --focus security`
+  - `rup dashboard --mode review --focus blocked`
+- CLI help and README now document:
+  - `dashboard` as the primary interactive workflow,
+  - `upgrade --from-plan`,
+  - `ci --gate ...`,
+  - verification and verification-report flows.
+- `init-ci` generated workflows now:
+  - use explicit CI gates,
+  - emit a decision plan artifact in strict and enterprise modes,
+  - replay approved plans with verification in enterprise mode.
+- Artifact manifests now include verification report output paths when configured.
+
+### Removed
+
+- Removed the legacy standalone dashboard Ink/store implementation under `src/ui/dashboard/` in favor of a single shared interactive path.
+
+### Tests
+
+- Added coverage for:
+  - `dashboard` parser support for mode/focus/plan/verification flags,
+  - additive GitHub output fields for decision-plan and verification metadata,
+  - updated CI bootstrap templates for review/upgrade gates.
+
 ## [0.5.7] - 2026-03-01
 
 Final stabilization release for the `v0.5` series, focused on modularization, doctor scan quality, and maintainability.

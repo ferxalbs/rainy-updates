@@ -15,6 +15,8 @@ test("initCiWorkflow creates strict workflow file", async () => {
   expect(content.includes("Upload SARIF")).toBe(true);
   expect(content.includes("@rainy-updates/cli ci")).toBe(true);
   expect(content.includes("--mode strict")).toBe(true);
+  expect(content.includes("--gate review")).toBe(true);
+  expect(content.includes("--plan-file .artifacts/decision-plan.json")).toBe(true);
 });
 
 test("initCiWorkflow uses pnpm install when pnpm lockfile exists", async () => {
@@ -38,4 +40,8 @@ test("initCiWorkflow creates enterprise workflow matrix", async () => {
   expect(content.includes("--fail-on minor")).toBe(true);
   expect(content.includes("--max-updates 50")).toBe(true);
   expect(content.includes("--mode enterprise")).toBe(true);
+  expect(content.includes("--gate review")).toBe(true);
+  expect(content.includes("--gate upgrade")).toBe(true);
+  expect(content.includes("--from-plan .artifacts/decision-plan.json")).toBe(true);
+  expect(content.includes("--verification-report-file .artifacts/verification-node-${{ matrix.node }}.json")).toBe(true);
 });

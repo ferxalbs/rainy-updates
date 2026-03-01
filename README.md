@@ -29,6 +29,7 @@ Rainy Updates gives teams one dependency lifecycle:
 - `check` detects candidate updates.
 - `doctor` summarizes the current situation.
 - `review` decides what should happen.
+- `dashboard` is the primary interactive decision surface.
 - `upgrade` applies the approved change set.
 
 Everything else supports that lifecycle: CI orchestration, advisory lookup, peer resolution, licenses, snapshots, baselines, and fix-PR automation.
@@ -48,11 +49,11 @@ npx @rainy-updates/cli check --workspace --show-impact
 # 2) Summarize what matters
 npx @rainy-updates/cli doctor --workspace
 
-# 3) Decide in the review surface
-npx @rainy-updates/cli review --interactive
+# 3) Decide in the dashboard
+npx @rainy-updates/cli dashboard --mode review --plan-file .artifacts/decision-plan.json
 
-# 4) Apply the approved set
-npx @rainy-updates/cli upgrade --interactive
+# 4) Apply the approved plan
+npx @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json
 ```
 
 ## Why teams use it
@@ -106,6 +107,7 @@ npx @rainy-updates/cli ci --workspace --mode strict
 - `check` — detect candidate dependency updates
 - `doctor` — summarize the current dependency situation
 - `review` — decide what to do with security, risk, peer, and policy context
+- `dashboard` — open the primary interactive decision console
 - `upgrade` — apply the approved change set
 - `ga` — audit GA and CI readiness for the current checkout
 
@@ -136,30 +138,33 @@ rup doctor --workspace
 
 # 3) Review and decide
 npx @rainy-updates/cli review --security-only
-rup review --interactive
+rup dashboard --mode review --plan-file .artifacts/decision-plan.json
 rup review --show-changelog
 
-# 4) Apply upgrades with workspace sync
-npx @rainy-updates/cli upgrade --target latest --workspace --sync --install
-rup upgrade --target latest --workspace --sync --install
+# 4) Apply an approved decision plan with verification
+npx @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json --verify install,test --test-command "npm test"
+rup upgrade --from-plan .artifacts/decision-plan.json --verify install,test --test-command "npm test"
 
 # 5) CI orchestration with policy gates
-npx @rainy-updates/cli ci --workspace --mode strict --format github
-rup ci --workspace --mode strict --format github
+npx @rainy-updates/cli ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
+rup ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
 
-# 6) Batch fix branches by scope (enterprise)
+# 6) Replay an approved plan in CI
+rup ci --workspace --mode strict --gate upgrade --from-plan .artifacts/decision-plan.json --verify test --test-command "npm test"
+
+# 7) Batch fix branches by scope (enterprise)
 npx @rainy-updates/cli ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
 rup ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
 
-# 7) Warm cache → deterministic offline CI check
+# 8) Warm cache -> deterministic offline CI check
 npx @rainy-updates/cli warm-cache --workspace --concurrency 32
 npx @rainy-updates/cli check --workspace --offline --ci
 
-# 8) Save and compare baseline drift
+# 9) Save and compare baseline drift
 npx @rainy-updates/cli baseline --save --file .artifacts/deps-baseline.json --workspace
 npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --workspace --ci
 
-# 9) Scan for known CVEs
+# 10) Scan for known CVEs
 npx @rainy-updates/cli audit
 npx @rainy-updates/cli audit --severity high
 npx @rainy-updates/cli audit --summary
@@ -169,24 +174,54 @@ rup audit --severity high                   # if installed
 
 `audit` prefers npm/pnpm lockfiles today for exact installed-version inference, and now also reads simple `bun.lock` workspace entries when available. It reports source-health warnings when OSV or GitHub returns only partial coverage.
 
-# 10) Check dependency maintenance health
+# 11) Check dependency maintenance health
 npx @rainy-updates/cli health
 npx @rainy-updates/cli health --stale 6m   # flag packages with no release in 6 months
 npx @rainy-updates/cli health --stale 180d # same but in days
 rup health --stale 6m                       # if installed
 
-# 11) Find which version introduced a breaking change
+# 12) Find which version introduced a breaking change
 npx @rainy-updates/cli bisect axios --cmd "bun test"
 npx @rainy-updates/cli bisect react --range "18.0.0..19.0.0" --cmd "npm test"
 npx @rainy-updates/cli bisect lodash --cmd "npm run test:unit" --dry-run
 rup bisect axios --cmd "bun test"           # if installed
 
-# 12) Focus review on high-risk changes
+# 13) Focus review on high-risk changes
 rup review --risk high --diff major
 
-# 13) Audit GA / CI readiness
+# 14) Audit GA / CI readiness
 rup ga --workspace
 ```
+
+## Decision Plans And Verification
+
+Rainy can persist an approved update set as a deterministic decision plan and replay it later:
+
+```bash
+# Create a reviewed plan
+rup dashboard --mode review --plan-file .artifacts/decision-plan.json
+
+# Apply only that approved plan later
+rup upgrade --from-plan .artifacts/decision-plan.json
+
+# Apply and verify install + tests
+rup upgrade \
+  --from-plan .artifacts/decision-plan.json \
+  --verify install,test \
+  --test-command "npm test" \
+  --verification-report-file .artifacts/verification.json
+```
+
+This is the intended local review -> CI replay workflow.
+
+## CI Gates
+
+`ci` supports explicit execution gates:
+
+- `--gate check` runs detection only.
+- `--gate doctor` computes the high-level verdict and doctor metadata.
+- `--gate review` emits a decision plan artifact without mutating the repo.
+- `--gate upgrade` replays an existing plan and can run verification.
 
 ## What it does in production
 
@@ -275,8 +310,8 @@ Generated file:
 
 Modes:
 
-- `strict`: warm-cache + offline check + artifacts + SARIF upload.
-- `enterprise`: strict checks + runtime matrix + retention policy + rollout gates.
+- `strict`: warm-cache + review gate + artifacts + SARIF upload.
+- `enterprise`: strict checks + runtime matrix + review/upgrade gates + retention policy.
 - `minimal`: fast check-only workflow for quick adoption.
 
 Schedule:
@@ -307,9 +342,15 @@ Schedule:
 - `--pr-limit <n>`
 - `--only-changed`
 - `--interactive`
+- `--plan-file <path>`
+- `--from-plan <path>`
+- `--verify none|install|test|install,test`
+- `--test-command <cmd>`
+- `--verification-report-file <path>`
 - `--show-impact`
 - `--show-homepage`
 - `--mode minimal|strict|enterprise` (for `ci`)
+- `--gate check|doctor|review|upgrade` (for `ci`)
 - `--fix-pr-batch-size <n>` (for batched fix branches in `ci`)
 - `--policy-file <path>`
 - `--format table|json|minimal|github`
