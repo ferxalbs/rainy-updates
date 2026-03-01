@@ -1,4 +1,5 @@
 import type { FailOnLevel, FailReason, PackageUpdate, Summary } from "../types/index.js";
+import { hasErrorCode } from "./errors.js";
 
 export interface DurationInput {
   totalMs: number;
@@ -126,6 +127,7 @@ function isOfflineCacheMissError(value: string): boolean {
 
 function isRegistryFailureError(value: string): boolean {
   return (
+    hasErrorCode(value, "REGISTRY_ERROR") ||
     value.includes("Unable to resolve") ||
     value.includes("Unable to warm") ||
     value.includes("Registry request failed") ||
@@ -134,5 +136,5 @@ function isRegistryFailureError(value: string): boolean {
 }
 
 function isRegistryAuthError(value: string): boolean {
-  return value.includes("Registry authentication failed") || value.includes("401");
+  return hasErrorCode(value, "AUTH_ERROR") || value.includes("Registry authentication failed") || value.includes("401");
 }

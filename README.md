@@ -4,6 +4,9 @@ The fastest DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and 
 
 `@rainy-updates/cli` is built for teams that need fast dependency intelligence, security auditing, policy-aware upgrades, and automation-ready output for CI/CD and pull request workflows.
 
+Comparison:
+[Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
+
 ## Why this package
 
 - Detects updates quickly across single-package repos and workspaces.

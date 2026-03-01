@@ -23,6 +23,7 @@ import {
   renderAuditTable,
   summarizeAdvisories,
 } from "./mapper.js";
+import { formatClassifiedMessage } from "../../core/errors.js";
 
 /**
  * Entry point for `rup audit`. Lazy-loaded by cli.ts.
@@ -93,7 +94,13 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
 
   if (fetched.sourceHealth.every((item) => item.status === "failed")) {
     result.errors.push(
-      "All advisory sources failed. Audit coverage is unavailable for this run.",
+      formatClassifiedMessage({
+        code: "ADVISORY_SOURCE_DOWN",
+        whatFailed: "All advisory sources failed.",
+        intact: "Dependency target resolution completed, but no advisory coverage was returned.",
+        validity: "invalid",
+        next: "Retry `rup audit` later or select a single healthy source with --source.",
+      }),
     );
   }
 

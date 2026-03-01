@@ -193,19 +193,16 @@ export function renderReviewResult(review: ReviewResult): string {
 }
 
 export function renderDoctorResult(result: DoctorResult, verdictOnly = false): string {
-  if (verdictOnly) {
-    return `${result.verdict}: ${result.primaryFindings[0] ?? "No blocking findings"} (${result.recommendedCommand})`;
-  }
-
   const lines = [
-    `Verdict: ${result.verdict}`,
-    `Recommended: ${result.recommendedCommand}`,
-    "",
-    "Primary findings:",
-    ...result.primaryFindings.map((finding) => `- ${finding}`),
-    "",
-    `Counts: updates=${result.summary.updatesFound}, security=${result.summary.securityPackages ?? 0}, risk=${result.summary.riskPackages ?? 0}, peer=${result.summary.peerConflictPackages ?? 0}, license=${result.summary.licenseViolationPackages ?? 0}`,
+    `State: ${result.verdict}`,
+    `PrimaryRisk: ${result.primaryFindings[0] ?? "No blocking findings."}`,
+    `NextAction: ${result.recommendedCommand}`,
   ];
+  if (!verdictOnly) {
+    lines.push(
+      `Counts: updates=${result.summary.updatesFound}, security=${result.summary.securityPackages ?? 0}, risk=${result.summary.riskPackages ?? 0}, peer=${result.summary.peerConflictPackages ?? 0}, license=${result.summary.licenseViolationPackages ?? 0}`,
+    );
+  }
   return lines.join("\n");
 }
 

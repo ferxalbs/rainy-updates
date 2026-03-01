@@ -11,6 +11,7 @@ import { discoverPackageDirs } from "../workspace/discover.js";
 import { loadPolicy, resolvePolicyRule } from "../config/policy.js";
 import { createSummary, finalizeSummary } from "./summary.js";
 import { applyImpactScores } from "./impact.js";
+import { formatClassifiedMessage } from "./errors.js";
 
 interface DependencyTask {
   packageDir: string;
@@ -48,7 +49,15 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
   if (cache.degraded) {
-    warnings.push("SQLite cache backend unavailable in Bun runtime. Falling back to file cache backend.");
+    warnings.push(
+      formatClassifiedMessage({
+        code: "CACHE_BACKEND_FALLBACK",
+        whatFailed: cache.fallbackReason ?? "Preferred SQLite cache backend is unavailable.",
+        intact: "Dependency analysis continues with the file cache backend.",
+        validity: "partial",
+        next: "Run `rup warm-cache` after restoring SQLite support if you want the preferred backend again.",
+      }),
+    );
   }
 
   let totalDependencies = 0;
@@ -135,7 +144,15 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
           });
           warnings.push(`Using stale cache for ${packageName} because --offline is enabled.`);
         } else {
-          errors.push(`Offline cache miss for ${packageName}. Run once without --offline to warm cache.`);
+          errors.push(
+            formatClassifiedMessage({
+              code: "REGISTRY_ERROR",
+              whatFailed: `Offline cache miss for ${packageName}.`,
+              intact: "Local manifests and previously cached packages remain unchanged.",
+              validity: "invalid",
+              next: `Run \`rup warm-cache --cwd ${options.cwd}\` or retry without --offline.`,
+            }),
+          );
         }
       }
       cacheMs += Date.now() - cacheFallbackStartedAt;
@@ -182,8 +199,21 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
           });
           warnings.push(`Using stale cache for ${packageName} due to registry error: ${error}`);
         } else {
-          errors.push(`Unable to resolve ${packageName}: ${error}`);
-          emitStream(`[error] Unable to resolve ${packageName}: ${error}`);
+          const classified = formatClassifiedMessage({
+            code:
+              error.includes("401") || error.includes("403")
+                ? "AUTH_ERROR"
+                : "REGISTRY_ERROR",
+            whatFailed: `Unable to resolve ${packageName}: ${error}.`,
+            intact: "Other package results and local files remain intact.",
+            validity: "partial",
+            next:
+              error.includes("401") || error.includes("403")
+                ? "Check .npmrc scoped registry credentials and retry."
+                : "Retry `rup check` or warm the cache before offline runs.",
+          });
+          errors.push(classified);
+          emitStream(`[error] ${classified}`);
         }
       }
       cacheMs += Date.now() - cacheStaleStartedAt;

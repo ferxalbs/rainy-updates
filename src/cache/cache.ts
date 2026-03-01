@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import type { CachedVersion, TargetLevel } from "../types/index.js";
 
 interface CacheStore {
@@ -137,15 +138,31 @@ export class VersionCache {
   private readonly store: CacheStore;
   readonly backend: "sqlite" | "file";
   readonly degraded: boolean;
+  readonly fallbackReason?: string;
 
-  private constructor(store: CacheStore, backend: "sqlite" | "file", degraded: boolean) {
+  private constructor(
+    store: CacheStore,
+    backend: "sqlite" | "file",
+    degraded: boolean,
+    fallbackReason?: string,
+  ) {
     this.store = store;
     this.backend = backend;
     this.degraded = degraded;
+    this.fallbackReason = fallbackReason;
   }
 
   static async create(customPath?: string): Promise<VersionCache> {
     const basePath = customPath ?? path.join(os.homedir(), ".cache", "rainy-updates");
+    if (process.env.RAINY_UPDATES_CACHE_BACKEND === "file") {
+      const jsonPath = path.join(basePath, "cache.json");
+      return new VersionCache(
+        new FileCacheStore(jsonPath),
+        "file",
+        true,
+        "forced via RAINY_UPDATES_CACHE_BACKEND=file",
+      );
+    }
     const sqlitePath = path.join(basePath, "cache.db");
 
     const sqliteStore = await tryCreateSqliteStore(sqlitePath);
@@ -153,7 +170,12 @@ export class VersionCache {
 
     const jsonPath = path.join(basePath, "cache.json");
     const degraded = typeof Bun !== "undefined";
-    return new VersionCache(new FileCacheStore(jsonPath), "file", degraded);
+    return new VersionCache(
+      new FileCacheStore(jsonPath),
+      "file",
+      degraded,
+      degraded ? "bun:sqlite unavailable; using file cache backend" : undefined,
+    );
   }
 
   async getValid(packageName: string, target: TargetLevel): Promise<CachedVersion | null> {

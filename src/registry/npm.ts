@@ -311,7 +311,7 @@ async function tryCreateUndiciRequester(registryConfig: RegistryConfig): Promise
   }
 }
 
-async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
+export async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
   const homeNpmrc = path.join(os.homedir(), ".npmrc");
   const projectNpmrc = path.join(cwd, ".npmrc");
   const merged = new Map<string, string>();
@@ -391,7 +391,7 @@ function normalizeRegistryUrl(value: string): string {
   return normalized;
 }
 
-function resolveRegistryForPackage(packageName: string, config: RegistryConfig): string {
+export function resolveRegistryForPackage(packageName: string, config: RegistryConfig): string {
   const scope = extractScope(packageName);
   if (scope) {
     const scoped = config.scopedRegistries.get(scope);
@@ -412,7 +412,7 @@ function buildRegistryUrl(registry: string, packageName: string): string {
   return new URL(encodeURIComponent(packageName), base).toString();
 }
 
-function resolveAuthHeader(registry: string, config: RegistryConfig): string | undefined {
+export function resolveAuthHeader(registry: string, config: RegistryConfig): string | undefined {
   const registryUrl = normalizeRegistryUrl(registry);
   const auth = findRegistryAuth(registryUrl, config.authByRegistry);
   if (!auth) return undefined;

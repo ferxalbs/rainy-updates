@@ -473,7 +473,7 @@ describe("audit sources", () => {
     expect(result.sourceHealth).toHaveLength(2);
     expect(
       result.warnings.some((item) =>
-        item.includes("Continuing with partial advisory coverage"),
+        item.includes("[ADVISORY_SOURCE_DEGRADED]"),
       ),
     ).toBe(true);
   });

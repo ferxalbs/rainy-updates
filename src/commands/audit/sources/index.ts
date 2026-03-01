@@ -13,6 +13,7 @@ import type {
   AuditSourceAdapter,
   AuditSourceAggregateResult,
 } from "./types.js";
+import { formatClassifiedMessage } from "../../../core/errors.js";
 
 const SOURCE_MAP: Record<AuditSourceName, AuditSourceAdapter> = {
   osv: osvAuditSource,
@@ -102,7 +103,13 @@ function normalizeSourceWarnings(
       .map((item) => formatSourceName(item.source))
       .join(", ");
     normalized.push(
-      `Continuing with partial advisory coverage: ${failedNames} failed, ${successfulNames} still returned results.`,
+      formatClassifiedMessage({
+        code: "ADVISORY_SOURCE_DEGRADED",
+        whatFailed: `${failedNames} advisory source(s) failed during the audit query.`,
+        intact: `${successfulNames} still returned advisory results.`,
+        validity: "partial",
+        next: "Retry `rup audit` later or pin `--source` to a healthy backend.",
+      }),
     );
   }
 

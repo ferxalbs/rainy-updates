@@ -7,6 +7,7 @@ import { NpmRegistryClient } from "../registry/npm.js";
 import { detectPackageManager } from "../pm/detect.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
 import { createSummary, finalizeSummary } from "./summary.js";
+import { formatClassifiedMessage } from "./errors.js";
 
 export async function warmCache(options: CheckOptions): Promise<CheckResult> {
   const startedAt = Date.now();
@@ -28,7 +29,15 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
   if (cache.degraded) {
-    warnings.push("SQLite cache backend unavailable in Bun runtime. Falling back to file cache backend.");
+    warnings.push(
+      formatClassifiedMessage({
+        code: "CACHE_BACKEND_FALLBACK",
+        whatFailed: cache.fallbackReason ?? "Preferred SQLite cache backend is unavailable.",
+        intact: "Warm-cache continues using the file cache backend.",
+        validity: "partial",
+        next: "Restore SQLite support or unset the forced file backend override if you need the preferred backend.",
+      }),
+    );
   }
 
   let totalDependencies = 0;
@@ -78,7 +87,15 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
           emitStream(`[warm-cache-stale] ${pkg}`);
           warmed += 1;
         } else {
-          errors.push(`Offline cache miss for ${pkg}. Cannot warm cache in --offline mode.`);
+          errors.push(
+            formatClassifiedMessage({
+              code: "REGISTRY_ERROR",
+              whatFailed: `Offline cache miss for ${pkg}.`,
+              intact: "Previously cached packages remain available.",
+              validity: "invalid",
+              next: "Retry warm-cache without --offline.",
+            }),
+          );
           emitStream(`[error] Offline cache miss for ${pkg}`);
         }
       }
@@ -103,8 +120,21 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
       cacheMs += Date.now() - cacheWriteStartedAt;
 
       for (const [pkg, error] of fetched.errors) {
-        errors.push(`Unable to warm ${pkg}: ${error}`);
-        emitStream(`[error] Unable to warm ${pkg}: ${error}`);
+        const classified = formatClassifiedMessage({
+          code:
+            error.includes("401") || error.includes("403")
+              ? "AUTH_ERROR"
+              : "REGISTRY_ERROR",
+          whatFailed: `Unable to warm ${pkg}: ${error}.`,
+          intact: "Any successfully warmed packages remain cached.",
+          validity: "partial",
+          next:
+            error.includes("401") || error.includes("403")
+              ? "Check registry credentials in .npmrc and retry warm-cache."
+              : "Retry warm-cache or continue with stale cache if available.",
+        });
+        errors.push(classified);
+        emitStream(`[error] ${classified}`);
       }
     }
   }

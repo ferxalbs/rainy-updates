@@ -56,7 +56,10 @@
     "test": "bun test",
     "lint": "bunx biome check src tests",
     "check": "bun run typecheck && bun test",
-    "perf:smoke": "node scripts/perf-smoke.mjs",
+    "perf:smoke": "node scripts/perf-smoke.mjs && RAINY_UPDATES_PERF_SCENARIO=resolve node scripts/perf-smoke.mjs && RAINY_UPDATES_PERF_SCENARIO=ci node scripts/perf-smoke.mjs",
+    "perf:check": "node scripts/perf-smoke.mjs",
+    "perf:resolve": "RAINY_UPDATES_PERF_SCENARIO=resolve node scripts/perf-smoke.mjs",
+    "perf:ci": "RAINY_UPDATES_PERF_SCENARIO=ci node scripts/perf-smoke.mjs",
     "test:prod": "node dist/bin/cli.js --help && node dist/bin/cli.js --version",
     "prepublishOnly": "bun run check && bun run build && bun run test:prod"
   },
