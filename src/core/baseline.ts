@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { BaselineOptions, DependencyKind } from "../types/index.js";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
+import { writeFileAtomic } from "../utils/io.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
 
 interface BaselineEntry {
@@ -42,7 +43,7 @@ export async function saveBaseline(
     entries,
   };
 
-  await Bun.write(options.filePath, JSON.stringify(payload, null, 2) + "\n");
+  await writeFileAtomic(options.filePath, JSON.stringify(payload, null, 2) + "\n");
 
   return {
     filePath: options.filePath,

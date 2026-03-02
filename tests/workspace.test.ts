@@ -44,3 +44,27 @@ test("discoverPackageDirs supports recursive and negated patterns", async () => 
   expect(dirs.includes(appA)).toBe(true);
   expect(dirs.includes(appB)).toBe(false);
 });
+
+test("discoverPackageDirs ignores node_modules and hidden directories during glob expansion", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "rainy-updates-workspace-ignore-"));
+  await writeFile(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "root", workspaces: ["**"] }, null, 2),
+    "utf8",
+  );
+
+  const publicPkg = path.join(root, "packages", "visible");
+  const hiddenPkg = path.join(root, ".hidden", "pkg");
+  const nodeModulesPkg = path.join(root, "node_modules", "pkg");
+  await mkdir(publicPkg, { recursive: true });
+  await mkdir(hiddenPkg, { recursive: true });
+  await mkdir(nodeModulesPkg, { recursive: true });
+  await writeFile(path.join(publicPkg, "package.json"), JSON.stringify({ name: "visible" }), "utf8");
+  await writeFile(path.join(hiddenPkg, "package.json"), JSON.stringify({ name: "hidden" }), "utf8");
+  await writeFile(path.join(nodeModulesPkg, "package.json"), JSON.stringify({ name: "node-modules" }), "utf8");
+
+  const dirs = await discoverPackageDirs(root, true);
+  expect(dirs.includes(publicPkg)).toBe(true);
+  expect(dirs.includes(hiddenPkg)).toBe(false);
+  expect(dirs.includes(nodeModulesPkg)).toBe(false);
+});

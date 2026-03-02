@@ -1,6 +1,7 @@
 import path from "node:path";
 import process from "node:process";
 import type { CachedVersion, TargetLevel } from "../types/index.js";
+import { writeFileAtomic } from "../utils/io.js";
 import { getCacheDir } from "../utils/runtime-paths.js";
 
 interface CacheStore {
@@ -34,7 +35,7 @@ class FileCacheStore implements CacheStore {
   async set(entry: CachedVersion): Promise<void> {
     const entries = await this.readEntries();
     entries[this.getKey(entry.packageName, entry.target)] = entry;
-    await Bun.write(this.filePath, JSON.stringify(entries));
+    await writeFileAtomic(this.filePath, JSON.stringify(entries));
   }
 
   private async readEntries(): Promise<Record<string, CachedVersion>> {

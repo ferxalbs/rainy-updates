@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 
 const HARD_IGNORE_DIRS = new Set([
@@ -123,59 +122,42 @@ async function expandWorkspacePattern(
     return [path.resolve(cwd, normalized)];
   }
 
-  const segments = normalized.split("/").filter(Boolean);
   const results = new Set<string>();
-  await collectMatches(path.resolve(cwd), segments, 0, results);
+  const manifestPattern = normalized.endsWith("/package.json")
+    ? normalized
+    : `${normalized}/package.json`;
+  const glob = new Bun.Glob(manifestPattern);
+
+  for await (const match of glob.scan({
+    cwd,
+    absolute: true,
+    dot: false,
+    onlyFiles: true,
+  })) {
+    const dir = path.dirname(match);
+    if (shouldIgnoreWorkspaceDir(cwd, dir)) continue;
+    results.add(dir);
+    if (results.size > MAX_DISCOVERED_DIRS) {
+      throw new Error(
+        `Workspace discovery exceeded ${MAX_DISCOVERED_DIRS} directories. Refine workspace patterns.`,
+      );
+    }
+  }
+
   return Array.from(results);
 }
 
-async function collectMatches(
-  baseDir: string,
-  segments: string[],
-  index: number,
-  out: Set<string>,
-): Promise<void> {
-  if (out.size > MAX_DISCOVERED_DIRS) {
-    throw new Error(
-      `Workspace discovery exceeded ${MAX_DISCOVERED_DIRS} directories. Refine workspace patterns.`,
+function shouldIgnoreWorkspaceDir(cwd: string, dir: string): boolean {
+  const relative = path.relative(cwd, dir);
+  if (relative.length === 0 || relative.startsWith("..")) {
+    return false;
+  }
+
+  return relative
+    .split(path.sep)
+    .filter(Boolean)
+    .some(
+      (segment) =>
+        HARD_IGNORE_DIRS.has(segment) || segment.startsWith("."),
     );
-  }
-
-  if (index >= segments.length) {
-    out.add(baseDir);
-    return;
-  }
-
-  const segment = segments[index];
-  if (segment === "**") {
-    await collectMatches(baseDir, segments, index + 1, out);
-    const children = await readChildDirs(baseDir);
-    for (const child of children) {
-      await collectMatches(child, segments, index, out);
-    }
-    return;
-  }
-
-  if (segment === "*") {
-    const children = await readChildDirs(baseDir);
-    for (const child of children) {
-      await collectMatches(child, segments, index + 1, out);
-    }
-    return;
-  }
-
-  await collectMatches(path.join(baseDir, segment), segments, index + 1, out);
-}
-
-async function readChildDirs(dir: string): Promise<string[]> {
-  try {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isDirectory())
-      .filter((entry) => !HARD_IGNORE_DIRS.has(entry.name))
-      .filter((entry) => !entry.name.startsWith("."))
-      .map((entry) => path.join(dir, entry.name));
-  } catch {
-    return [];
-  }
 }
