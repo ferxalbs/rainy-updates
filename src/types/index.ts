@@ -784,6 +784,7 @@ export interface GaCheck {
     | "lockfile"
     | "cache-backend"
     | "dist-build"
+    | "runtime-artifacts"
     | "benchmark-gates"
     | "docs-contract";
   status: "pass" | "warn" | "fail";

@@ -283,7 +283,7 @@ function buildCommitMessage(patchMap: Map<string, string>): string {
   return `fix(security): patch ${items.length} vulnerabilities — ${names} (rup audit)`;
 }
 
-/** Detects the package manager in use by checking for lockfiles. */
+/** Detects the package manager in use so audit fixes can use the repo's native installer, including Bun. */
 async function detectPackageManager(
   cwd: string,
   explicit: AuditOptions["packageManager"],

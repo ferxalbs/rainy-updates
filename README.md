@@ -184,10 +184,10 @@ npx @rainy-updates/cli audit
 npx @rainy-updates/cli audit --severity high
 npx @rainy-updates/cli audit --summary
 npx @rainy-updates/cli audit --source osv
-npx @rainy-updates/cli audit --fix          # prints the patching npm install command
+npx @rainy-updates/cli audit --fix          # prints the patching install command for the detected package manager
 rup audit --severity high                   # if installed
 
-`audit` prefers npm/pnpm lockfiles today for exact installed-version inference, and now also reads simple `bun.lock` workspace entries when available. It reports source-health warnings when OSV or GitHub returns only partial coverage.
+`audit` resolves installed versions from lockfiles across npm, pnpm, and simple `bun.lock` workspace entries when available. It reports source-health warnings when OSV or GitHub returns only partial coverage.
 
 # 11) Check dependency maintenance health
 npx @rainy-updates/cli health
@@ -223,11 +223,14 @@ rup upgrade --from-plan .artifacts/decision-plan.json
 rup upgrade \
   --from-plan .artifacts/decision-plan.json \
   --verify install,test \
-  --test-command "npm test" \
+  --test-command "bun test" \
   --verification-report-file .artifacts/verification.json
 ```
 
 This is the intended local review -> CI replay workflow.
+
+Verification follows the target repository's package manager when one is detected.
+That means Bun repositories can verify with `bun install` / `bun test`, while npm and pnpm projects keep their native install/test flows.
 
 ## CI Gates
 

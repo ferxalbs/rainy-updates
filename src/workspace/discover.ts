@@ -46,15 +46,20 @@ export async function discoverPackageDirs(
   const existing: string[] = [];
   for (const dir of roots) {
     const packageJsonPath = path.join(dir, "package.json");
-    try {
-      await fs.access(packageJsonPath);
+    if (await packageFileExists(packageJsonPath)) {
       existing.push(dir);
-    } catch {
-      // ignore missing package.json
     }
   }
 
   return existing.sort();
+}
+
+async function packageFileExists(packageJsonPath: string): Promise<boolean> {
+  try {
+    return await Bun.file(packageJsonPath).exists();
+  } catch {
+    return false;
+  }
 }
 
 async function readPackageJsonWorkspacePatterns(

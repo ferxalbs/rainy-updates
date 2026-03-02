@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { VersionCache } from "../../cache/cache.js";
@@ -19,8 +18,8 @@ export async function runGa(options: GaOptions): Promise<GaResult> {
     status: packageManager === "unknown" ? "warn" : "pass",
     detail:
       packageManager === "unknown"
-        ? "No supported lockfile was detected. npm-compatible execution is still possible."
-        : `Detected package manager: ${packageManager}.`,
+        ? "No supported lockfile was detected. Rainy can still run, but runtime/package verification will fall back to generic defaults."
+        : `Detected package manager: ${packageManager}. Runtime and verification can align with this package ecosystem, including Bun.`,
   });
 
   checks.push({
@@ -48,6 +47,15 @@ export async function runGa(options: GaOptions): Promise<GaResult> {
     detail: distBuildExists
       ? "Built CLI entrypoint exists in dist/bin/cli.js."
       : "Built CLI entrypoint is missing; run the build before publishing a release artifact.",
+  });
+
+  const compiledBinaryExists = await fileExists(path.resolve(options.cwd, "dist/rup"));
+  checks.push({
+    name: "runtime-artifacts",
+    status: compiledBinaryExists ? "pass" : "warn",
+    detail: compiledBinaryExists
+      ? "Compiled Bun runtime artifact exists in dist/rup."
+      : "Compiled Bun runtime artifact is missing; run bun run build:exe before publishing Bun-first release artifacts.",
   });
 
   checks.push({
@@ -138,8 +146,7 @@ async function detectLockfile(cwd: string): Promise<GaCheck> {
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
-    await fs.access(filePath);
-    return true;
+    return await Bun.file(filePath).exists();
   } catch {
     return false;
   }

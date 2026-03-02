@@ -28,4 +28,7 @@ test("runGa writes JSON output when requested", async () => {
   const parsed = JSON.parse(content) as { ready: boolean; checks: Array<{ name: string }> };
   expect(parsed.ready).toBe(true);
   expect(parsed.checks.some((check) => check.name === "lockfile")).toBe(true);
+  expect(parsed.checks.some((check) => check.name === "runtime-artifacts")).toBe(
+    true,
+  );
 });

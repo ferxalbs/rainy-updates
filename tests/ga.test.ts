@@ -20,4 +20,9 @@ test("runGa reports readiness details for a basic npm project", async () => {
   expect(result.packageManager).toBe("npm");
   expect(result.workspacePackages).toBe(1);
   expect(result.checks.some((check) => check.name === "lockfile" && check.status === "pass")).toBe(true);
+  expect(
+    result.checks.some(
+      (check) => check.name === "runtime-artifacts" && check.status === "warn",
+    ),
+  ).toBe(true);
 });
