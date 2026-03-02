@@ -1,5 +1,4 @@
 import path from "node:path";
-import process from "node:process";
 import {
   readManifest,
   collectDependencies,
@@ -7,6 +6,7 @@ import {
 import { discoverPackageDirs } from "../../workspace/discover.js";
 import { writeFileAtomic } from "../../utils/io.js";
 import { stableStringify } from "../../utils/stable-json.js";
+import { writeStderr, writeStdout } from "../../utils/runtime.js";
 import type {
   UnusedOptions,
   UnusedResult,
@@ -80,7 +80,7 @@ export async function runUnused(options: UnusedOptions): Promise<UnusedResult> {
     // ─ Apply fix ─────────────────────────────────────────────────────────────
     if (options.fix && unused.length > 0) {
       if (options.dryRun) {
-        process.stderr.write(
+        writeStderr(
           `[unused] --dry-run: would remove ${unused.length} unused dep(s) from ${packageDir}/package.json\n`,
         );
       } else {
@@ -89,7 +89,7 @@ export async function runUnused(options: UnusedOptions): Promise<UnusedResult> {
           const originalJson = await Bun.file(manifestPath).text();
           const updatedJson = removeUnusedFromManifest(originalJson, unused);
           await writeFileAtomic(manifestPath, updatedJson);
-          process.stderr.write(
+          writeStderr(
             `[unused] Removed ${unused.length} unused dep(s) from ${packageDir}/package.json\n`,
           );
         } catch (error) {
@@ -105,12 +105,12 @@ export async function runUnused(options: UnusedOptions): Promise<UnusedResult> {
   result.totalMissing = result.missing.length;
 
   // ─ Render output ─────────────────────────────────────────────────────────
-  process.stdout.write(renderUnusedTable(result) + "\n");
+  writeStdout(renderUnusedTable(result) + "\n");
 
   // ─ JSON report ───────────────────────────────────────────────────────────
   if (options.jsonFile) {
     await writeFileAtomic(options.jsonFile, stableStringify(result, 2) + "\n");
-    process.stderr.write(
+    writeStderr(
       `[unused] JSON report written to ${options.jsonFile}\n`,
     );
   }

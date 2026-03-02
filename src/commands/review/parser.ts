@@ -1,11 +1,15 @@
 import path from "node:path";
-import process from "node:process";
 import type { ReviewOptions } from "../../types/index.js";
 import { ensureRiskLevel } from "../../core/options.js";
+import {
+  exitProcess,
+  getRuntimeCwd,
+  writeStdout,
+} from "../../utils/runtime.js";
 
 export function parseReviewArgs(args: string[]): ReviewOptions {
   const options: ReviewOptions = {
-    cwd: process.cwd(),
+    cwd: getRuntimeCwd(),
     target: "latest",
     filter: undefined,
     reject: undefined,
@@ -188,8 +192,8 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       throw new Error("Missing value for --registry-retries");
     }
     if (current === "--help" || current === "-h") {
-      process.stdout.write(REVIEW_HELP);
-      process.exit(0);
+      writeStdout(REVIEW_HELP);
+      exitProcess(0);
     }
     if (current.startsWith("-")) throw new Error(`Unknown review option: ${current}`);
     throw new Error(`Unexpected review argument: ${current}`);

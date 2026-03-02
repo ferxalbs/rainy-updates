@@ -1,10 +1,10 @@
 import path from "node:path";
-import process from "node:process";
 import type { BisectOptions } from "../../types/index.js";
+import { getRuntimeCwd } from "../../utils/runtime.js";
 
 export function parseBisectArgs(args: string[]): BisectOptions {
   const options: BisectOptions = {
-    cwd: process.cwd(),
+    cwd: getRuntimeCwd(),
     packageName: "",
     versionRange: undefined,
     testCommand: "",

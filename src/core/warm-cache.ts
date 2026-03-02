@@ -1,5 +1,4 @@
 import type { CheckOptions, CheckResult, Summary } from "../types/index.js";
-import process from "node:process";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { matchesPattern } from "../utils/pattern.js";
 import { VersionCache } from "../cache/cache.js";
@@ -8,6 +7,7 @@ import { detectPackageManager } from "../pm/detect.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
 import { createSummary, finalizeSummary } from "./summary.js";
 import { formatClassifiedMessage } from "./errors.js";
+import { writeStdout } from "../utils/runtime.js";
 
 export async function warmCache(options: CheckOptions): Promise<CheckResult> {
   const startedAt = Date.now();
@@ -46,7 +46,7 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
   const emitStream = (message: string): void => {
     if (!options.stream) return;
     streamedEvents += 1;
-    process.stdout.write(`${message}\n`);
+    writeStdout(`${message}\n`);
   };
 
   for (const packageDir of packageDirs) {

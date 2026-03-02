@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import packageJson from "../../package.json" with { type: "json" };
-import process from "node:process";
 import { parseCliArgs } from "../core/options.js";
 import { applyFixPr } from "../core/fix-pr.js";
 import { applyFixPrBatches } from "../core/fix-pr-batch.js";
@@ -16,19 +15,25 @@ import type {
 import { writeFileAtomic } from "../utils/io.js";
 import { resolveFailReason } from "../core/summary.js";
 import { stableStringify } from "../utils/stable-json.js";
+import {
+  getRuntimeArgv,
+  setRuntimeExitCode,
+  writeStderr,
+  writeStdout,
+} from "../utils/runtime.js";
 import { handleDirectCommand, runPrimaryCommand } from "./dispatch.js";
 import { renderHelp } from "./help.js";
 
 async function main(): Promise<void> {
   try {
-    const argv = process.argv.slice(2);
+    const argv = getRuntimeArgv();
     if (argv.includes("--version") || argv.includes("-v")) {
-      process.stdout.write((await readPackageVersion()) + "\n");
+      writeStdout((await readPackageVersion()) + "\n");
       return;
     }
 
     if (argv.includes("--help") || argv.includes("-h")) {
-      process.stdout.write(renderHelp(argv[0]) + "\n");
+      writeStdout(renderHelp(argv[0]) + "\n");
       return;
     }
 
@@ -152,12 +157,12 @@ async function main(): Promise<void> {
       );
     }
 
-    process.stdout.write(rendered + "\n");
+    writeStdout(rendered + "\n");
 
-    process.exitCode = resolveExitCode(result, result.summary.failReason);
+    setRuntimeExitCode(resolveExitCode(result, result.summary.failReason));
   } catch (error) {
-    process.stderr.write(`rainy-updates (rup): ${String(error)}\n`);
-    process.exitCode = 2;
+    writeStderr(`rainy-updates (rup): ${String(error)}\n`);
+    setRuntimeExitCode(2);
   }
 }
 

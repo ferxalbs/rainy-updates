@@ -1,6 +1,6 @@
 import path from "node:path";
-import process from "node:process";
 import { loadConfig } from "../config/loader.js";
+import { getRuntimeCwd } from "../utils/runtime.js";
 import type {
   BaselineOptions,
   CheckOptions,
@@ -150,7 +150,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   }
 
   const base: CheckOptions = {
-    cwd: process.cwd(),
+    cwd: getRuntimeCwd(),
     target: "latest",
     filter: undefined,
     reject: undefined,

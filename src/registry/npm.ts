@@ -1,7 +1,7 @@
 import path from "node:path";
-import process from "node:process";
 import { asyncPool } from "../utils/async-pool.js";
 import { getHomeDir } from "../utils/runtime-paths.js";
+import { getRuntimeCwd, readEnv } from "../utils/runtime.js";
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const USER_AGENT = "@rainy-updates/cli";
@@ -271,7 +271,7 @@ class RetryableRegistryError extends Error {
 }
 
 async function createRequester(cwd?: string): Promise<RequestLike> {
-  const registryConfig = await loadRegistryConfig(cwd ?? process.cwd());
+  const registryConfig = await loadRegistryConfig(cwd ?? getRuntimeCwd());
 
   return async (packageName: string, timeoutMs: number) => {
     const controller = new AbortController();
@@ -399,10 +399,7 @@ function parseNpmrc(content: string): Map<string, string> {
 function substituteEnvValue(value: string): string {
   return value.replace(
     /\$\{([^}]+)\}/g,
-    (_match, name: string) =>
-      (typeof Bun !== "undefined" ? Bun.env[name] : undefined) ??
-      process.env[name] ??
-      "",
+    (_match, name: string) => readEnv(name) ?? "",
   );
 }
 

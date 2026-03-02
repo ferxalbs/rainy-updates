@@ -1,9 +1,9 @@
-import process from "node:process";
 import type { ResolveOptions, ResolveResult } from "../../types/index.js";
 import { buildPeerGraph } from "./graph/builder.js";
 import { resolvePeerConflicts } from "./graph/resolver.js";
 import { stableStringify } from "../../utils/stable-json.js";
 import { writeFileAtomic } from "../../utils/io.js";
+import { writeStderr, writeStdout } from "../../utils/runtime.js";
 
 /**
  * Entry point for `rup resolve`. Lazy-loaded by cli.ts.
@@ -32,7 +32,7 @@ export async function runResolve(
   if (options.afterUpdate) {
     versionOverrides = await fetchProposedVersions(options);
     if (versionOverrides.size === 0 && !options.silent) {
-      process.stderr.write(
+      writeStderr(
         "[resolve] No pending updates found — checking current state.\n",
       );
     }
@@ -56,13 +56,13 @@ export async function runResolve(
   ).length;
 
   if (!options.silent) {
-    process.stdout.write(renderConflictsTable(result, options) + "\n");
+    writeStdout(renderConflictsTable(result, options) + "\n");
   }
 
   if (options.jsonFile) {
     await writeFileAtomic(options.jsonFile, stableStringify(result, 2) + "\n");
     if (!options.silent) {
-      process.stderr.write(
+      writeStderr(
         `[resolve] JSON report written to ${options.jsonFile}\n`,
       );
     }

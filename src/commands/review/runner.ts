@@ -1,9 +1,9 @@
-import process from "node:process";
 import { buildReviewResult, renderReviewResult } from "../../core/review-model.js";
 import { applySelectedUpdates } from "../../core/upgrade.js";
 import { createDecisionPlan, writeDecisionPlan } from "../../core/decision-plan.js";
 import { stableStringify } from "../../utils/stable-json.js";
 import { writeFileAtomic } from "../../utils/io.js";
+import { writeStdout } from "../../utils/runtime.js";
 import type { ReviewOptions, ReviewResult } from "../../types/index.js";
 
 export async function runReview(options: ReviewOptions): Promise<ReviewResult> {
@@ -57,7 +57,7 @@ export async function runReview(options: ReviewOptions): Promise<ReviewResult> {
     );
   }
 
-  process.stdout.write(renderReviewResult({
+  writeStdout(renderReviewResult({
     ...review,
     items: selectedItems,
     updates: selectedUpdates,

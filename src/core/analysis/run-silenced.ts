@@ -1,5 +1,3 @@
-import process from "node:process";
-
 export async function runSilenced<T>(fn: () => Promise<T>): Promise<T> {
   const stdoutWrite = process.stdout.write.bind(process.stdout);
   const stderrWrite = process.stderr.write.bind(process.stderr);

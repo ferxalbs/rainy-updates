@@ -1,10 +1,10 @@
 import path from "node:path";
-import process from "node:process";
 import type { HealthOptions } from "../../types/index.js";
+import { getRuntimeCwd } from "../../utils/runtime.js";
 
 export function parseHealthArgs(args: string[]): HealthOptions {
   const options: HealthOptions = {
-    cwd: process.cwd(),
+    cwd: getRuntimeCwd(),
     workspace: false,
     staleDays: 365,
     includeDeprecated: true,

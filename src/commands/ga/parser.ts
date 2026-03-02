@@ -1,10 +1,14 @@
 import path from "node:path";
-import process from "node:process";
 import type { GaOptions } from "../../types/index.js";
+import {
+  exitProcess,
+  getRuntimeCwd,
+  writeStdout,
+} from "../../utils/runtime.js";
 
 export function parseGaArgs(args: string[]): GaOptions {
   const options: GaOptions = {
-    cwd: process.cwd(),
+    cwd: getRuntimeCwd(),
     workspace: false,
     jsonFile: undefined,
   };
@@ -29,8 +33,8 @@ export function parseGaArgs(args: string[]): GaOptions {
     }
     if (current === "--json-file") throw new Error("Missing value for --json-file");
     if (current === "--help" || current === "-h") {
-      process.stdout.write(GA_HELP);
-      process.exit(0);
+      writeStdout(GA_HELP);
+      exitProcess(0);
     }
     if (current.startsWith("-")) throw new Error(`Unknown ga option: ${current}`);
     throw new Error(`Unexpected ga argument: ${current}`);

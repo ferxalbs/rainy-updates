@@ -1,10 +1,10 @@
 import path from "node:path";
-import process from "node:process";
 import { VersionCache } from "../../cache/cache.js";
 import { detectPackageManager } from "../../pm/detect.js";
 import { discoverPackageDirs } from "../../workspace/discover.js";
 import { stableStringify } from "../../utils/stable-json.js";
 import { writeFileAtomic } from "../../utils/io.js";
+import { writeStdout } from "../../utils/runtime.js";
 import type { GaCheck, GaOptions, GaResult } from "../../types/index.js";
 
 export async function runGa(options: GaOptions): Promise<GaResult> {
@@ -91,7 +91,7 @@ export async function runGa(options: GaOptions): Promise<GaResult> {
     errors,
   };
 
-  process.stdout.write(renderGaResult(result) + "\n");
+  writeStdout(renderGaResult(result) + "\n");
   if (options.jsonFile) {
     await writeFileAtomic(options.jsonFile, stableStringify(result, 2) + "\n");
   }

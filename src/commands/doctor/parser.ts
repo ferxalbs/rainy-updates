@@ -1,10 +1,14 @@
 import path from "node:path";
-import process from "node:process";
 import type { DoctorOptions } from "../../types/index.js";
+import {
+  exitProcess,
+  getRuntimeCwd,
+  writeStdout,
+} from "../../utils/runtime.js";
 
 export function parseDoctorArgs(args: string[]): DoctorOptions {
   const options: DoctorOptions = {
-    cwd: process.cwd(),
+    cwd: getRuntimeCwd(),
     target: "latest",
     filter: undefined,
     reject: undefined,
@@ -85,8 +89,8 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
     }
     if (current === "--json-file") throw new Error("Missing value for --json-file");
     if (current === "--help" || current === "-h") {
-      process.stdout.write(DOCTOR_HELP);
-      process.exit(0);
+      writeStdout(DOCTOR_HELP);
+      exitProcess(0);
     }
     if (current.startsWith("-")) throw new Error(`Unknown doctor option: ${current}`);
     throw new Error(`Unexpected doctor argument: ${current}`);

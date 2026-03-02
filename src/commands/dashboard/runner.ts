@@ -1,4 +1,3 @@
-import process from "node:process";
 import type {
   DashboardOptions,
   DashboardResult,
@@ -15,6 +14,7 @@ import { buildReviewResult, renderReviewResult } from "../../core/review-model.j
 import { applySelectedUpdates } from "../../core/upgrade.js";
 import { runVerification } from "../../core/verification.js";
 import { runTui } from "../../ui/tui.js";
+import { writeStderr, writeStdout } from "../../utils/runtime.js";
 
 export async function runDashboard(
   options: DashboardOptions,
@@ -78,7 +78,7 @@ export async function runDashboard(
     }
   }
 
-  process.stdout.write(
+  writeStdout(
     renderReviewResult({
       ...review,
       items: selectedItems,
@@ -86,7 +86,7 @@ export async function runDashboard(
     }) + "\n",
   );
 
-  process.stderr.write(
+  writeStderr(
     `[dashboard] decision plan written to ${decisionPlanFile}\n`,
   );
 

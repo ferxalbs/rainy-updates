@@ -9,6 +9,7 @@ import {
 import { discoverPackageDirs } from "../../workspace/discover.js";
 import { writeFileAtomic } from "../../utils/io.js";
 import { stableStringify } from "../../utils/stable-json.js";
+import { writeStderr, writeStdout } from "../../utils/runtime.js";
 import type {
   AuditOptions,
   AuditResult,
@@ -82,7 +83,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
   }
 
   if (!options.silent) {
-    process.stderr.write(
+    writeStderr(
       `[audit] Querying ${describeSourceMode(options.sourceMode)} for ${targetResolution.targets.length} dependency version${targetResolution.targets.length === 1 ? "" : "s"}...\n`,
     );
   }
@@ -119,13 +120,13 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
 
   if (!options.silent) {
     if (options.reportFormat === "summary") {
-      process.stdout.write(
+      writeStdout(
         renderAuditSummary(result.packages) +
           renderAuditSourceHealth(result.sourceHealth) +
           "\n",
       );
     } else if (options.reportFormat === "table" || !options.jsonFile) {
-      process.stdout.write(
+      writeStdout(
         renderAuditTable(advisories) +
           renderAuditSourceHealth(result.sourceHealth) +
           "\n",
@@ -150,7 +151,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
       ) + "\n",
     );
     if (!options.silent) {
-      process.stderr.write(
+      writeStderr(
         `[audit] JSON report written to ${options.jsonFile}\n`,
       );
     }
@@ -185,12 +186,12 @@ async function applyFix(
 
   if (options.dryRun) {
     if (!options.silent) {
-      process.stderr.write(
+      writeStderr(
         `[audit] --dry-run: would execute:\n  ${installCmd}\n`,
       );
       if (options.commit) {
         const msg = buildCommitMessage(patchMap);
-        process.stderr.write(
+        writeStderr(
           `[audit] --dry-run: would commit:\n  git commit -m "${msg}"\n`,
         );
       }
@@ -199,27 +200,27 @@ async function applyFix(
   }
 
   if (!options.silent) {
-    process.stderr.write(`[audit] Applying ${patchMap.size} fix(es)...\n`);
-    process.stderr.write(`  → ${installCmd}\n`);
+    writeStderr(`[audit] Applying ${patchMap.size} fix(es)...\n`);
+    writeStderr(`  → ${installCmd}\n`);
   }
 
   try {
     await runCommand(pm, installArgs, options.cwd);
   } catch (err) {
     if (!options.silent) {
-      process.stderr.write(`[audit] Install failed: ${String(err)}\n`);
+      writeStderr(`[audit] Install failed: ${String(err)}\n`);
     }
     return;
   }
 
   if (!options.silent) {
-    process.stderr.write(`[audit] ✔ Patches applied successfully.\n`);
+    writeStderr(`[audit] ✔ Patches applied successfully.\n`);
   }
 
   if (options.commit) {
     await commitFix(patchMap, options.cwd, options.silent);
   } else if (!options.silent) {
-    process.stderr.write(
+    writeStderr(
       `[audit] Tip: run with --commit to automatically commit the changes.\n`,
     );
   }

@@ -1,4 +1,3 @@
-import process from "node:process";
 import type {
   LicenseOptions,
   LicenseResult,
@@ -12,6 +11,7 @@ import {
 import { asyncPool } from "../../utils/async-pool.js";
 import { stableStringify } from "../../utils/stable-json.js";
 import { writeFileAtomic } from "../../utils/io.js";
+import { writeStderr, writeStdout } from "../../utils/runtime.js";
 import { generateSbom } from "./sbom.js";
 
 /**
@@ -86,19 +86,19 @@ export async function runLicenses(
   result.totalViolations = result.violations.length;
 
   // Render
-  process.stdout.write(renderLicenseTable(result) + "\n");
+  writeStdout(renderLicenseTable(result) + "\n");
 
   // SBOM output
   if (options.sbomFile) {
     const sbom = generateSbom(result.packages, options.cwd);
     await writeFileAtomic(options.sbomFile, stableStringify(sbom, 2) + "\n");
-    process.stderr.write(`[licenses] SBOM written to ${options.sbomFile}\n`);
+    writeStderr(`[licenses] SBOM written to ${options.sbomFile}\n`);
   }
 
   // JSON output
   if (options.jsonFile) {
     await writeFileAtomic(options.jsonFile, stableStringify(result, 2) + "\n");
-    process.stderr.write(
+    writeStderr(
       `[licenses] JSON report written to ${options.jsonFile}\n`,
     );
   }

@@ -1,5 +1,4 @@
 import path from "node:path";
-import process from "node:process";
 import type { CheckOptions, CheckResult, PackageDependency, PackageUpdate, Summary } from "../types/index.js";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { matchesPattern } from "../utils/pattern.js";
@@ -12,6 +11,7 @@ import { loadPolicy, resolvePolicyRule } from "../config/policy.js";
 import { createSummary, finalizeSummary } from "./summary.js";
 import { applyImpactScores } from "./impact.js";
 import { formatClassifiedMessage } from "./errors.js";
+import { writeStdout } from "../utils/runtime.js";
 
 interface DependencyTask {
   packageDir: string;
@@ -71,7 +71,7 @@ export async function check(options: CheckOptions): Promise<CheckResult> {
   const emitStream = (message: string): void => {
     if (!options.stream) return;
     streamedEvents += 1;
-    process.stdout.write(`${message}\n`);
+    writeStdout(`${message}\n`);
   };
 
   for (const packageDir of packageDirs) {

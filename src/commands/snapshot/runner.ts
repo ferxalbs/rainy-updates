@@ -1,4 +1,3 @@
-import process from "node:process";
 import type { SnapshotOptions, SnapshotResult } from "../../types/index.js";
 import { discoverPackageDirs } from "../../workspace/discover.js";
 import {
@@ -7,6 +6,7 @@ import {
   restoreState,
   diffManifests,
 } from "./store.js";
+import { writeStderr, writeStdout } from "../../utils/runtime.js";
 
 /**
  * Entry point for `rup snapshot`. Lazy-loaded by cli.ts.
@@ -39,7 +39,7 @@ export async function runSnapshot(
       const entry = await store.saveSnapshot(manifests, lockfileHashes, label);
       result.snapshotId = entry.id;
       result.label = entry.label;
-      process.stdout.write(`✔ Snapshot saved: ${entry.label} (${entry.id})\n`);
+      writeStdout(`✔ Snapshot saved: ${entry.label} (${entry.id})\n`);
       break;
     }
 
@@ -53,17 +53,17 @@ export async function runSnapshot(
       }));
 
       if (entries.length === 0) {
-        process.stdout.write(
+        writeStdout(
           "No snapshots saved yet. Use `rup snapshot save` to create one.\n",
         );
       } else {
-        process.stdout.write(`\n${entries.length} snapshot(s):\n\n`);
-        process.stdout.write(
+        writeStdout(`\n${entries.length} snapshot(s):\n\n`);
+        writeStdout(
           "  " + "ID".padEnd(30) + "Label".padEnd(30) + "Created\n",
         );
-        process.stdout.write("  " + "─".repeat(75) + "\n");
+        writeStdout("  " + "─".repeat(75) + "\n");
         for (const e of entries) {
-          process.stdout.write(
+          writeStdout(
             "  " +
               e.id.padEnd(30) +
               e.label.padEnd(30) +
@@ -71,7 +71,7 @@ export async function runSnapshot(
               "\n",
           );
         }
-        process.stdout.write("\n");
+        writeStdout("\n");
       }
       break;
     }
@@ -96,10 +96,10 @@ export async function runSnapshot(
       result.snapshotId = entry.id;
       result.label = entry.label;
       const count = Object.keys(entry.manifests).length;
-      process.stdout.write(
+      writeStdout(
         `✔ Restored ${count} package.json file(s) from snapshot "${entry.label}" (${entry.id})\n`,
       );
-      process.stdout.write("  Re-run your package manager install to apply.\n");
+      writeStdout("  Re-run your package manager install to apply.\n");
       break;
     }
 
@@ -122,23 +122,23 @@ export async function runSnapshot(
       result.diff = changes;
 
       if (changes.length === 0) {
-        process.stdout.write(
+        writeStdout(
           `✔ No dependency changes since snapshot "${entry.label}"\n`,
         );
       } else {
-        process.stdout.write(
+        writeStdout(
           `\nDependency changes since snapshot "${entry.label}":\n\n`,
         );
-        process.stdout.write(
+        writeStdout(
           "  " + "Package".padEnd(35) + "Before".padEnd(20) + "After\n",
         );
-        process.stdout.write("  " + "─".repeat(65) + "\n");
+        writeStdout("  " + "─".repeat(65) + "\n");
         for (const c of changes) {
-          process.stdout.write(
+          writeStdout(
             "  " + c.name.padEnd(35) + c.from.padEnd(20) + c.to + "\n",
           );
         }
-        process.stdout.write("\n");
+        writeStdout("\n");
       }
       break;
     }
@@ -146,7 +146,7 @@ export async function runSnapshot(
 
   if (result.errors.length > 0) {
     for (const err of result.errors) {
-      process.stderr.write(`[snapshot] ✖ ${err}\n`);
+      writeStderr(`[snapshot] ✖ ${err}\n`);
     }
   }
 

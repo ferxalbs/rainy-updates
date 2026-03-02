@@ -1,4 +1,3 @@
-import process from "node:process";
 import type {
   UpgradeOptions,
   VerificationCheck,
@@ -9,6 +8,7 @@ import { detectPackageManager, resolvePackageManager } from "../pm/detect.js";
 import { installDependencies } from "../pm/install.js";
 import { stableStringify } from "../utils/stable-json.js";
 import { writeFileAtomic } from "../utils/io.js";
+import { readEnv } from "../utils/runtime.js";
 
 export async function runVerification(
   options: Pick<
@@ -84,7 +84,7 @@ async function runShellCheck(
   const startedAt = Date.now();
 
   try {
-    const shell = process.env.SHELL || "sh";
+    const shell = readEnv("SHELL") || "sh";
     const proc = Bun.spawn([shell, "-lc", command], {
       cwd,
       stdin: "inherit",

@@ -1,16 +1,9 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-
-function readEnv(name: string): string | undefined {
-  if (typeof Bun !== "undefined") {
-    const value = Bun.env[name];
-    if (value) return value;
-  }
-  return globalThis.process?.env?.[name];
-}
+import { getRuntimeCwd, readEnv } from "./runtime.js";
 
 function resolveHomeDir(): string {
-  return readEnv("HOME") ?? readEnv("USERPROFILE") ?? process.cwd();
+  return readEnv("HOME") ?? readEnv("USERPROFILE") ?? getRuntimeCwd();
 }
 
 export function getHomeDir(): string {

@@ -1,10 +1,10 @@
 import path from "node:path";
-import process from "node:process";
 import type {
   AuditOptions,
   AuditSeverity,
   AuditSourceMode,
 } from "../../types/index.js";
+import { getRuntimeCwd } from "../../utils/runtime.js";
 
 const SEVERITY_LEVELS: AuditSeverity[] = ["critical", "high", "medium", "low"];
 const SOURCE_MODES: AuditSourceMode[] = ["auto", "osv", "github", "all"];
@@ -20,7 +20,7 @@ export function parseSeverity(value: string): AuditSeverity {
 
 export function parseAuditArgs(args: string[]): AuditOptions {
   const options: AuditOptions = {
-    cwd: process.cwd(),
+    cwd: getRuntimeCwd(),
     workspace: false,
     severity: undefined,
     fix: false,
