@@ -36,12 +36,12 @@ Dashboard-first release candidate for the `v0.6` series, focused on unifying the
   - verification report generation.
 
 - **Native Bun Optimizations**:
-  - Dropped `undici` and `node:https` for high-throughput `Bun.fetch` natively.
-  - Replaced all heavily trafficked `node:fs` operations with lightning-fast `Bun.file()` and atomic `Bun.write()`.
-  - Replaced `node:child_process` execution for Git wrapper logic and native patching with robust `Bun.spawn` and `Bun.$`.
-  - Replaced `node:crypto.createHash` with `Bun.CryptoHasher` for 25x faster artifact checksum generation.
-  - Test suites migrated entirely to the `bun test` engine.
-  - Added native `build:exe` target compilation for zero-dependency standalone distributions using `bun build --compile`.
+  - Bun is now the primary Rainy runtime path for local execution, CI templates, and release verification flows.
+  - Added a shared Bun-first runtime layer for cwd/env/stdout/stderr/exit handling across the CLI command surface.
+  - Migrated verification and package-manager-aware test execution onto `Bun.spawn`, while keeping npm, pnpm, Bun, and yarn target-repo support intact.
+  - Migrated internal hot-path file operations onto `Bun.file()`, `Bun.write()`, `Bun.Glob`, and `Bun.CryptoHasher` across workspace discovery, lockfile hashing, snapshot persistence, audit target resolution, changelog cache reads, and CLI/package metadata loading.
+  - Added real atomic file writes for Rainy-managed artifacts, reports, caches, baselines, and snapshot restore paths.
+  - Added native `build:exe` target compilation for standalone Bun-first distributions using `bun build --compile`.
 
 ### Changed
 
@@ -55,25 +55,33 @@ Dashboard-first release candidate for the `v0.6` series, focused on unifying the
   - `dashboard` as the primary interactive workflow,
   - `upgrade --from-plan`,
   - `ci --gate ...`,
-  - verification and verification-report flows.
+  - verification and verification-report flows,
+  - Bun as the preferred Rainy runtime via `bunx --bun` and compiled Bun artifacts.
 - `init-ci` generated workflows now:
+  - use Bun as the Rainy runtime by default,
   - use explicit CI gates,
   - emit a decision plan artifact in strict and enterprise modes,
-  - replay approved plans with verification in enterprise mode.
+  - replay approved plans with verification in enterprise mode,
+  - align install and test commands with detected npm, pnpm, or Bun target repos.
 - Artifact manifests now include verification report output paths when configured.
+- Package-manager detection and verification defaults now treat Bun as a first-class package ecosystem instead of falling back to npm/pnpm-only assumptions.
+- GA readiness checks now validate both the JS dist CLI and the compiled Bun runtime artifact.
 
 ### Removed
 
 - Removed the legacy standalone dashboard Ink/store implementation under `src/ui/dashboard/` in favor of a single shared interactive path.
-- Removed `undici` networking fallback in favor of native `Bun.fetch`.
-- Removed `node:fs` and `node:child_process` wrappers across all internal flows.
+- Removed the remaining explicit `node:process` imports from the main CLI command surface in favor of the shared runtime layer.
+- Removed manual recursive workspace directory walking in favor of Bun-native glob expansion.
 
 ### Tests
 
 - Added coverage for:
   - `dashboard` parser support for mode/focus/plan/verification flags,
   - additive GitHub output fields for decision-plan and verification metadata,
-  - updated CI bootstrap templates for review/upgrade gates.
+  - updated CI bootstrap templates for review/upgrade gates,
+  - Bun-aware package-manager detection and verification defaults,
+  - GA runtime-artifact readiness checks,
+  - Bun-glob workspace discovery with hidden-directory and `node_modules` exclusions.
 
 ## [0.5.7] - 2026-03-01
 
