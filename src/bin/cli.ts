@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
 import { parseCliArgs } from "../core/options.js";
 import { applyFixPr } from "../core/fix-pr.js";
 import { applyFixPrBatches } from "../core/fix-pr-batch.js";
@@ -21,6 +20,7 @@ import {
   writeStderr,
   writeStdout,
 } from "../utils/runtime.js";
+import { CLI_VERSION } from "../generated/version.js";
 import { handleDirectCommand, runPrimaryCommand } from "./dispatch.js";
 import { renderHelp } from "./help.js";
 
@@ -169,14 +169,7 @@ async function main(): Promise<void> {
 void main();
 
 async function readPackageVersion(): Promise<string> {
-  try {
-    const packageJson = JSON.parse(
-      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
-    ) as { version?: string };
-    return packageJson.version ?? "0.0.0";
-  } catch {
-    return "0.0.0";
-  }
+  return CLI_VERSION;
 }
 
 function resolveExitCode(result: CheckResult, failReason: FailReason): number {

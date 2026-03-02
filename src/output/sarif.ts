@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
 import type { CheckResult } from "../types/index.js";
+import { CLI_VERSION } from "../generated/version.js";
 
 export function createSarifReport(result: CheckResult): Record<string, unknown> {
   const dependencyRuleId = "rainy-updates/dependency-update";
@@ -123,13 +123,6 @@ let TOOL_VERSION_CACHE: string | null = null;
 
 function getToolVersion(): string {
   if (TOOL_VERSION_CACHE) return TOOL_VERSION_CACHE;
-  try {
-    const packageJson = JSON.parse(
-      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
-    ) as { version?: string };
-    TOOL_VERSION_CACHE = packageJson.version ?? "0.0.0";
-  } catch {
-    TOOL_VERSION_CACHE = "0.0.0";
-  }
+  TOOL_VERSION_CACHE = CLI_VERSION;
   return TOOL_VERSION_CACHE;
 }
