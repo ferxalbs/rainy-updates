@@ -1,4 +1,4 @@
-import packageJson from "../../package.json" with { type: "json" };
+import { readFileSync } from "node:fs";
 import type { CheckResult } from "../types/index.js";
 
 export function createSarifReport(result: CheckResult): Record<string, unknown> {
@@ -123,6 +123,13 @@ let TOOL_VERSION_CACHE: string | null = null;
 
 function getToolVersion(): string {
   if (TOOL_VERSION_CACHE) return TOOL_VERSION_CACHE;
-  TOOL_VERSION_CACHE = packageJson.version ?? "0.0.0";
+  try {
+    const packageJson = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as { version?: string };
+    TOOL_VERSION_CACHE = packageJson.version ?? "0.0.0";
+  } catch {
+    TOOL_VERSION_CACHE = "0.0.0";
+  }
   return TOOL_VERSION_CACHE;
 }

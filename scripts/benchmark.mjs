@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -94,7 +94,7 @@ function commandArgs(commandName, cwd, useWorkspace) {
 }
 
 function runCli(args, homeDir) {
-  const result = spawnSync("node", [cliPath, ...args], {
+  const result = spawnSync("bun", [cliPath, ...args], {
     cwd: projectRoot,
     encoding: "utf8",
     env: {
@@ -111,7 +111,7 @@ function runCli(args, homeDir) {
   }
   if (!isExpectedExitCode(args[0], result.status ?? 1)) {
     throw new Error(
-      `Benchmark command failed: node ${[cliPath, ...args].join(" ")} (exit ${result.status ?? "null"})\n${output}`,
+      `Benchmark command failed: bun ${[cliPath, ...args].join(" ")} (exit ${result.status ?? "null"})\n${output}`,
     );
   }
   return {

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,7 +31,7 @@ function commandArgsForScenario() {
 
 function runScenario() {
   const startedAt = Date.now();
-  const result = spawnSync("node", [cliPath, ...commandArgsForScenario()], {
+  const result = spawnSync("bun", [cliPath, ...commandArgsForScenario()], {
     encoding: "utf8",
   });
   const durationMs = Date.now() - startedAt;

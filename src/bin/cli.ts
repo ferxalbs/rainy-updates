@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import packageJson from "../../package.json" with { type: "json" };
+import { readFileSync } from "node:fs";
 import { parseCliArgs } from "../core/options.js";
 import { applyFixPr } from "../core/fix-pr.js";
 import { applyFixPrBatches } from "../core/fix-pr-batch.js";
@@ -169,7 +169,14 @@ async function main(): Promise<void> {
 void main();
 
 async function readPackageVersion(): Promise<string> {
-  return packageJson.version ?? "0.0.0";
+  try {
+    const packageJson = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as { version?: string };
+    return packageJson.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
 }
 
 function resolveExitCode(result: CheckResult, failReason: FailReason): number {

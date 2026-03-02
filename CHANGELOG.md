@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [0.6.0-rc.1] - 2026-03-01
+## [0.6.0] - 2026-03-01
 
 Dashboard-first release candidate for the `v0.6` series, focused on unifying the interactive surface, introducing replayable decision plans, tightening CI/apply verification flows, and undergoing a complete native Bun performance optimization.
 
