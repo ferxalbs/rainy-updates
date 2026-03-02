@@ -1,19 +1,8 @@
-import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
 import path from "node:path";
+import { writeFileAtomic } from "../../utils/io.js";
 import type { SnapshotEntry } from "../../types/index.js";
 
 const DEFAULT_STORE_NAME = ".rup-snapshots.json";
-
-/**
- * Lightweight SQLite-free snapshot store (uses a JSON file in the project root).
- *
- * Design goals:
- *   - No extra runtime dependencies (SQLite bindings vary by runtime)
- *   - Human-readable store file (git-committable if desired)
- *   - Atomic writes via tmp-rename to prevent corruption
- *   - Fast: entire store fits in memory for typical use (< 50 snapshots)
- */
 
 export class SnapshotStore {
   private readonly storePath: string;
@@ -31,8 +20,7 @@ export class SnapshotStore {
   async load(): Promise<void> {
     if (this.loaded) return;
     try {
-      const raw = await fs.readFile(this.storePath, "utf8");
-      const parsed = JSON.parse(raw) as unknown;
+      const parsed = (await Bun.file(this.storePath).json()) as unknown;
       if (Array.isArray(parsed)) {
         this.entries = parsed as SnapshotEntry[];
       }
@@ -43,13 +31,10 @@ export class SnapshotStore {
   }
 
   async save(): Promise<void> {
-    const tmp = this.storePath + ".tmp";
-    await fs.writeFile(
-      tmp,
+    await writeFileAtomic(
+      this.storePath,
       JSON.stringify(this.entries, null, 2) + "\n",
-      "utf8",
     );
-    await fs.rename(tmp, this.storePath);
   }
 
   async saveSnapshot(
@@ -98,7 +83,6 @@ export class SnapshotStore {
   }
 }
 
-/** Captures current package.json and lockfile state for a set of directories. */
 export async function captureState(
   packageDirs: string[],
 ): Promise<{
@@ -108,33 +92,28 @@ export async function captureState(
   const manifests: Record<string, string> = {};
   const lockfileHashes: Record<string, string> = {};
 
-  const LOCKFILES = [
+  const lockfiles = [
     "package-lock.json",
     "pnpm-lock.yaml",
     "yarn.lock",
+    "bun.lock",
     "bun.lockb",
   ];
 
   await Promise.all(
     packageDirs.map(async (dir) => {
-      // Read package.json
       try {
-        const content = await fs.readFile(
-          path.join(dir, "package.json"),
-          "utf8",
-        );
-        manifests[dir] = content;
+        manifests[dir] = await Bun.file(path.join(dir, "package.json")).text();
       } catch {
         // No package.json — skip
       }
 
-      // Hash the first lockfile found
-      for (const lf of LOCKFILES) {
+      for (const lockfileName of lockfiles) {
+        const filePath = path.join(dir, lockfileName);
         try {
-          const content = await fs.readFile(path.join(dir, lf));
-          lockfileHashes[dir] = createHash("sha256")
-            .update(content)
-            .digest("hex");
+          const file = Bun.file(filePath);
+          if (!(await file.exists())) continue;
+          lockfileHashes[dir] = await hashFile(filePath);
           break;
         } catch {
           // Try next
@@ -146,19 +125,14 @@ export async function captureState(
   return { manifests, lockfileHashes };
 }
 
-/** Restores package.json files from a snapshot's manifest map. */
 export async function restoreState(entry: SnapshotEntry): Promise<void> {
   await Promise.all(
     Object.entries(entry.manifests).map(async ([dir, content]) => {
-      const manifestPath = path.join(dir, "package.json");
-      const tmp = manifestPath + ".tmp";
-      await fs.writeFile(tmp, content, "utf8");
-      await fs.rename(tmp, manifestPath);
+      await writeFileAtomic(path.join(dir, "package.json"), content);
     }),
   );
 }
 
-/** Computes a diff of dependency versions between two manifest snapshots. */
 export function diffManifests(
   before: Record<string, string>,
   after: Record<string, string>,
@@ -184,12 +158,15 @@ export function diffManifests(
       "optionalDependencies",
     ] as const;
     for (const field of fields) {
-      const before = beforeManifest[field] ?? {};
-      const after = afterManifest[field] ?? {};
-      const allNames = new Set([...Object.keys(before), ...Object.keys(after)]);
+      const beforeDeps = beforeManifest[field] ?? {};
+      const afterDeps = afterManifest[field] ?? {};
+      const allNames = new Set([
+        ...Object.keys(beforeDeps),
+        ...Object.keys(afterDeps),
+      ]);
       for (const name of allNames) {
-        const fromVer = before[name] ?? "(removed)";
-        const toVer = after[name] ?? "(removed)";
+        const fromVer = beforeDeps[name] ?? "(removed)";
+        const toVer = afterDeps[name] ?? "(removed)";
         if (fromVer !== toVer) {
           changes.push({ name, from: fromVer, to: toVer });
         }
@@ -198,4 +175,10 @@ export function diffManifests(
   }
 
   return changes;
+}
+
+async function hashFile(filePath: string): Promise<string> {
+  const hasher = new Bun.CryptoHasher("sha256");
+  hasher.update(await Bun.file(filePath).bytes());
+  return hasher.digest("hex");
 }

@@ -85,9 +85,8 @@ export async function runUnused(options: UnusedOptions): Promise<UnusedResult> {
         );
       } else {
         try {
-          const { promises: fs } = await import("node:fs");
           const manifestPath = path.join(packageDir, "package.json");
-          const originalJson = await fs.readFile(manifestPath, "utf8");
+          const originalJson = await Bun.file(manifestPath).text();
           const updatedJson = removeUnusedFromManifest(originalJson, unused);
           await writeFileAtomic(manifestPath, updatedJson);
           process.stderr.write(

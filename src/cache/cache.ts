@@ -1,7 +1,7 @@
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import type { CachedVersion, TargetLevel } from "../types/index.js";
+import { getCacheDir } from "../utils/runtime-paths.js";
 
 interface CacheStore {
   get(packageName: string, target: TargetLevel): Promise<CachedVersion | null>;
@@ -178,8 +178,7 @@ export class VersionCache {
   }
 
   static async create(customPath?: string): Promise<VersionCache> {
-    const basePath =
-      customPath ?? path.join(os.homedir(), ".cache", "rainy-updates");
+    const basePath = customPath ?? getCacheDir();
     if (process.env.RAINY_UPDATES_CACHE_BACKEND === "file") {
       const jsonPath = path.join(basePath, "cache.json");
       return new VersionCache(

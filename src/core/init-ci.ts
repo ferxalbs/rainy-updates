@@ -1,4 +1,4 @@
-import { access, writeFile, mkdir } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { detectPackageManager } from "../pm/detect.js";
 
@@ -24,8 +24,9 @@ export async function initCiWorkflow(
 
   try {
     if (!force) {
-      await access(workflowPath);
-      return { path: workflowPath, created: false };
+      if (await Bun.file(workflowPath).exists()) {
+        return { path: workflowPath, created: false };
+      }
     }
   } catch {
     // missing file, continue create
@@ -43,7 +44,7 @@ export async function initCiWorkflow(
         : enterpriseWorkflowTemplate(scheduleBlock, packageManager);
 
   await mkdir(path.dirname(workflowPath), { recursive: true });
-  await writeFile(workflowPath, workflow, "utf8");
+  await Bun.write(workflowPath, workflow);
 
   return { path: workflowPath, created: true };
 }

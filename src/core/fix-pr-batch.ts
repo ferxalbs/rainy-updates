@@ -1,6 +1,4 @@
 import { $ } from "bun";
-import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import type {
   CheckResult,
@@ -10,6 +8,7 @@ import type {
   RunOptions,
 } from "../types/index.js";
 import { readManifest, writeManifest } from "../parsers/package-json.js";
+import { createTempDir } from "../utils/runtime-paths.js";
 
 export interface FixPrBatchResult {
   applied: boolean;
@@ -60,9 +59,7 @@ export async function applyFixPrBatches(
   const commits: string[] = [];
 
   for (const plan of plans) {
-    const tempDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), "rainy-fix-pr-batch-"),
-    );
+    const tempDir = await createTempDir("rainy-fix-pr-batch-");
     try {
       await runGit(options.cwd, [
         "worktree",

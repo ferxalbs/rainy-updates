@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { PackageDependency } from "../../types/index.js";
 
@@ -111,7 +110,7 @@ async function resolveDependencyVersion(
         ? await resolveFromPnpmLock(lockfilePath, packageDir, dep.name)
         : fileName === "bun.lock"
           ? await resolveFromBunLock(lockfilePath, packageDir, dep.name)
-        : await resolveFromPackageLock(lockfilePath, packageDir, dep.name);
+          : await resolveFromPackageLock(lockfilePath, packageDir, dep.name);
     if (version) {
       return {
         name: dep.name,
@@ -145,11 +144,8 @@ async function findNearestLockfiles(
   while (true) {
     for (const fileName of LOCKFILE_PRIORITY) {
       const candidate = path.join(current, fileName);
-      try {
-        await fs.access(candidate);
+      if (await fileExists(candidate)) {
         found.push(candidate);
-      } catch {
-        // ignore missing
       }
     }
 
@@ -177,10 +173,6 @@ async function resolveFromPackageLock(
   for (const key of candidatePaths) {
     const version = parsed.packages?.[key]?.version;
     if (version) return version;
-  }
-
-  if (!relDir) {
-    return parsed.dependencies?.[packageName]?.version ?? null;
   }
 
   return parsed.dependencies?.[packageName]?.version ?? null;
@@ -227,8 +219,8 @@ async function resolveFromBunLock(
 async function readPackageLock(lockfilePath: string): Promise<PackageLockData> {
   let promise = packageLockCache.get(lockfilePath);
   if (!promise) {
-    promise = fs
-      .readFile(lockfilePath, "utf8")
+    promise = Bun.file(lockfilePath)
+      .text()
       .then((content) => JSON.parse(content) as PackageLockData);
     packageLockCache.set(lockfilePath, promise);
   }
@@ -238,7 +230,7 @@ async function readPackageLock(lockfilePath: string): Promise<PackageLockData> {
 async function readPnpmLock(lockfilePath: string): Promise<PnpmLockData> {
   let promise = pnpmLockCache.get(lockfilePath);
   if (!promise) {
-    promise = fs.readFile(lockfilePath, "utf8").then(parsePnpmLock);
+    promise = Bun.file(lockfilePath).text().then(parsePnpmLock);
     pnpmLockCache.set(lockfilePath, promise);
   }
   return await promise;
@@ -247,7 +239,7 @@ async function readPnpmLock(lockfilePath: string): Promise<PnpmLockData> {
 async function readBunLock(lockfilePath: string): Promise<BunLockData> {
   let promise = bunLockCache.get(lockfilePath);
   if (!promise) {
-    promise = fs.readFile(lockfilePath, "utf8").then(parseBunLock);
+    promise = Bun.file(lockfilePath).text().then(parseBunLock);
     bunLockCache.set(lockfilePath, promise);
   }
   return await promise;
@@ -333,8 +325,11 @@ function parseBunLock(content: string): BunLockData {
 
   let inWorkspaces = false;
   let currentWorkspace = "";
-  let currentSection: "dependencies" | "devDependencies" | "optionalDependencies" | null =
-    null;
+  let currentSection:
+    | "dependencies"
+    | "devDependencies"
+    | "optionalDependencies"
+    | null = null;
 
   for (const rawLine of lines) {
     const indent = rawLine.match(/^ */)?.[0].length ?? 0;
@@ -410,4 +405,12 @@ function normalizePnpmVersion(value: string): string | null {
 
 function trimYamlKey(value: string): string {
   return value.trim().replace(/^['"]|['"]$/g, "");
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    return await Bun.file(filePath).exists();
+  } catch {
+    return false;
+  }
 }

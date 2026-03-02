@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 
 /**
@@ -100,37 +101,35 @@ async function walkDirectory(
   dir: string,
   collector: Set<string>,
 ): Promise<void> {
-  let entries: string[];
+  let entries: Dirent[];
   try {
-    entries = await fs.readdir(dir);
+    entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
     return;
   }
 
   const tasks: Promise<void>[] = [];
 
-  for (const entryName of entries) {
+  for (const entry of entries) {
+    const entryName = entry.name;
     if (IGNORED_DIRS.has(entryName)) continue;
     const fullPath = path.join(dir, entryName);
 
+    if (entry.isDirectory()) {
+      tasks.push(walkDirectory(fullPath, collector));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+
+    const ext = path.extname(entryName).toLowerCase();
+    if (!SOURCE_EXTENSIONS.has(ext)) continue;
+
     tasks.push(
-      fs
-        .stat(fullPath)
-        .then((stat) => {
-          if (stat.isDirectory()) {
-            return walkDirectory(fullPath, collector);
-          }
-          if (stat.isFile()) {
-            const ext = path.extname(entryName).toLowerCase();
-            if (!SOURCE_EXTENSIONS.has(ext)) return;
-            return fs
-              .readFile(fullPath, "utf8")
-              .then((source) => {
-                for (const name of extractImportsFromSource(source)) {
-                  collector.add(name);
-                }
-              })
-              .catch(() => undefined);
+      Bun.file(fullPath)
+        .text()
+        .then((source) => {
+          for (const name of extractImportsFromSource(source)) {
+            collector.add(name);
           }
         })
         .catch(() => undefined),

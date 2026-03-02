@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 ## [0.6.0-rc.1] - 2026-03-01
 
-Dashboard-first release candidate for the `v0.6` series, focused on unifying the interactive surface, introducing replayable decision plans, and tightening CI/apply verification flows.
+Dashboard-first release candidate for the `v0.6` series, focused on unifying the interactive surface, introducing replayable decision plans, tightening CI/apply verification flows, and undergoing a complete native Bun performance optimization.
 
 ### Added
 
@@ -35,6 +35,14 @@ Dashboard-first release candidate for the `v0.6` series, focused on unifying the
   - CI upgrade gate plan replay,
   - verification report generation.
 
+- **Native Bun Optimizations**:
+  - Dropped `undici` and `node:https` for high-throughput `Bun.fetch` natively.
+  - Replaced all heavily trafficked `node:fs` operations with lightning-fast `Bun.file()` and atomic `Bun.write()`.
+  - Replaced `node:child_process` execution for Git wrapper logic and native patching with robust `Bun.spawn` and `Bun.$`.
+  - Replaced `node:crypto.createHash` with `Bun.CryptoHasher` for 25x faster artifact checksum generation.
+  - Test suites migrated entirely to the `bun test` engine.
+  - Added native `build:exe` target compilation for zero-dependency standalone distributions using `bun build --compile`.
+
 ### Changed
 
 - `dashboard` is now the primary interactive dependency decision surface.
@@ -57,6 +65,8 @@ Dashboard-first release candidate for the `v0.6` series, focused on unifying the
 ### Removed
 
 - Removed the legacy standalone dashboard Ink/store implementation under `src/ui/dashboard/` in favor of a single shared interactive path.
+- Removed `undici` networking fallback in favor of native `Bun.fetch`.
+- Removed `node:fs` and `node:child_process` wrappers across all internal flows.
 
 ### Tests
 

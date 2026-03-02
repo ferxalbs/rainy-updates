@@ -1,6 +1,6 @@
-import os from "node:os";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { promises as fs } from "node:fs";
+import { getCacheDir } from "../../utils/runtime-paths.js";
 
 export interface ChangelogEntry {
   content: string;
@@ -14,7 +14,7 @@ class ChangelogCache {
   private readonly dbPath: string;
 
   constructor() {
-    const basePath = path.join(os.homedir(), ".cache", "rainy-updates");
+    const basePath = getCacheDir();
     this.dbPath = path.join(basePath, "cache.db");
   }
 
@@ -22,7 +22,7 @@ class ChangelogCache {
     if (this.db) return;
     try {
       if (typeof Bun !== "undefined") {
-        await fs.mkdir(path.dirname(this.dbPath), { recursive: true });
+        await mkdir(path.dirname(this.dbPath), { recursive: true });
         const mod = await import("bun:sqlite");
         this.db = new mod.Database(this.dbPath, { create: true });
         this.db.exec(`
@@ -138,9 +138,7 @@ export async function fetchChangelog(
       if (contentsRes.ok) {
         const fileContent = await contentsRes.json();
         if (fileContent.content && fileContent.encoding === "base64") {
-          content = Buffer.from(fileContent.content, "base64").toString(
-            "utf-8",
-          );
+          content = decodeBase64Utf8(fileContent.content);
         }
       }
     }
@@ -157,4 +155,11 @@ export async function fetchChangelog(
   } catch (err) {
     return null;
   }
+}
+
+function decodeBase64Utf8(value: string): string {
+  const normalized = value.replace(/\s+/g, "");
+  const binary = atob(normalized);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }

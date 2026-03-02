@@ -1,9 +1,11 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import {
   collectDependencies,
   readManifest,
 } from "../../parsers/package-json.js";
+import {
+  detectPackageManager as detectProjectPackageManager,
+  resolvePackageManager,
+} from "../../pm/detect.js";
 import { discoverPackageDirs } from "../../workspace/discover.js";
 import { writeFileAtomic } from "../../utils/io.js";
 import { stableStringify } from "../../utils/stable-json.js";
@@ -176,7 +178,8 @@ async function applyFix(
   const patchMap = buildPatchMap(advisories);
   if (patchMap.size === 0) return;
 
-  const pm = await detectPackageManager(options.cwd, options.packageManager);
+  const detected = await detectProjectPackageManager(options.cwd);
+  const pm = resolvePackageManager(options.packageManager, detected);
   const installArgs = buildInstallArgs(pm, patchMap);
   const installCmd = `${pm} ${installArgs.join(" ")}`;
 
@@ -281,32 +284,6 @@ function buildCommitMessage(patchMap: Map<string, string>): string {
   }
   const names = items.map(([n]) => n).join(", ");
   return `fix(security): patch ${items.length} vulnerabilities — ${names} (rup audit)`;
-}
-
-/** Detects the package manager in use so audit fixes can use the repo's native installer, including Bun. */
-async function detectPackageManager(
-  cwd: string,
-  explicit: AuditOptions["packageManager"],
-): Promise<string> {
-  if (explicit !== "auto") return explicit;
-
-  const checks: Array<[string, string]> = [
-    ["bun.lock", "bun"],
-    ["bun.lockb", "bun"],
-    ["pnpm-lock.yaml", "pnpm"],
-    ["yarn.lock", "yarn"],
-  ];
-
-  for (const [lockfile, pm] of checks) {
-    try {
-      await fs.access(path.join(cwd, lockfile));
-      return pm;
-    } catch {
-      // not found, try next
-    }
-  }
-
-  return "npm"; // default
 }
 
 /** Spawns a subprocess, pipes stdio live to the terminal. */

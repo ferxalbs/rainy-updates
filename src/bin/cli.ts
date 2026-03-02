@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import packageJson from "../../package.json" with { type: "json" };
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 import { parseCliArgs } from "../core/options.js";
 import { applyFixPr } from "../core/fix-pr.js";
 import { applyFixPrBatches } from "../core/fix-pr-batch.js";
@@ -166,14 +164,7 @@ async function main(): Promise<void> {
 void main();
 
 async function readPackageVersion(): Promise<string> {
-  const currentFile = fileURLToPath(import.meta.url);
-  const packageJsonPath = path.resolve(
-    path.dirname(currentFile),
-    "../../package.json",
-  );
-  const content = await fs.readFile(packageJsonPath, "utf8");
-  const parsed = JSON.parse(content) as { version?: string };
-  return parsed.version ?? "0.0.0";
+  return packageJson.version ?? "0.0.0";
 }
 
 function resolveExitCode(result: CheckResult, failReason: FailReason): number {

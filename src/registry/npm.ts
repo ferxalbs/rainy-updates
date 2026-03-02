@@ -1,8 +1,7 @@
-import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { asyncPool } from "../utils/async-pool.js";
+import { getHomeDir } from "../utils/runtime-paths.js";
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const USER_AGENT = "@rainy-updates/cli";
@@ -311,19 +310,16 @@ async function createRequester(cwd?: string): Promise<RequestLike> {
 }
 
 export async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
-  const homeNpmrc = path.join(os.homedir(), ".npmrc");
+  const homeNpmrc = path.join(getHomeDir(), ".npmrc");
   const projectNpmrc = path.join(cwd, ".npmrc");
   const merged = new Map<string, string>();
 
   for (const filePath of [homeNpmrc, projectNpmrc]) {
-    try {
-      const content = await fs.readFile(filePath, "utf8");
-      const parsed = parseNpmrc(content);
-      for (const [key, value] of parsed) {
-        merged.set(key, value);
-      }
-    } catch {
-      // ignore missing/unreadable file
+    const content = await readOptionalTextFile(filePath);
+    if (!content) continue;
+    const parsed = parseNpmrc(content);
+    for (const [key, value] of parsed) {
+      merged.set(key, value);
     }
   }
 
@@ -368,6 +364,16 @@ export async function loadRegistryConfig(cwd: string): Promise<RegistryConfig> {
   return { defaultRegistry, scopedRegistries, authByRegistry };
 }
 
+async function readOptionalTextFile(filePath: string): Promise<string | null> {
+  try {
+    const file = Bun.file(filePath);
+    if (!(await file.exists())) return null;
+    return await file.text();
+  } catch {
+    return null;
+  }
+}
+
 function parseNpmrc(content: string): Map<string, string> {
   const values = new Map<string, string>();
   const lines = content.split(/\r?\n/);
@@ -393,7 +399,10 @@ function parseNpmrc(content: string): Map<string, string> {
 function substituteEnvValue(value: string): string {
   return value.replace(
     /\$\{([^}]+)\}/g,
-    (_match, name: string) => process.env[name] ?? "",
+    (_match, name: string) =>
+      (typeof Bun !== "undefined" ? Bun.env[name] : undefined) ??
+      process.env[name] ??
+      "",
   );
 }
 
