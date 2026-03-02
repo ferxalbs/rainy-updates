@@ -1,11 +1,11 @@
-import { spawn } from "node:child_process";
+import process from "node:process";
 import type {
   UpgradeOptions,
   VerificationCheck,
   VerificationMode,
   VerificationResult,
 } from "../types/index.js";
-import { detectPackageManager } from "../pm/detect.js";
+import { detectPackageManager, resolvePackageManager } from "../pm/detect.js";
 import { installDependencies } from "../pm/install.js";
 import { stableStringify } from "../utils/stable-json.js";
 import { writeFileAtomic } from "../utils/io.js";
@@ -36,14 +36,20 @@ export async function runVerification(
 
   if (includesInstall(mode)) {
     checks.push(
-      await runCheck("install", `${resolvedPackageManager(options.packageManager, detected)} install`, async () => {
-        await installDependencies(options.cwd, options.packageManager, detected);
-      }),
+      await runCheck(
+        "install",
+        `${resolvePackageManager(options.packageManager, detected)} install`,
+        async () => {
+          await installDependencies(options.cwd, options.packageManager, detected);
+        },
+      ),
     );
   }
 
   if (includesTest(mode)) {
-    const command = options.testCommand ?? defaultTestCommand(options.packageManager, detected);
+    const command =
+      options.testCommand ??
+      defaultTestCommand(options.packageManager, detected);
     checks.push(await runShellCheck(options.cwd, command));
   }
 
@@ -66,52 +72,47 @@ function includesTest(mode: VerificationMode): boolean {
 
 function defaultTestCommand(
   packageManager: UpgradeOptions["packageManager"],
-  detected: "npm" | "pnpm" | "unknown",
+  detected: Awaited<ReturnType<typeof detectPackageManager>>,
 ): string {
-  const selected = resolvedPackageManager(packageManager, detected);
-  return `${selected} test`;
+  return `${resolvePackageManager(packageManager, detected, "bun")} test`;
 }
 
-function resolvedPackageManager(
-  packageManager: UpgradeOptions["packageManager"],
-  detected: "npm" | "pnpm" | "unknown",
-): "npm" | "pnpm" {
-  if (packageManager === "pnpm") return "pnpm";
-  if (packageManager === "npm") return "npm";
-  return detected === "pnpm" ? "pnpm" : "npm";
-}
-
-async function runShellCheck(cwd: string, command: string): Promise<VerificationCheck> {
+async function runShellCheck(
+  cwd: string,
+  command: string,
+): Promise<VerificationCheck> {
   const startedAt = Date.now();
-  return new Promise((resolve) => {
-    const child = spawn(command, {
+
+  try {
+    const shell = process.env.SHELL || "sh";
+    const proc = Bun.spawn([shell, "-lc", command], {
       cwd,
-      stdio: "inherit",
-      shell: true,
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: "inherit",
     });
-
-    child.on("exit", (code) => {
-      resolve({
-        name: "test",
-        command,
-        passed: code === 0,
-        exitCode: code ?? 1,
-        durationMs: Math.max(0, Date.now() - startedAt),
-        error: code === 0 ? undefined : `${command} failed with exit code ${code ?? "unknown"}`,
-      });
-    });
-
-    child.on("error", (error) => {
-      resolve({
-        name: "test",
-        command,
-        passed: false,
-        exitCode: 1,
-        durationMs: Math.max(0, Date.now() - startedAt),
-        error: String(error),
-      });
-    });
-  });
+    const exitCode = await proc.exited;
+    return {
+      name: "test",
+      command,
+      passed: exitCode === 0,
+      exitCode,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      error:
+        exitCode === 0
+          ? undefined
+          : `${command} failed with exit code ${exitCode}`,
+    };
+  } catch (error) {
+    return {
+      name: "test",
+      command,
+      passed: false,
+      exitCode: 1,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      error: String(error),
+    };
+  }
 }
 
 async function runCheck(

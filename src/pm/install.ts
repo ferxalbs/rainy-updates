@@ -1,16 +1,12 @@
+import type { DetectedPackageManager, SelectedPackageManager } from "../types/index.js";
+import { resolvePackageManager } from "./detect.js";
+
 export async function installDependencies(
   cwd: string,
-  packageManager: "auto" | "npm" | "pnpm",
-  detected: "npm" | "pnpm" | "unknown",
+  packageManager: SelectedPackageManager,
+  detected: DetectedPackageManager,
 ): Promise<void> {
-  const selected =
-    packageManager === "auto"
-      ? detected === "unknown"
-        ? "npm"
-        : detected
-      : packageManager;
-
-  const command = selected;
+  const command = resolvePackageManager(packageManager, detected);
   const args = ["install"];
 
   try {

@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { BisectOptions, BisectOutcome } from "../../types/index.js";
+import { detectPackageManager, resolvePackageManager } from "../../pm/detect.js";
 
 /**
  * The "oracle" for bisect: installs a specific version of a package
@@ -19,8 +20,10 @@ export async function bisectOracle(
     return "skip";
   }
 
+  const detected = await detectPackageManager(options.cwd);
+  const packageManager = resolvePackageManager("auto", detected, "bun");
   const installResult = await runShell(
-    `npm install --no-save ${packageName}@${version}`,
+    buildInstallCommand(packageManager, packageName, version),
     options.cwd,
   );
 
@@ -49,5 +52,23 @@ async function runShell(command: string, cwd: string): Promise<number> {
     return await proc.exited;
   } catch {
     return 1;
+  }
+}
+
+function buildInstallCommand(
+  packageManager: "bun" | "npm" | "pnpm" | "yarn",
+  packageName: string,
+  version: string,
+): string {
+  const spec = `${packageName}@${version}`;
+  switch (packageManager) {
+    case "bun":
+      return `bun add --exact --no-save ${spec}`;
+    case "pnpm":
+      return `pnpm add --save-exact --no-save ${spec}`;
+    case "yarn":
+      return `npm install --no-save --save-exact ${spec}`;
+    default:
+      return `npm install --no-save --save-exact ${spec}`;
   }
 }

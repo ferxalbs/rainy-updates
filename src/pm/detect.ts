@@ -1,21 +1,45 @@
-import { access } from "node:fs/promises";
 import path from "node:path";
+import type {
+  DetectedPackageManager,
+  SelectedPackageManager,
+  SupportedPackageManager,
+} from "../types/index.js";
 
-export async function detectPackageManager(cwd: string): Promise<"npm" | "pnpm" | "unknown"> {
-  const pnpmLock = path.join(cwd, "pnpm-lock.yaml");
-  const npmLock = path.join(cwd, "package-lock.json");
+const PACKAGE_MANAGER_LOCKFILES: Array<[string, SupportedPackageManager]> = [
+  ["bun.lock", "bun"],
+  ["bun.lockb", "bun"],
+  ["pnpm-lock.yaml", "pnpm"],
+  ["package-lock.json", "npm"],
+  ["npm-shrinkwrap.json", "npm"],
+  ["yarn.lock", "yarn"],
+];
 
-  try {
-    await access(pnpmLock);
-    return "pnpm";
-  } catch {
-    // noop
+export async function detectPackageManager(
+  cwd: string,
+): Promise<DetectedPackageManager> {
+  for (const [lockfile, packageManager] of PACKAGE_MANAGER_LOCKFILES) {
+    if (await fileExists(path.join(cwd, lockfile))) {
+      return packageManager;
+    }
   }
 
+  return "unknown";
+}
+
+export function resolvePackageManager(
+  requested: SelectedPackageManager,
+  detected: DetectedPackageManager,
+  fallback: SupportedPackageManager = "npm",
+): SupportedPackageManager {
+  if (requested !== "auto") return requested;
+  if (detected !== "unknown") return detected;
+  return fallback;
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
   try {
-    await access(npmLock);
-    return "npm";
+    return await Bun.file(filePath).exists();
   } catch {
-    return "unknown";
+    return false;
   }
 }

@@ -7,7 +7,7 @@ export function parseBisectArgs(args: string[]): BisectOptions {
     cwd: process.cwd(),
     packageName: "",
     versionRange: undefined,
-    testCommand: "npm test",
+    testCommand: "",
     concurrency: 4,
     registryTimeoutMs: 8000,
     cacheTtlSeconds: 3600,

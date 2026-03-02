@@ -3,6 +3,9 @@ export type DependencyKind =
   | "devDependencies"
   | "optionalDependencies"
   | "peerDependencies";
+export type SupportedPackageManager = "bun" | "npm" | "pnpm" | "yarn";
+export type DetectedPackageManager = SupportedPackageManager | "unknown";
+export type SelectedPackageManager = "auto" | SupportedPackageManager;
 
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
 export type GroupBy = "none" | "name" | "scope" | "kind" | "risk";
@@ -108,7 +111,7 @@ export interface CheckOptions extends RunOptions {}
 
 export interface UpgradeOptions extends RunOptions {
   install: boolean;
-  packageManager: "auto" | "npm" | "pnpm";
+  packageManager: SelectedPackageManager;
   sync: boolean;
   fromPlanFile?: string;
 }
@@ -327,7 +330,7 @@ export interface Summary {
 export interface CheckResult {
   projectPath: string;
   packagePaths: string[];
-  packageManager: "npm" | "pnpm" | "unknown";
+  packageManager: DetectedPackageManager;
   target: TargetLevel;
   timestamp: string;
   summary: Summary;
@@ -378,7 +381,7 @@ export interface AuditOptions {
   fix: boolean;
   dryRun: boolean;
   commit: boolean;
-  packageManager: "auto" | "npm" | "pnpm" | "bun" | "yarn";
+  packageManager: SelectedPackageManager;
   reportFormat: AuditReportFormat;
   sourceMode: AuditSourceMode;
   jsonFile?: string;
@@ -790,7 +793,7 @@ export interface GaCheck {
 export interface GaResult {
   ready: boolean;
   projectPath: string;
-  packageManager: "npm" | "pnpm" | "unknown";
+  packageManager: DetectedPackageManager;
   workspacePackages: number;
   cacheBackend: "sqlite" | "file";
   checks: GaCheck[];

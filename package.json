@@ -66,10 +66,11 @@
     "perf:check": "bun run scripts/perf-smoke.mjs",
     "perf:resolve": "RAINY_UPDATES_PERF_SCENARIO=resolve bun run scripts/perf-smoke.mjs",
     "perf:ci": "RAINY_UPDATES_PERF_SCENARIO=ci bun run scripts/perf-smoke.mjs",
-    "test:prod": "bun run dist/bin/cli.js --help && bun run dist/bin/cli.js --version",
+    "test:prod": "bun run dist/bin/cli.js --help && bun run dist/bin/cli.js --version && ./dist/rup --help && ./dist/rup --version",
     "prepublishOnly": "bun run check && bun run build && bun run build:exe && bun run test:prod"
   },
   "engines": {
+    "bun": ">=1.3.9",
     "node": ">=20"
   },
   "publishConfig": {

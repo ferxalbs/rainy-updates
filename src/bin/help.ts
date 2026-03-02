@@ -85,7 +85,7 @@ Options:
   --workspace
   --sync
   --install
-  --pm auto|npm|pnpm
+  --pm auto|bun|npm|pnpm|yarn
   --target patch|minor|major|latest
   --policy-file <path>
   --concurrency <n>

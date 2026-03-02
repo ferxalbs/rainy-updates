@@ -910,14 +910,22 @@ function applyConfig(
   }
 }
 
-function parsePackageManager(args: string[]): "auto" | "npm" | "pnpm" {
+function parsePackageManager(
+  args: string[],
+): "auto" | "bun" | "npm" | "pnpm" | "yarn" {
   const index = args.indexOf("--pm");
   if (index === -1) return "auto";
   const value = args[index + 1] ?? "auto";
-  if (value === "auto" || value === "npm" || value === "pnpm") {
+  if (
+    value === "auto" ||
+    value === "bun" ||
+    value === "npm" ||
+    value === "pnpm" ||
+    value === "yarn"
+  ) {
     return value;
   }
-  throw new Error("--pm must be auto, npm or pnpm");
+  throw new Error("--pm must be auto, bun, npm, pnpm or yarn");
 }
 
 function ensureTarget(value: string): TargetLevel {

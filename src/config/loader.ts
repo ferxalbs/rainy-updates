@@ -1,6 +1,7 @@
 import path from "node:path";
 import type {
   CiProfile,
+  SelectedPackageManager,
   DependencyKind,
   FailOnLevel,
   GroupBy,
@@ -50,7 +51,7 @@ export interface FileConfig {
   showImpact?: boolean;
   showHomepage?: boolean;
   install?: boolean;
-  packageManager?: "auto" | "npm" | "pnpm";
+  packageManager?: SelectedPackageManager;
   sync?: boolean;
 }
 

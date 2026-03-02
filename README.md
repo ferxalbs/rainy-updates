@@ -44,16 +44,16 @@ Everything else supports that lifecycle: CI orchestration, advisory lookup, peer
 
 ```bash
 # 1) Detect what changed
-npx @rainy-updates/cli check --workspace --show-impact
+bunx --bun @rainy-updates/cli check --workspace --show-impact
 
 # 2) Summarize what matters
-npx @rainy-updates/cli doctor --workspace
+bunx --bun @rainy-updates/cli doctor --workspace
 
 # 3) Decide in the dashboard
-npx @rainy-updates/cli dashboard --mode review --plan-file .artifacts/decision-plan.json
+bunx --bun @rainy-updates/cli dashboard --mode review --plan-file .artifacts/decision-plan.json
 
 # 4) Apply the approved plan
-npx @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json
+bunx --bun @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json
 ```
 
 ## Why teams use it
@@ -68,10 +68,15 @@ npx @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json
 ## Install
 
 ```bash
+# Preferred: run with Bun's runtime directly
+bunx --bun @rainy-updates/cli check
+
 # As a project dev dependency (recommended for teams)
 npm install --save-dev @rainy-updates/cli
 # or
 pnpm add -D @rainy-updates/cli
+# or
+bun add -d @rainy-updates/cli
 ```
 
 Once installed, three binary aliases are available in your `node_modules/.bin/`:
@@ -89,16 +94,25 @@ rainy-up check
 rainy-updates check
 ```
 
-### One-off usage with npx (no install required)
+### Bun-first runtime
 
 ```bash
-# Always works without installing:
+# Preferred no-install path:
+bunx --bun @rainy-updates/cli check
+bunx --bun @rainy-updates/cli audit --severity high
+bunx --bun @rainy-updates/cli ci --workspace --mode strict
+```
+
+### One-off usage with npx (compatibility path)
+
+```bash
+# Compatibility path when Bun is not available:
 npx @rainy-updates/cli check
 npx @rainy-updates/cli audit --severity high
 npx @rainy-updates/cli ci --workspace --mode strict
 ```
 
-> **Note:** The short aliases (`rup`, `rainy-up`) only work after installing the package. For one-off `npx` runs, use `npx @rainy-updates/cli <command>`.
+> **Note:** Rainy is Bun-first at runtime. `bunx --bun @rainy-updates/cli ...` is the fastest no-install path. The npm package and `npx` remain supported compatibility paths.
 
 ## Commands
 
@@ -125,28 +139,29 @@ npx @rainy-updates/cli ci --workspace --mode strict
 
 ## Quick usage
 
-> Commands work with `npx` (no install) **or** with the `rup` / `rainy-up` shortcut if the package is installed.
+> Commands work with `bunx --bun`, with `npx` as a compatibility path, or with the `rup` / `rainy-up` shortcut if the package is installed.
 
 ```bash
 # 1) Detect updates
+bunx --bun @rainy-updates/cli check --format table
 npx @rainy-updates/cli check --format table
 rup check --format table                      # if installed
 
 # 2) Summarize the state
-npx @rainy-updates/cli doctor --workspace
+bunx --bun @rainy-updates/cli doctor --workspace
 rup doctor --workspace
 
 # 3) Review and decide
-npx @rainy-updates/cli review --security-only
+bunx --bun @rainy-updates/cli review --security-only
 rup dashboard --mode review --plan-file .artifacts/decision-plan.json
 rup review --show-changelog
 
 # 4) Apply an approved decision plan with verification
-npx @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json --verify install,test --test-command "npm test"
+bunx --bun @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json --verify install,test --test-command "bun test"
 rup upgrade --from-plan .artifacts/decision-plan.json --verify install,test --test-command "npm test"
 
 # 5) CI orchestration with policy gates
-npx @rainy-updates/cli ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
+bunx --bun @rainy-updates/cli ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
 rup ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
 
 # 6) Replay an approved plan in CI
@@ -369,7 +384,7 @@ Schedule:
 ### Upgrade-only
 
 - `--install`
-- `--pm auto|npm|pnpm`
+- `--pm auto|bun|npm|pnpm|yarn`
 - `--sync`
 
 ### Review-only
