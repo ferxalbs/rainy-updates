@@ -1,6 +1,6 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "The fastest DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and automates npm/pnpm dependencies in CI.",
   "type": "module",
   "private": false,
@@ -30,6 +30,7 @@
     "renovate"
   ],
   "bin": {
+    "cli": "./dist/bin/cli.js",
     "rainy-updates": "./dist/bin/cli.js",
     "rainy-up": "./dist/bin/cli.js",
     "rup": "./dist/bin/cli.js"
