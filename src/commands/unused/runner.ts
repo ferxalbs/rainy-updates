@@ -34,7 +34,10 @@ export async function runUnused(options: UnusedOptions): Promise<UnusedResult> {
     warnings: [],
   };
 
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeDependents: false,
+  });
 
   for (const packageDir of packageDirs) {
     // ─ Read manifest ─────────────────────────────────────────────────────────

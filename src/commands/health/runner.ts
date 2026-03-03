@@ -129,7 +129,11 @@ export async function runHealth(options: HealthOptions): Promise<HealthResult> {
     warnings: [],
   };
 
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeKinds: ["dependencies", "devDependencies", "optionalDependencies"],
+    includeDependents: options.affected === true,
+  });
   const versionMap = new Map<string, string>();
 
   for (const dir of packageDirs) {

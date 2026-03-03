@@ -42,6 +42,11 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
     cooldownDays: undefined,
     prLimit: undefined,
     onlyChanged: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     ciProfile: "minimal",
     lockfileMode: "preserve",
     interactive: false,
@@ -70,6 +75,36 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
       options.workspace = true;
       continue;
     }
+    if (current === "--only-changed") {
+      options.onlyChanged = true;
+      continue;
+    }
+    if (current === "--affected") {
+      options.affected = true;
+      continue;
+    }
+    if (current === "--staged") {
+      options.staged = true;
+      continue;
+    }
+    if (current === "--base" && next) {
+      options.baseRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--base") throw new Error("Missing value for --base");
+    if (current === "--head" && next) {
+      options.headRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--head") throw new Error("Missing value for --head");
+    if (current === "--since" && next) {
+      options.sinceRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--since") throw new Error("Missing value for --since");
     if (current === "--verdict-only") {
       options.verdictOnly = true;
       continue;
@@ -110,6 +145,12 @@ Options:
   --include-changelog    Include release note summaries in the aggregated review data
   --agent-report         Print a prompt-ready remediation report for coding agents
   --workspace            Scan all workspace packages
+  --only-changed         Limit analysis to changed packages
+  --affected             Include changed packages and their dependents
+  --staged               Limit analysis to staged changes
+  --base <ref>           Compare changes against a base git ref
+  --head <ref>           Compare changes against a head git ref
+  --since <ref>          Compare changes since a git ref
   --json-file <path>     Write JSON doctor report to file
   --cwd <path>
 `.trimStart();

@@ -43,6 +43,11 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     cooldownDays: undefined,
     prLimit: undefined,
     onlyChanged: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     ciProfile: "minimal",
     lockfileMode: "preserve",
     interactive: false,
@@ -75,6 +80,36 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       options.workspace = true;
       continue;
     }
+    if (current === "--only-changed") {
+      options.onlyChanged = true;
+      continue;
+    }
+    if (current === "--affected") {
+      options.affected = true;
+      continue;
+    }
+    if (current === "--staged") {
+      options.staged = true;
+      continue;
+    }
+    if (current === "--base" && next) {
+      options.baseRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--base") throw new Error("Missing value for --base");
+    if (current === "--head" && next) {
+      options.headRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--head") throw new Error("Missing value for --head");
+    if (current === "--since" && next) {
+      options.sinceRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--since") throw new Error("Missing value for --since");
     if (current === "--interactive") {
       options.interactive = true;
       continue;
@@ -227,6 +262,12 @@ Options:
   --test-command <cmd>    Override the command used for test verification
   --show-changelog        Fetch release notes summaries for review output
   --workspace             Scan all workspace packages
+  --only-changed         Limit analysis to changed packages
+  --affected             Include changed packages and their dependents
+  --staged               Limit analysis to staged changes
+  --base <ref>           Compare changes against a base git ref
+  --head <ref>           Compare changes against a head git ref
+  --since <ref>          Compare changes since a git ref
   --policy-file <path>    Load policy overrides
   --json-file <path>      Write JSON review report to file
   --registry-timeout-ms <n>

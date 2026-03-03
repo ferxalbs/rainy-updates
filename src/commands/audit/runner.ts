@@ -49,7 +49,15 @@ export async function runAudit(options: AuditOptions): Promise<AuditResult> {
     },
   };
 
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeKinds: [
+      "dependencies",
+      "devDependencies",
+      "optionalDependencies",
+    ],
+    includeDependents: options.affected === true,
+  });
   const depsByDir = new Map<string, ReturnType<typeof collectDependencies>>();
 
   for (const dir of packageDirs) {

@@ -40,6 +40,11 @@ Options:
   --cooldown-days <n>
   --pr-limit <n>
   --only-changed
+  --affected
+  --staged
+  --base <ref>
+  --head <ref>
+  --since <ref>
   --interactive
   --plan-file <path>
   --verify none|install|test|install,test
@@ -126,6 +131,11 @@ Options:
   --cooldown-days <n>
   --pr-limit <n>
   --only-changed
+  --affected
+  --staged
+  --base <ref>
+  --head <ref>
+  --since <ref>
   --offline
   --concurrency <n>
   --registry-timeout-ms <n>
@@ -186,6 +196,11 @@ Scan dependencies for CVEs using OSV.dev and GitHub Advisory Database.
 
 Options:
   --workspace
+  --affected
+  --staged
+  --base <ref>
+  --head <ref>
+  --since <ref>
   --severity critical|high|medium|low
   --summary
   --report table|summary|json
@@ -207,6 +222,12 @@ Use it to inspect risk, security, peer, license, and policy context before apply
 
 Options:
   --workspace
+  --only-changed
+  --affected
+  --staged
+  --base <ref>
+  --head <ref>
+  --since <ref>
   --interactive
   --security-only
   --risk critical|high|medium|low
@@ -228,6 +249,12 @@ Produce a fast summary verdict and point the operator to review when action is n
 
 Options:
   --workspace
+  --only-changed
+  --affected
+  --staged
+  --base <ref>
+  --head <ref>
+  --since <ref>
   --verdict-only
   --include-changelog
   --json-file <path>`;
@@ -240,6 +267,12 @@ Open the primary interactive dependency operations console.
 
 Options:
   --workspace
+  --only-changed
+  --affected
+  --staged
+  --base <ref>
+  --head <ref>
+  --since <ref>
   --mode check|review|upgrade
   --focus all|security|risk|major|blocked|workspace
   --apply-selected
@@ -258,6 +291,15 @@ Audit release and CI readiness for Rainy Updates.
 Options:
   --workspace
   --json-file <path>
+  --cwd <path>`;
+  }
+
+  if (isCommand && command === "hook") {
+    return `rainy-updates hook <install|uninstall|doctor> [options]
+
+Install, remove, or inspect Rainy-managed git hooks.
+
+Options:
   --cwd <path>`;
   }
 
@@ -281,6 +323,7 @@ Commands:
   licenses    Scan dependency licenses and generate SPDX SBOM
   snapshot    Save, list, restore, and diff dependency state snapshots
   ga          Audit GA and CI readiness for this checkout
+  hook        Install or inspect Rainy-managed git hooks
 
 Global options:
   --cwd <path>
@@ -299,6 +342,11 @@ Global options:
   --cooldown-days <n>
   --pr-limit <n>
   --only-changed
+  --affected
+  --staged
+  --base <ref>
+  --head <ref>
+  --since <ref>
   --interactive
   --show-impact
   --show-links

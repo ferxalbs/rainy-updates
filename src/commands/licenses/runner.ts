@@ -32,7 +32,11 @@ export async function runLicenses(
     warnings: [],
   };
 
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeKinds: ["dependencies", "devDependencies", "optionalDependencies"],
+    includeDependents: options.affected === true,
+  });
   const allDeps = new Map<string, string>(); // name → resolved version
 
   for (const packageDir of packageDirs) {

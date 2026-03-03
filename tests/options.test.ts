@@ -122,6 +122,11 @@ test("parseCliArgs supports ci command orchestration flags", async () => {
     "--fix-pr-batch-size",
     "3",
     "--only-changed",
+    "--affected",
+    "--base",
+    "origin/main",
+    "--head",
+    "HEAD",
     "--verify",
     "test",
     "--test-command",
@@ -137,6 +142,9 @@ test("parseCliArgs supports ci command orchestration flags", async () => {
     expect(parsed.options.prLimit).toBe(20);
     expect(parsed.options.fixPrBatchSize).toBe(3);
     expect(parsed.options.onlyChanged).toBe(true);
+    expect(parsed.options.affected).toBe(true);
+    expect(parsed.options.baseRef).toBe("origin/main");
+    expect(parsed.options.headRef).toBe("HEAD");
     expect(parsed.options.verify).toBe("test");
     expect(parsed.options.testCommand).toBe("npm test");
   }
@@ -184,6 +192,9 @@ test("parseCliArgs supports review command filters", async () => {
   const parsed = await parseCliArgs([
     "review",
     "--workspace",
+    "--only-changed",
+    "--since",
+    "origin/main",
     "--interactive",
     "--security-only",
     "--show-changelog",
@@ -195,6 +206,8 @@ test("parseCliArgs supports review command filters", async () => {
   expect(parsed.command).toBe("review");
   if (parsed.command === "review") {
     expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.onlyChanged).toBe(true);
+    expect(parsed.options.sinceRef).toBe("origin/main");
     expect(parsed.options.interactive).toBe(true);
     expect(parsed.options.securityOnly).toBe(true);
     expect(parsed.options.showChangelog).toBe(true);
@@ -207,6 +220,8 @@ test("parseCliArgs supports doctor command", async () => {
   const parsed = await parseCliArgs([
     "doctor",
     "--workspace",
+    "--affected",
+    "--staged",
     "--verdict-only",
     "--include-changelog",
     "--agent-report",
@@ -214,6 +229,8 @@ test("parseCliArgs supports doctor command", async () => {
   expect(parsed.command).toBe("doctor");
   if (parsed.command === "doctor") {
     expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.affected).toBe(true);
+    expect(parsed.options.staged).toBe(true);
     expect(parsed.options.verdictOnly).toBe(true);
     expect(parsed.options.includeChangelog).toBe(true);
     expect(parsed.options.agentReport).toBe(true);

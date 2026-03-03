@@ -141,6 +141,13 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
     return true;
   }
 
+  if (parsed.command === "hook") {
+    const { runHook } = await import("../commands/hook/runner.js");
+    const result = await runHook(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 1 : 0);
+    return true;
+  }
+
   if (
     parsed.options.interactive &&
     (parsed.command === "check" ||

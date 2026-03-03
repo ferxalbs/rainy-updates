@@ -95,6 +95,11 @@ export interface RunOptions {
   cooldownDays?: number;
   prLimit?: number;
   onlyChanged: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   ciProfile: CiProfile;
   lockfileMode: LockfileMode;
   interactive: boolean;
@@ -378,6 +383,11 @@ export type AuditSourceStatusLevel = "ok" | "partial" | "failed";
 export interface AuditOptions {
   cwd: string;
   workspace: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   severity?: AuditSeverity;
   fix: boolean;
   dryRun: boolean;
@@ -463,6 +473,11 @@ export type HealthFlag = "stale" | "deprecated" | "archived" | "unmaintained";
 export interface HealthOptions {
   cwd: string;
   workspace: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   staleDays: number; // default: 365
   includeDeprecated: boolean;
   includeAlternatives: boolean;
@@ -519,6 +534,11 @@ export interface PeerConflict {
 export interface ResolveOptions {
   cwd: string;
   workspace: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   afterUpdate: boolean; // simulate pending check updates before applying
   safe: boolean;
   jsonFile?: string;
@@ -667,6 +687,11 @@ export interface UnusedDependency {
 export interface UnusedOptions {
   cwd: string;
   workspace: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   srcDirs: string[]; // defaults: ['src', '.']
   includeDevDependencies: boolean;
   fix: boolean;
@@ -723,6 +748,11 @@ export interface SbomRelationship {
 export interface LicenseOptions {
   cwd: string;
   workspace: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   allow?: string[];
   deny?: string[];
   sbomFile?: string;
@@ -756,6 +786,11 @@ export type SnapshotAction = "save" | "list" | "restore" | "diff";
 export interface SnapshotOptions {
   cwd: string;
   workspace: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   action: SnapshotAction;
   label?: string;
   snapshotId?: string;
@@ -772,9 +807,31 @@ export interface SnapshotResult {
   warnings: string[];
 }
 
+export type HookAction = "install" | "uninstall" | "doctor";
+
+export interface HookOptions {
+  cwd: string;
+  action: HookAction;
+}
+
+export interface HookResult {
+  action: HookAction;
+  hookDir?: string;
+  installed: string[];
+  removed: string[];
+  checked: Array<{ name: "pre-commit" | "pre-push"; status: "managed" | "missing" | "foreign" }>;
+  errors: string[];
+  warnings: string[];
+}
+
 export interface GaOptions {
   cwd: string;
   workspace: boolean;
+  affected?: boolean;
+  staged?: boolean;
+  baseRef?: string;
+  headRef?: string;
+  sinceRef?: string;
   jsonFile?: string;
 }
 

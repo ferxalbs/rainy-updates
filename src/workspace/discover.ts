@@ -1,4 +1,6 @@
 import path from "node:path";
+import type { DependencyKind } from "../types/index.js";
+import { scopePackageDirsByGit, type GitScopeOptions } from "../git/scope.js";
 
 const HARD_IGNORE_DIRS = new Set([
   "node_modules",
@@ -13,9 +15,18 @@ const MAX_DISCOVERED_DIRS = 20000;
 export async function discoverPackageDirs(
   cwd: string,
   workspaceMode: boolean,
+  options: {
+    git?: GitScopeOptions;
+    includeKinds?: DependencyKind[];
+    includeDependents?: boolean;
+  } = {},
 ): Promise<string[]> {
   if (!workspaceMode) {
-    return [cwd];
+    const scoped = await scopePackageDirsByGit(cwd, [cwd], options.git ?? {}, {
+      includeKinds: options.includeKinds,
+      includeDependents: options.includeDependents,
+    });
+    return scoped.packageDirs;
   }
 
   const roots = new Set<string>([cwd]);
@@ -50,7 +61,11 @@ export async function discoverPackageDirs(
     }
   }
 
-  return existing.sort();
+  const scoped = await scopePackageDirsByGit(cwd, existing.sort(), options.git ?? {}, {
+    includeKinds: options.includeKinds,
+    includeDependents: options.includeDependents,
+  });
+  return scoped.packageDirs;
 }
 
 async function packageFileExists(packageJsonPath: string): Promise<boolean> {

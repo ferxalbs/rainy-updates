@@ -4,6 +4,11 @@ export function parseResolveArgs(args: string[]): ResolveOptions {
   const options: ResolveOptions = {
     cwd: process.cwd(),
     workspace: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     afterUpdate: false,
     safe: false,
     jsonFile: undefined,
@@ -27,6 +32,32 @@ export function parseResolveArgs(args: string[]): ResolveOptions {
       options.workspace = true;
       continue;
     }
+    if (current === "--affected") {
+      options.affected = true;
+      continue;
+    }
+    if (current === "--staged") {
+      options.staged = true;
+      continue;
+    }
+    if (current === "--base" && next) {
+      options.baseRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--base") throw new Error("Missing value for --base");
+    if (current === "--head" && next) {
+      options.headRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--head") throw new Error("Missing value for --head");
+    if (current === "--since" && next) {
+      options.sinceRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--since") throw new Error("Missing value for --since");
     if (current === "--after-update") {
       options.afterUpdate = true;
       continue;
@@ -86,6 +117,11 @@ Options:
   --after-update        Simulate conflicts after applying pending \`rup check\` updates
   --safe                Exit non-zero if any error-level conflicts exist
   --workspace           Scan all workspace packages
+  --affected            Scan changed workspace packages and their dependents
+  --staged              Limit scanning to staged changes
+  --base <ref>          Compare changes against a base git ref
+  --head <ref>          Compare changes against a head git ref
+  --since <ref>         Compare changes since a git ref
   --json-file <path>    Write JSON conflict report to file
   --timeout <ms>        Registry request timeout in ms (default: 10000)
   --concurrency <n>     Parallel registry requests (default: 12)

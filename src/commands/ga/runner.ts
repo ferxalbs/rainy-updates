@@ -9,7 +9,10 @@ import type { GaCheck, GaOptions, GaResult } from "../../types/index.js";
 
 export async function runGa(options: GaOptions): Promise<GaResult> {
   const packageManager = await detectPackageManagerDetails(options.cwd);
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeDependents: options.affected === true,
+  });
   const cache = await VersionCache.create();
   const checks: GaCheck[] = [];
 

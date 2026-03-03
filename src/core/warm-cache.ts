@@ -17,7 +17,11 @@ export async function warmCache(options: CheckOptions): Promise<CheckResult> {
 
   const discoveryStartedAt = Date.now();
   const packageManager = await detectPackageManager(options.cwd);
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeKinds: options.includeKinds,
+    includeDependents: options.affected === true,
+  });
   discoveryMs += Date.now() - discoveryStartedAt;
 
   const cache = await VersionCache.create();

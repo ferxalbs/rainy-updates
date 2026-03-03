@@ -42,6 +42,11 @@ export function parseDashboardArgs(args: string[]): DashboardOptions {
     cooldownDays: undefined,
     prLimit: undefined,
     onlyChanged: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     ciProfile: "minimal",
     lockfileMode: "preserve",
     interactive: true,
@@ -166,6 +171,48 @@ export function parseDashboardArgs(args: string[]): DashboardOptions {
     if (arg === "--workspace") {
       options.workspace = true;
       continue;
+    }
+
+    if (arg === "--only-changed") {
+      options.onlyChanged = true;
+      continue;
+    }
+
+    if (arg === "--affected") {
+      options.affected = true;
+      continue;
+    }
+
+    if (arg === "--staged") {
+      options.staged = true;
+      continue;
+    }
+
+    if (arg === "--base" && nextArg) {
+      options.baseRef = nextArg;
+      i++;
+      continue;
+    }
+    if (arg === "--base") {
+      throw new Error("Missing value for --base");
+    }
+
+    if (arg === "--head" && nextArg) {
+      options.headRef = nextArg;
+      i++;
+      continue;
+    }
+    if (arg === "--head") {
+      throw new Error("Missing value for --head");
+    }
+
+    if (arg === "--since" && nextArg) {
+      options.sinceRef = nextArg;
+      i++;
+      continue;
+    }
+    if (arg === "--since") {
+      throw new Error("Missing value for --since");
     }
 
     if (arg === "--cwd" && nextArg) {

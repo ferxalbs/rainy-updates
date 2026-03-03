@@ -38,7 +38,11 @@ export async function buildPeerGraph(
    */
   resolvedVersionOverrides?: Map<string, string>,
 ): Promise<PeerGraph> {
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeKinds: ["dependencies", "devDependencies", "optionalDependencies"],
+    includeDependents: options.affected === true,
+  });
   const cache = await VersionCache.create();
   const registry = new NpmRegistryClient(options.cwd, {
     timeoutMs: options.registryTimeoutMs,

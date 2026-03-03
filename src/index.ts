@@ -4,6 +4,7 @@ export { warmCache } from "./core/warm-cache.js";
 export { runCi } from "./core/ci.js";
 export { initCiWorkflow } from "./core/init-ci.js";
 export { saveBaseline, diffBaseline } from "./core/baseline.js";
+export { runHook } from "./commands/hook/runner.js";
 export { createSarifReport } from "./output/sarif.js";
 export { writeGitHubOutput, renderGitHubAnnotations } from "./output/github.js";
 export { renderPrReport } from "./output/pr-report.js";
@@ -26,6 +27,8 @@ export type {
   ReviewResult,
   DoctorOptions,
   DoctorResult,
+  HookOptions,
+  HookResult,
   Verdict,
   RiskLevel,
   RiskCategory,

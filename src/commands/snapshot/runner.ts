@@ -26,7 +26,10 @@ export async function runSnapshot(
     warnings: [],
   };
 
-  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
+  const packageDirs = await discoverPackageDirs(options.cwd, options.workspace, {
+    git: options,
+    includeDependents: options.affected === true,
+  });
   const store = new SnapshotStore(options.cwd, options.storeFile);
 
   switch (options.action) {

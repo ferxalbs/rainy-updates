@@ -25,6 +25,7 @@ import type {
   RiskLevel,
   DashboardOptions,
   GaOptions,
+  HookOptions,
   VerificationMode,
   CiGate,
 } from "../types/index.js";
@@ -54,6 +55,7 @@ const KNOWN_COMMANDS = [
   "doctor",
   "dashboard",
   "ga",
+  "hook",
 ] as const;
 
 export type ParsedCliArgs =
@@ -84,7 +86,8 @@ export type ParsedCliArgs =
   | { command: "review"; options: ReviewOptions }
   | { command: "doctor"; options: DoctorOptions }
   | { command: "dashboard"; options: DashboardOptions }
-  | { command: "ga"; options: GaOptions };
+  | { command: "ga"; options: GaOptions }
+  | { command: "hook"; options: HookOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -148,6 +151,10 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     const { parseGaArgs } = await import("../commands/ga/parser.js");
     return { command, options: parseGaArgs(args) };
   }
+  if (command === "hook") {
+    const { parseHookArgs } = await import("../commands/hook/parser.js");
+    return { command, options: parseHookArgs(args) };
+  }
 
   const base: CheckOptions = {
     cwd: getRuntimeCwd(),
@@ -184,6 +191,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     cooldownDays: undefined,
     prLimit: undefined,
     onlyChanged: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     ciProfile: "minimal",
     lockfileMode: "preserve",
     interactive: false,
@@ -567,6 +579,43 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       continue;
     }
 
+    if (current === "--affected") {
+      base.affected = true;
+      continue;
+    }
+
+    if (current === "--staged") {
+      base.staged = true;
+      continue;
+    }
+
+    if (current === "--base" && next) {
+      base.baseRef = next;
+      index += 1;
+      continue;
+    }
+    if (current === "--base") {
+      throw new Error("Missing value for --base");
+    }
+
+    if (current === "--head" && next) {
+      base.headRef = next;
+      index += 1;
+      continue;
+    }
+    if (current === "--head") {
+      throw new Error("Missing value for --head");
+    }
+
+    if (current === "--since" && next) {
+      base.sinceRef = next;
+      index += 1;
+      continue;
+    }
+    if (current === "--since") {
+      throw new Error("Missing value for --since");
+    }
+
     if (current === "--interactive") {
       base.interactive = true;
       continue;
@@ -874,6 +923,21 @@ function applyConfig(
   }
   if (typeof config.onlyChanged === "boolean") {
     base.onlyChanged = config.onlyChanged;
+  }
+  if (typeof config.affected === "boolean") {
+    base.affected = config.affected;
+  }
+  if (typeof config.staged === "boolean") {
+    base.staged = config.staged;
+  }
+  if (typeof config.baseRef === "string" && config.baseRef.length > 0) {
+    base.baseRef = config.baseRef;
+  }
+  if (typeof config.headRef === "string" && config.headRef.length > 0) {
+    base.headRef = config.headRef;
+  }
+  if (typeof config.sinceRef === "string" && config.sinceRef.length > 0) {
+    base.sinceRef = config.sinceRef;
   }
   if (typeof config.ciProfile === "string") {
     base.ciProfile = ensureCiProfile(config.ciProfile);
