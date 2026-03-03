@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import path from "node:path";
+import { runCli } from "./main.js";
 
 async function main(): Promise<void> {
   if (typeof Bun === "undefined") {
@@ -20,8 +20,6 @@ async function main(): Promise<void> {
     process.exit(result.status ?? 1);
   }
 
-  const modulePath = path.join(path.dirname(fileURLToPath(import.meta.url)), "main.js");
-  const { runCli } = await import(modulePath);
   await runCli();
 }
 
