@@ -3,8 +3,9 @@ import {
   readManifest,
 } from "../../parsers/package-json.js";
 import {
-  detectPackageManager as detectProjectPackageManager,
-  resolvePackageManager,
+  buildAddInvocation,
+  createPackageManagerProfile,
+  detectPackageManagerDetails,
 } from "../../pm/detect.js";
 import { discoverPackageDirs } from "../../workspace/discover.js";
 import { writeFileAtomic } from "../../utils/io.js";
@@ -179,10 +180,13 @@ async function applyFix(
   const patchMap = buildPatchMap(advisories);
   if (patchMap.size === 0) return;
 
-  const detected = await detectProjectPackageManager(options.cwd);
-  const pm = resolvePackageManager(options.packageManager, detected);
-  const installArgs = buildInstallArgs(pm, patchMap);
-  const installCmd = `${pm} ${installArgs.join(" ")}`;
+  const detected = await detectPackageManagerDetails(options.cwd);
+  const profile = createPackageManagerProfile(
+    options.packageManager,
+    detected,
+  );
+  const install = buildInstallArgs(profile, patchMap);
+  const installCmd = install.display;
 
   if (options.dryRun) {
     if (!options.silent) {
@@ -205,7 +209,7 @@ async function applyFix(
   }
 
   try {
-    await runCommand(pm, installArgs, options.cwd);
+    await runCommand(install.command, install.args, options.cwd);
   } catch (err) {
     if (!options.silent) {
       writeStderr(`[audit] Install failed: ${String(err)}\n`);
@@ -226,19 +230,12 @@ async function applyFix(
   }
 }
 
-function buildInstallArgs(pm: string, patchMap: Map<string, string>): string[] {
+function buildInstallArgs(
+  profile: ReturnType<typeof createPackageManagerProfile>,
+  patchMap: Map<string, string>,
+): ReturnType<typeof buildAddInvocation> {
   const packages = [...patchMap.entries()].map(([n, v]) => `${n}@${v}`);
-
-  switch (pm) {
-    case "pnpm":
-      return ["add", ...packages];
-    case "bun":
-      return ["add", ...packages];
-    case "yarn":
-      return ["add", ...packages];
-    default:
-      return ["install", ...packages]; // npm
-  }
+  return buildAddInvocation(profile, packages);
 }
 
 async function commitFix(

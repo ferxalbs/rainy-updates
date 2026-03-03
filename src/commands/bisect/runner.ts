@@ -1,5 +1,9 @@
 import type { BisectOptions, BisectResult } from "../../types/index.js";
-import { detectPackageManager, resolvePackageManager } from "../../pm/detect.js";
+import {
+  buildTestCommand,
+  createPackageManagerProfile,
+  detectPackageManagerDetails,
+} from "../../pm/detect.js";
 import { fetchBisectVersions, bisectVersions } from "./engine.js";
 
 /**
@@ -7,12 +11,13 @@ import { fetchBisectVersions, bisectVersions } from "./engine.js";
  * Fully isolated: does NOT import anything from core/options.ts.
  */
 export async function runBisect(options: BisectOptions): Promise<BisectResult> {
-  const detected = await detectPackageManager(options.cwd);
+  const detected = await detectPackageManagerDetails(options.cwd);
+  const profile = createPackageManagerProfile("auto", detected, "bun");
   const runtimeOptions: BisectOptions = {
     ...options,
     testCommand:
       options.testCommand ||
-      `${resolvePackageManager("auto", detected, "bun")} test`,
+      buildTestCommand(profile),
   };
 
   process.stderr.write(

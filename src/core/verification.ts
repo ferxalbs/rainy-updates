@@ -4,7 +4,12 @@ import type {
   VerificationMode,
   VerificationResult,
 } from "../types/index.js";
-import { detectPackageManager, resolvePackageManager } from "../pm/detect.js";
+import {
+  buildInstallInvocation,
+  buildTestCommand,
+  createPackageManagerProfile,
+  detectPackageManagerDetails,
+} from "../pm/detect.js";
 import { installDependencies } from "../pm/install.js";
 import { stableStringify } from "../utils/stable-json.js";
 import { writeFileAtomic } from "../utils/io.js";
@@ -32,13 +37,15 @@ export async function runVerification(
   }
 
   const checks: VerificationCheck[] = [];
-  const detected = await detectPackageManager(options.cwd);
+  const detected = await detectPackageManagerDetails(options.cwd);
+  const profile = createPackageManagerProfile(options.packageManager, detected, "bun");
 
   if (includesInstall(mode)) {
+    const installInvocation = buildInstallInvocation(profile);
     checks.push(
       await runCheck(
         "install",
-        `${resolvePackageManager(options.packageManager, detected)} install`,
+        installInvocation.display,
         async () => {
           await installDependencies(options.cwd, options.packageManager, detected);
         },
@@ -49,7 +56,7 @@ export async function runVerification(
   if (includesTest(mode)) {
     const command =
       options.testCommand ??
-      defaultTestCommand(options.packageManager, detected);
+      defaultTestCommand(profile);
     checks.push(await runShellCheck(options.cwd, command));
   }
 
@@ -70,11 +77,8 @@ function includesTest(mode: VerificationMode): boolean {
   return mode === "test" || mode === "install,test";
 }
 
-function defaultTestCommand(
-  packageManager: UpgradeOptions["packageManager"],
-  detected: Awaited<ReturnType<typeof detectPackageManager>>,
-): string {
-  return `${resolvePackageManager(packageManager, detected, "bun")} test`;
+function defaultTestCommand(profile: ReturnType<typeof createPackageManagerProfile>): string {
+  return buildTestCommand(profile);
 }
 
 async function runShellCheck(

@@ -26,3 +26,34 @@ test("runGa reports readiness details for a basic npm project", async () => {
     ),
   ).toBe(true);
 });
+
+test("runGa detects package manager from packageManager field", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-ga-pm-field-"));
+  await writeFile(
+    path.join(dir, "package.json"),
+    JSON.stringify(
+      {
+        name: "ga-field-fixture",
+        version: "1.0.0",
+        packageManager: "yarn@4.6.0",
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  await writeFile(path.join(dir, "README.md"), "# fixture\n", "utf8");
+  await writeFile(path.join(dir, "CHANGELOG.md"), "# changelog\n", "utf8");
+
+  const result = await runGa({ cwd: dir, workspace: false });
+
+  expect(result.packageManager).toBe("yarn");
+  expect(
+    result.checks.some(
+      (check) =>
+        check.name === "package-manager" &&
+        check.detail.includes("packageManager-field") &&
+        check.detail.includes("yarn@4.6.0"),
+    ),
+  ).toBe(true);
+});

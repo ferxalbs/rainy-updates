@@ -1,14 +1,14 @@
-import { promises as fs } from "node:fs";
-import type { Dirent } from "node:fs";
 import path from "node:path";
+import { parseSync } from "oxc-parser";
 
 /**
- * Extracts all imported package names from a single source file.
+ * Extracts all imported package names from a single source file using AST.
  *
  * Handles:
  *   - ESM static:  import ... from "pkg"
  *   - ESM dynamic: import("pkg")
  *   - CJS:         require("pkg")
+ *   - ESM re-export: export ... from "pkg"
  *
  * Strips subpath imports (e.g. "lodash/merge" → "lodash"),
  * skips relative imports and node: builtins.
@@ -16,28 +16,49 @@ import path from "node:path";
 export function extractImportsFromSource(source: string): Set<string> {
   const names = new Set<string>();
 
-  // ESM static import: from "pkg" or from 'pkg'
-  const staticImport = /from\s+['"]([^'"]+)['"]/g;
-  for (const match of source.matchAll(staticImport)) {
-    addPackageName(names, match[1]);
-  }
+  try {
+    const parseResult = parseSync("unknown.ts", source, {
+      sourceType: "module",
+    });
 
-  // ESM dynamic import: import("pkg") or import('pkg')
-  const dynamicImport = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-  for (const match of source.matchAll(dynamicImport)) {
-    addPackageName(names, match[1]);
-  }
+    const walk = (node: any) => {
+      if (!node) return;
 
-  // CJS require: require("pkg") or require('pkg')
-  const cjsRequire = /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-  for (const match of source.matchAll(cjsRequire)) {
-    addPackageName(names, match[1]);
-  }
+      if (node.type === "ImportDeclaration" && node.source?.value) {
+        addPackageName(names, node.source.value);
+      } else if (node.type === "ExportNamedDeclaration" && node.source?.value) {
+        addPackageName(names, node.source.value);
+      } else if (node.type === "ExportAllDeclaration" && node.source?.value) {
+        addPackageName(names, node.source.value);
+      } else if (node.type === "ImportExpression" && node.source?.value) {
+        addPackageName(names, node.source.value);
+      } else if (node.type === "CallExpression") {
+        if (
+          node.callee?.type === "Identifier" &&
+          node.callee.name === "require" &&
+          node.arguments?.[0]?.type === "StringLiteral"
+        ) {
+          addPackageName(names, node.arguments[0].value);
+        }
+      }
 
-  // export ... from "pkg"
-  const reExport = /\bexport\s+(?:\*|\{[^}]*\})\s+from\s+['"]([^'"]+)['"]/g;
-  for (const match of source.matchAll(reExport)) {
-    addPackageName(names, match[1]);
+      // Traverse children
+      for (const key in node) {
+        if (node[key] && typeof node[key] === "object") {
+          if (Array.isArray(node[key])) {
+            for (const child of node[key]) {
+              walk(child);
+            }
+          } else {
+            walk(node[key]);
+          }
+        }
+      }
+    };
+
+    walk(parseResult.program);
+  } catch (err) {
+    // Fallback or ignore parse errors
   }
 
   return names;
@@ -93,43 +114,33 @@ const IGNORED_DIRS = new Set([
  */
 export async function scanDirectory(dir: string): Promise<Set<string>> {
   const allImports = new Set<string>();
-  await walkDirectory(dir, allImports);
-  return allImports;
-}
-
-async function walkDirectory(
-  dir: string,
-  collector: Set<string>,
-): Promise<void> {
-  let entries: Dirent[];
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
+  const glob = new Bun.Glob("**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}");
 
   const tasks: Promise<void>[] = [];
 
-  for (const entry of entries) {
-    const entryName = entry.name;
-    if (IGNORED_DIRS.has(entryName)) continue;
-    const fullPath = path.join(dir, entryName);
+  for await (const file of glob.scan(dir)) {
+    // Bun.Glob returns relative paths
+    const fullPath = path.join(dir, file);
 
-    if (entry.isDirectory()) {
-      tasks.push(walkDirectory(fullPath, collector));
+    // Quick check to ignore certain directories in the path
+    if (
+      fullPath.includes("/node_modules/") ||
+      fullPath.includes("/.git/") ||
+      fullPath.includes("/dist/") ||
+      fullPath.includes("/build/") ||
+      fullPath.includes("/out/") ||
+      fullPath.includes("/.next/") ||
+      fullPath.includes("/.nuxt/")
+    ) {
       continue;
     }
-    if (!entry.isFile()) continue;
-
-    const ext = path.extname(entryName).toLowerCase();
-    if (!SOURCE_EXTENSIONS.has(ext)) continue;
 
     tasks.push(
       Bun.file(fullPath)
         .text()
         .then((source) => {
           for (const name of extractImportsFromSource(source)) {
-            collector.add(name);
+            allImports.add(name);
           }
         })
         .catch(() => undefined),
@@ -137,4 +148,5 @@ async function walkDirectory(
   }
 
   await Promise.all(tasks);
+  return allImports;
 }

@@ -1,16 +1,25 @@
 import type { DetectedPackageManager, SelectedPackageManager } from "../types/index.js";
-import { resolvePackageManager } from "./detect.js";
+import {
+  buildInstallInvocation,
+  createPackageManagerProfile,
+  type PackageManagerDetection,
+} from "./detect.js";
 
 export async function installDependencies(
   cwd: string,
   packageManager: SelectedPackageManager,
-  detected: DetectedPackageManager,
+  detected: DetectedPackageManager | PackageManagerDetection,
 ): Promise<void> {
-  const command = resolvePackageManager(packageManager, detected);
-  const args = ["install"];
+  const detection =
+    typeof detected === "string"
+      ? { manager: detected, source: "fallback" as const }
+      : detected;
+  const invocation = buildInstallInvocation(
+    createPackageManagerProfile(packageManager, detection),
+  );
 
   try {
-    const proc = Bun.spawn([command, ...args], {
+    const proc = Bun.spawn([invocation.command, ...invocation.args], {
       cwd,
       stdin: "inherit",
       stdout: "inherit",
@@ -20,7 +29,7 @@ export async function installDependencies(
     const code = await proc.exited;
     if (code !== 0) {
       throw new Error(
-        `${command} ${args.join(" ")} failed with exit code ${code}`,
+        `${invocation.display} failed with exit code ${code}`,
       );
     }
   } catch (err) {

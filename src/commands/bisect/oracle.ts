@@ -1,6 +1,10 @@
 import path from "node:path";
 import type { BisectOptions, BisectOutcome } from "../../types/index.js";
-import { detectPackageManager, resolvePackageManager } from "../../pm/detect.js";
+import {
+  buildAddInvocation,
+  createPackageManagerProfile,
+  detectPackageManagerDetails,
+} from "../../pm/detect.js";
 
 /**
  * The "oracle" for bisect: installs a specific version of a package
@@ -20,10 +24,13 @@ export async function bisectOracle(
     return "skip";
   }
 
-  const detected = await detectPackageManager(options.cwd);
-  const packageManager = resolvePackageManager("auto", detected, "bun");
-  const installResult = await runShell(
-    buildInstallCommand(packageManager, packageName, version),
+  const detected = await detectPackageManagerDetails(options.cwd);
+  const profile = createPackageManagerProfile("auto", detected, "bun");
+  const installResult = await runCommand(
+    buildAddInvocation(profile, [`${packageName}@${version}`], {
+      exact: true,
+      noSave: true,
+    }),
     options.cwd,
   );
 
@@ -55,20 +62,18 @@ async function runShell(command: string, cwd: string): Promise<number> {
   }
 }
 
-function buildInstallCommand(
-  packageManager: "bun" | "npm" | "pnpm" | "yarn",
-  packageName: string,
-  version: string,
-): string {
-  const spec = `${packageName}@${version}`;
-  switch (packageManager) {
-    case "bun":
-      return `bun add --exact --no-save ${spec}`;
-    case "pnpm":
-      return `pnpm add --save-exact --no-save ${spec}`;
-    case "yarn":
-      return `npm install --no-save --save-exact ${spec}`;
-    default:
-      return `npm install --no-save --save-exact ${spec}`;
+async function runCommand(
+  command: { command: string; args: string[] },
+  cwd: string,
+): Promise<number> {
+  try {
+    const proc = Bun.spawn([command.command, ...command.args], {
+      cwd: path.resolve(cwd),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    return await proc.exited;
+  } catch {
+    return 1;
   }
 }

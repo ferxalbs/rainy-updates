@@ -346,6 +346,7 @@ export interface UpgradeResult extends CheckResult {
 export interface PackageManifest {
   name?: string;
   version?: string;
+  packageManager?: string;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;

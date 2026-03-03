@@ -1,6 +1,6 @@
 import path from "node:path";
 import { VersionCache } from "../../cache/cache.js";
-import { detectPackageManager } from "../../pm/detect.js";
+import { detectPackageManagerDetails } from "../../pm/detect.js";
 import { discoverPackageDirs } from "../../workspace/discover.js";
 import { stableStringify } from "../../utils/stable-json.js";
 import { writeFileAtomic } from "../../utils/io.js";
@@ -8,18 +8,18 @@ import { writeStdout } from "../../utils/runtime.js";
 import type { GaCheck, GaOptions, GaResult } from "../../types/index.js";
 
 export async function runGa(options: GaOptions): Promise<GaResult> {
-  const packageManager = await detectPackageManager(options.cwd);
+  const packageManager = await detectPackageManagerDetails(options.cwd);
   const packageDirs = await discoverPackageDirs(options.cwd, options.workspace);
   const cache = await VersionCache.create();
   const checks: GaCheck[] = [];
 
   checks.push({
     name: "package-manager",
-    status: packageManager === "unknown" ? "warn" : "pass",
+    status: packageManager.manager === "unknown" ? "warn" : "pass",
     detail:
-      packageManager === "unknown"
+      packageManager.manager === "unknown"
         ? "No supported lockfile was detected. Rainy can still run, but runtime/package verification will fall back to generic defaults."
-        : `Detected package manager: ${packageManager}. Runtime and verification can align with this package ecosystem, including Bun.`,
+        : `Detected package manager: ${packageManager.manager} via ${packageManager.source}${packageManager.lockfile ? ` (${packageManager.lockfile})` : ""}${packageManager.packageManagerField ? ` [${packageManager.packageManagerField}]` : ""}. Runtime and verification can align with this package ecosystem, including Bun.`,
   });
 
   checks.push({
@@ -83,7 +83,7 @@ export async function runGa(options: GaOptions): Promise<GaResult> {
   const result: GaResult = {
     ready: errors.length === 0,
     projectPath: options.cwd,
-    packageManager,
+    packageManager: packageManager.manager,
     workspacePackages: packageDirs.length,
     cacheBackend: cache.backend,
     checks,
