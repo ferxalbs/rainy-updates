@@ -10,6 +10,11 @@ export function parseGaArgs(args: string[]): GaOptions {
   const options: GaOptions = {
     cwd: getRuntimeCwd(),
     workspace: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     jsonFile: undefined,
   };
 
@@ -26,6 +31,32 @@ export function parseGaArgs(args: string[]): GaOptions {
       options.workspace = true;
       continue;
     }
+    if (current === "--affected") {
+      options.affected = true;
+      continue;
+    }
+    if (current === "--staged") {
+      options.staged = true;
+      continue;
+    }
+    if (current === "--base" && next) {
+      options.baseRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--base") throw new Error("Missing value for --base");
+    if (current === "--head" && next) {
+      options.headRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--head") throw new Error("Missing value for --head");
+    if (current === "--since" && next) {
+      options.sinceRef = next;
+      i += 1;
+      continue;
+    }
+    if (current === "--since") throw new Error("Missing value for --since");
     if (current === "--json-file" && next) {
       options.jsonFile = path.resolve(options.cwd, next);
       i += 1;
@@ -51,6 +82,11 @@ Usage:
 
 Options:
   --workspace            Evaluate workspace package coverage
+  --affected             Evaluate changed workspace packages and dependents
+  --staged               Limit GA discovery to staged changes
+  --base <ref>           Compare changes against a base git ref
+  --head <ref>           Compare changes against a head git ref
+  --since <ref>          Compare changes since a git ref
   --json-file <path>     Write JSON GA report to file
   --cwd <path>
 `.trimStart();

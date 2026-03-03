@@ -4,6 +4,11 @@ export function parseLicensesArgs(args: string[]): LicenseOptions {
   const options: LicenseOptions = {
     cwd: process.cwd(),
     workspace: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     allow: undefined,
     deny: undefined,
     sbomFile: undefined,
@@ -29,6 +34,32 @@ export function parseLicensesArgs(args: string[]): LicenseOptions {
       options.workspace = true;
       continue;
     }
+    if (current === "--affected") {
+      options.affected = true;
+      continue;
+    }
+    if (current === "--staged") {
+      options.staged = true;
+      continue;
+    }
+    if (current === "--base" && next) {
+      options.baseRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--base") throw new Error("Missing value for --base");
+    if (current === "--head" && next) {
+      options.headRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--head") throw new Error("Missing value for --head");
+    if (current === "--since" && next) {
+      options.sinceRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--since") throw new Error("Missing value for --since");
     if (current === "--diff") {
       options.diffMode = true;
       continue;
@@ -114,6 +145,11 @@ Options:
   --json-file <path>     Write JSON report to file
   --diff                 Show only packages with a different license than last scan
   --workspace            Scan all workspace packages
+  --affected             Scan changed workspace packages and dependents
+  --staged               Limit scanning to staged changes
+  --base <ref>           Compare changes against a base git ref
+  --head <ref>           Compare changes against a head git ref
+  --since <ref>          Compare changes since a git ref
   --timeout <ms>         Registry request timeout (default: 10000)
   --concurrency <n>      Parallel registry requests (default: 12)
   --cwd <path>           Working directory (default: cwd)

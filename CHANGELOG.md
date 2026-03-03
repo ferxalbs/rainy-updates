@@ -2,6 +2,59 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.1] - 2026-03-03
+
+Compatibility, git-aware workspace scoping, and release-readiness stabilization for the `v0.6` line.
+
+### Added
+
+- **First-class package-manager profile layer**:
+  - detection now prefers `package.json.packageManager` before falling back to lockfiles,
+  - additive package-manager metadata for lockfile source and Yarn flavor detection,
+  - centralized install, add, and test command construction for npm, pnpm, Bun, and Yarn.
+- **Git-aware workspace scoping**:
+  - `--affected`,
+  - `--staged`,
+  - `--base <ref>`,
+  - `--head <ref>`,
+  - `--since <ref>`.
+- **Workspace dependent expansion for affected scans**:
+  - changed packages can now expand to dependent workspace packages instead of stopping at direct file matches.
+- **New `hook` command**:
+  - `rup hook install`,
+  - `rup hook uninstall`,
+  - `rup hook doctor`.
+- **Rainy-managed git hooks**:
+  - `pre-commit` runs `rup unused --workspace --staged` and `rup resolve --workspace --staged`,
+  - `pre-push` runs `rup audit --workspace --affected --report summary`.
+- **New test coverage** for:
+  - package-manager field precedence and Yarn Berry behavior,
+  - git-scoped workspace discovery,
+  - hook install/doctor/uninstall lifecycle,
+  - scoped standalone parser support.
+
+### Changed
+
+- `init-ci` workflow generation now uses the centralized package-manager profile layer instead of special-casing npm/pnpm/Bun only.
+- Yarn support is now explicit in generated workflows:
+  - Corepack enablement for Yarn/pnpm repos,
+  - Yarn Berry uses immutable installs,
+  - Yarn package adds no longer fall back to npm command construction.
+- `verification`, `audit --fix`, and `bisect` now reuse the same package-manager command model as `upgrade`.
+- `ga` package-manager reporting now includes detection source details and respects the git-scoped workspace discovery flow.
+- `check`, `warm-cache`, `audit`, `unused`, `resolve`, `health`, `licenses`, `snapshot`, and `ga` now share the same git-aware workspace scoping path.
+- Command help and parser support were aligned so git-scoping flags are consistently accepted across the primary and standalone command surfaces.
+
+### Tests
+
+- Full release validation passed:
+  - `pnpm -s exec tsc --noEmit`
+  - `bun test`
+  - `pnpm run build`
+  - `bun run build:exe`
+  - `bun run test:prod`
+  - `bun ./dist/bin/cli.js ga --workspace`
+
 ## [0.6.0] - 2026-03-01
 
 Dashboard-first release candidate for the `v0.6` series, focused on unifying the interactive surface, introducing replayable decision plans, tightening CI/apply verification flows, and undergoing a complete native Bun performance optimization.

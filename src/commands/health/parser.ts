@@ -6,6 +6,11 @@ export function parseHealthArgs(args: string[]): HealthOptions {
   const options: HealthOptions = {
     cwd: getRuntimeCwd(),
     workspace: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     staleDays: 365,
     includeDeprecated: true,
     includeAlternatives: false,
@@ -32,6 +37,35 @@ export function parseHealthArgs(args: string[]): HealthOptions {
       index += 1;
       continue;
     }
+
+    if (current === "--affected") {
+      options.affected = true;
+      index += 1;
+      continue;
+    }
+    if (current === "--staged") {
+      options.staged = true;
+      index += 1;
+      continue;
+    }
+    if (current === "--base" && next) {
+      options.baseRef = next;
+      index += 2;
+      continue;
+    }
+    if (current === "--base") throw new Error("Missing value for --base");
+    if (current === "--head" && next) {
+      options.headRef = next;
+      index += 2;
+      continue;
+    }
+    if (current === "--head") throw new Error("Missing value for --head");
+    if (current === "--since" && next) {
+      options.sinceRef = next;
+      index += 2;
+      continue;
+    }
+    if (current === "--since") throw new Error("Missing value for --since");
 
     if (current === "--stale" && next) {
       // Accept "12m" → 365, "6m" → 180, "365d" → 365, or plain number

@@ -6,6 +6,11 @@ export function parseSnapshotArgs(args: string[]): SnapshotOptions {
   const options: SnapshotOptions = {
     cwd: process.cwd(),
     workspace: false,
+    affected: false,
+    staged: false,
+    baseRef: undefined,
+    headRef: undefined,
+    sinceRef: undefined,
     action: "list",
     label: undefined,
     snapshotId: undefined,
@@ -31,6 +36,32 @@ export function parseSnapshotArgs(args: string[]): SnapshotOptions {
       options.workspace = true;
       continue;
     }
+    if (current === "--affected") {
+      options.affected = true;
+      continue;
+    }
+    if (current === "--staged") {
+      options.staged = true;
+      continue;
+    }
+    if (current === "--base" && next) {
+      options.baseRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--base") throw new Error("Missing value for --base");
+    if (current === "--head" && next) {
+      options.headRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--head") throw new Error("Missing value for --head");
+    if (current === "--since" && next) {
+      options.sinceRef = next;
+      i++;
+      continue;
+    }
+    if (current === "--since") throw new Error("Missing value for --since");
 
     if (current === "--label" && next) {
       options.label = next;
@@ -89,6 +120,11 @@ Options:
   --label <name>        Human-readable label for the snapshot
   --store <path>        Custom snapshot store file (default: .rup-snapshots.json)
   --workspace           Include all workspace packages
+  --affected            Include changed workspace packages and dependents
+  --staged              Limit snapshot scope to staged changes
+  --base <ref>          Compare changes against a base git ref
+  --head <ref>          Compare changes against a head git ref
+  --since <ref>         Compare changes since a git ref
   --cwd <path>          Working directory (default: cwd)
   --help                Show this help
 `.trimStart();
