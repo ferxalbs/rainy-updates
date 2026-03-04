@@ -22,9 +22,6 @@ Risk engine:
 Benchmarks:
 [Benchmark methodology](./docs/benchmarks.md)
 
-Distribution:
-[Distribution guide](./docs/distribution-guide.md)
-
 ## What it is
 
 Rainy Updates gives teams one dependency lifecycle:
@@ -93,9 +90,6 @@ Release assets are published for:
 - macOS x64
 - macOS arm64
 - Windows x64
-
-See:
-[Distribution guide](./docs/distribution-guide.md)
 
 Once installed, three binary aliases are available in your `node_modules/.bin/`:
 
