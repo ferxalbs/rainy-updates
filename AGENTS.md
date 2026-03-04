@@ -1,30 +1,315 @@
-# Repository Guidelines
+# AGENTS.md — @rainy-updates/cli
 
-## Project Structure & Module Organization
+> **README for AI agents.** This file defines the exact rules, patterns, and boundaries for any AI agent working in this repository. Read it fully before making any change.
 
-Core source lives in `src/`. Entry points are under `src/bin/`, shared orchestration is in `src/core/`, command implementations are in `src/commands/`, and cross-cutting utilities live in `src/utils/`, `src/workspace/`, `src/pm/`, and `src/git/`. Generated version metadata is stored in `src/generated/version.ts`. Tests live in `tests/` and generally mirror feature areas (`options.test.ts`, `workspace-scope.test.ts`, `hook.test.ts`). Build output goes to `dist/`. Supporting scripts are in `scripts/`, and longer design or roadmap documents are in the repository root and `docs/`.
+---
 
-## Build, Test, and Development Commands
+## Identity & Role
 
-- `bun run build`: syncs the generated version file and compiles the TypeScript CLI to `dist/`.
-- `bun run build:exe`: builds the standalone compiled Bun binary at `dist/rup`.
-- `bun test`: runs the full test suite with `bun:test`.
-- `pnpm -s exec tsc --noEmit`: strict typecheck without emitting files.
-- `bun run test:prod`: validates the built JS CLI and compiled binary entrypoints.
-- `bun run prepublishOnly`: full release gate used before publishing.
+You are working on **`@rainy-updates/cli`** — a high-performance, DevOps-first dependency management CLI for Node.js monorepos and CI/CD pipelines. The binary is distributed as `rup` / `rainy-updates` / `rainy-up`. It is **Bun-first**: Bun is both the development runtime and the distribution target. Do not introduce Node.js-only patterns, alternative runtimes, or Rust bindings — the power comes from Bun's native APIs, which are fully sufficient and preferred.
 
-## Coding Style & Naming Conventions
+---
 
-Use TypeScript with ESM modules and 2-space indentation. Prefer small focused modules over large multi-purpose files. Use `camelCase` for functions and variables, `PascalCase` for types/interfaces, and kebab-style filenames only where already established by command folders. Keep CLI-facing text explicit and operational. Use `apply_patch` for file edits and keep generated files, especially `src/generated/version.ts`, in sync with `package.json`.
+## ⚡ Runtime — BUN ONLY
 
-## Testing Guidelines
+This project runs on **Bun ≥ 1.3.9**. Use Bun's native capabilities at every opportunity.
 
-Tests use `bun:test`. Add or update targeted tests for any parser, command runner, or workspace/package-manager behavior you change. Name tests by behavior, not implementation detail, for example `pm-detect.test.ts` or `workspace-scope.test.ts`. Before opening a PR, run at least `pnpm -s exec tsc --noEmit` and `bun test`; for release-sensitive changes also run `bun run test:prod`.
+| Instead of…                    | Use…                                    |
+| ------------------------------ | --------------------------------------- |
+| `node file.ts` / `ts-node`     | `bun file.ts`                           |
+| `npm install` / `pnpm install` | `bun install`                           |
+| `npm run <script>`             | `bun run <script>`                      |
+| `npx <pkg>`                    | `bunx <pkg>`                            |
+| `jest` / `vitest`              | `bun test` (uses `bun:test`)            |
+| `fs.readFile` / `fs.writeFile` | `Bun.file()` / `.text()` / `.json()`    |
+| `execa` / `child_process`      | `Bun.$\`command\`` (shell API)          |
+| `better-sqlite3`               | `import { Database } from "bun:sqlite"` |
+| `dotenv`                       | _(not needed — Bun auto-loads `.env`)_  |
+| `webpack` / `esbuild`          | `bun build`                             |
+| `express` / `fastify`          | `Bun.serve()`                           |
 
-## Commit & Pull Request Guidelines
+**Bun-native APIs to actively use:**
 
-Recent history follows Conventional Commit style: `feat(scope): ...`, `refactor(cli): ...`, `chore(release): ...`. Keep commits scoped and descriptive. PRs should summarize the user-visible change, note any CLI flags or workflow changes, and include validation commands run. If you modify interactive or hook behavior, include the exact command path tested.
+- `Bun.file(path)` → `.text()`, `.json()`, `.exists()`, `.size`
+- `Bun.$\`cmd args\`` → shell commands with full streaming support
+- `Bun.serve({ routes: {...} })` → HTTP with WebSocket support
+- `new Database(path)` from `bun:sqlite` → SQLite for caching
+- `Bun.env` → environment variables
+- `Bun.sleep(ms)`, `Bun.hash()`, `Bun.deepEquals()`
+- `bun:test` → `describe`, `test`, `expect`, `mock`, `spyOn`, `beforeEach`
 
-## Release & Configuration Notes
+**Never add** `dotenv`, `execa`, `shelljs`, `better-sqlite3`, `ws`, or any package that duplicates a Bun built-in.
 
-This project is Bun-first but must keep the published JS entrypoint functional under Node-based launchers. If you change versioning, run `bun run version:sync`. If you touch publish flow, re-run `bun run prepublishOnly` before release.
+---
+
+## 📁 Project Map
+
+```
+src/
+├── bin/          ← CLI entry points (cli.ts, help, dispatch)
+├── core/         ← Business logic: check, upgrade, audit, ci, bisect, resolve
+├── commands/     ← Per-command runner modules + options parsers
+├── ui/           ← Ink/React TUI components (tui.tsx, dashboard)
+├── risk/         ← Risk assessment engine (freshness, churn, OSV signals)
+├── registry/     ← NPM registry client, metadata fetching
+├── pm/           ← Package manager detection (npm, pnpm, bun)
+├── workspace/    ← Monorepo workspace parsing and graph
+├── parsers/      ← package.json, lockfile parsers
+├── cache/        ← bun:sqlite-backed cache layer
+├── output/       ← Formatters: json, table, sarif, github
+├── utils/        ← Cross-cutting: semver, IO helpers, exit codes
+├── config/       ← Config loading (.rainyrc, env, CLI flags merge)
+├── types/        ← Shared TypeScript types and interfaces
+└── generated/    ← version.ts (auto-generated — DO NOT EDIT MANUALLY)
+
+tests/            ← bun:test test suite mirroring src/ structure
+scripts/          ← Build, benchmark, perf scripts (run with bun)
+benchmarks/       ← Benchmark suites for check, ci, resolve
+dist/             ← Build output (DO NOT EDIT — generated by tsc)
+.github/          ← CI workflows
+```
+
+**Key files:**
+
+- `src/bin/cli.ts` — CLI entry point and command dispatcher
+- `src/generated/version.ts` — **auto-synced from `package.json`** via `bun run version:sync`
+- `tsconfig.json` / `tsconfig.build.json` — TS configuration
+- `package.json` — source of truth for version and scripts
+
+---
+
+## 🔧 Essential Commands
+
+Run all commands with **`bun`**:
+
+```sh
+# Development
+bun run build          # sync version + tsc → dist/
+bun run build:exe      # compile standalone binary → dist/rup
+
+# Quality
+bun run typecheck      # tsc --noEmit (zero tolerances)
+bun run lint           # bunx biome check src tests
+bun test               # full test suite
+bun run check          # typecheck + test (CI gate)
+
+# Smoke & prod validation
+bun run test:prod      # validates built JS CLI + compiled binary
+bun run prepublishOnly # full release gate (check + build + test:prod)
+
+# Benchmarks
+bun run bench:check    # dependency check benchmark
+bun run bench:ci       # CI mode benchmark
+bun run bench:resolve  # resolve benchmark
+
+# Version sync (run after bumping package.json version)
+bun run version:sync
+```
+
+**Before any PR**: run `bun run check`. For release changes: run `bun run prepublishOnly`.
+
+---
+
+## 💻 Core Command Lifecycle
+
+```
+check   → detect candidate updates in workspace
+doctor  → summarize current dependency health
+review  → interactive or CLI-based decision with risk context
+upgrade → apply approved change set with optional verification
+audit   → lockfile-aware CVE scan (OSV.dev + GitHub Advisory)
+bisect  → find breaking version via binary search
+ci      → CI gate mode (deterministic artifacts, exit codes)
+health  → package health signals (maintenance, churn, freshness)
+resolve → resolve transitive dependency tree
+```
+
+---
+
+## ✅ Dos — Always Follow
+
+- **Bun-first**: Use `Bun.$`, `Bun.file`, `bun:sqlite`, `bun:test` for all IO, shell, DB, and testing.
+- **ESM only**: All modules use `import`/`export`. Never use `require()` or CommonJS.
+- **TypeScript strict**: All code must be valid TypeScript with `strict: true`. No `any` without justification.
+- **Small focused modules**: One clear responsibility per file. Prefer composition over large files.
+- **Zod for validation**: All external data (registry responses, config files, CLI options) must be validated with Zod schemas.
+- **Exit codes**:
+  - `0` — success / no updates found
+  - `1` — updates detected (standard CI behavior)
+  - `2` — operational or runtime error
+- **Keep `src/generated/version.ts` in sync**: After any version change, run `bun run version:sync`.
+- **Deterministic artifacts**: CI-facing outputs go to `.artifacts/` (e.g., `decision-plan.json`). Keep format stable.
+- **Machine-readable outputs**: The `--format json`, `--format sarif`, `--format github` contracts are stable. Never break them.
+- **Naming**: `camelCase` for functions/variables, `PascalCase` for types/interfaces, kebab-case for filenames.
+- **2-space indentation**. Biome enforces this.
+- **Add tests** for every new flag, command, output format, or behavior change in `tests/`.
+
+---
+
+## ❌ Don'ts — Hard Stops
+
+- **Do NOT add Rust bindings** — Bun's native APIs are the performance layer. No `napi-rs`, no native addons.
+- **Do NOT use Node.js-only APIs** when a Bun equivalent exists (`fs`, `child_process`, `crypto` module equivalents).
+- **Do NOT use `require()`** — ESM only.
+- **Do NOT edit `dist/`** — it is generated output.
+- **Do NOT edit `src/generated/version.ts`** directly — use `bun run version:sync`.
+- **Do NOT install duplicates of Bun built-ins** (`dotenv`, `better-sqlite3`, `execa`, `ws`, etc.).
+- **Do NOT break machine-readable output contracts** (`json`, `sarif`, `github` formats).
+- **Do NOT add heavy dependencies** without benchmarking the startup time impact.
+- **Do NOT use `console.log` for structured output** — use the formatters in `src/output/`.
+- **Do NOT skip tests** — every new behavior needs a test in `tests/` using `bun:test`.
+
+---
+
+## 🧪 Testing Rules
+
+Framework: `bun:test` — **always**, no exceptions.
+
+```ts
+import { test, expect, describe, beforeEach, mock } from "bun:test";
+
+describe("pm-detect", () => {
+  test("detects pnpm workspace from lockfile", async () => {
+    // test body
+  });
+});
+```
+
+- **Name tests by behavior**, not by implementation: `pm-detect.test.ts`, `workspace-scope.test.ts`.
+- Place tests in `tests/` mirroring the `src/` structure.
+- Use file fixtures from `tests/fixtures/` for package.json and lockfile scenarios.
+- For shell/process tests, use `Bun.$` with temp directories.
+- Mock registry calls — never make real HTTP calls in tests.
+- Before opening a PR: `bun run check` (typecheck + full suite) must pass.
+
+---
+
+## 🏗️ Architecture Patterns
+
+### Adding a New Command
+
+1. Create `src/commands/<name>/runner.ts` with the core logic.
+2. Create `src/commands/<name>/options.ts` with Zod-validated options schema.
+3. Register the command in `src/bin/cli.ts` dispatcher.
+4. Add output formatter support in `src/output/` if needed.
+5. Write tests in `tests/<name>.test.ts`.
+6. Update `--help` text in the dispatch layer.
+
+### Adding Output Formats
+
+All structured output flows through `src/output/`. Add a new formatter there — never write ad-hoc `console.log` in command runners.
+
+### Using the Cache
+
+```ts
+import { Database } from "bun:sqlite";
+const db = new Database(".rainy-cache.sqlite", { create: true });
+```
+
+TTL-based caching is in `src/cache/`. Respect the layered cache (memory → sqlite → network).
+
+### File I/O
+
+```ts
+// Reading
+const content = await Bun.file("path/to/file.json").json();
+const text = await Bun.file("path/to/file").text();
+
+// Writing
+await Bun.write("path/to/output.json", JSON.stringify(data, null, 2));
+
+// Checking existence
+const exists = await Bun.file("path").exists();
+```
+
+### Shell Commands
+
+```ts
+// Simple command
+const result = await Bun.$`bun install`.cwd(dir).text();
+
+// With error handling
+const { stdout, stderr, exitCode } = await Bun.$`npm pack`.quiet().nothrow();
+```
+
+---
+
+## 📦 Dependency Policy
+
+Current production dependencies:
+
+- `ink` + `react` — TUI rendering (Ink components)
+- `zod` — schema validation
+- `oxc-parser` — fast JS/TS AST parsing
+
+**Before adding any new dependency:**
+
+1. Check if a Bun native API covers it.
+2. Benchmark startup time delta (`bun run bench:check`).
+3. Verify it works with `"type": "module"` and Bun's module resolution.
+4. If it's a dev tool, add to `devDependencies` only.
+
+---
+
+## 🔄 Release & Version Flow
+
+1. Bump version in `package.json`.
+2. Run `bun run version:sync` (updates `src/generated/version.ts`).
+3. Run `bun run prepublishOnly` (full gate: check + build + binary + test:prod).
+4. Commit with `chore(release): v<version>`.
+5. Tag and push.
+
+Commit style: **Conventional Commits** — `feat(scope): ...`, `fix(cli): ...`, `refactor(core): ...`, `chore(release): ...`.
+
+---
+
+## 🚦 CI & Output Contracts
+
+The following output formats are **stable public API** — never change structure:
+
+- `--format json` → structured JSON to stdout
+- `--format sarif` → SARIF 2.1.0 for GitHub Code Scanning
+- `--format github` → GitHub Actions annotation format
+
+CI artifacts land in `.artifacts/`:
+
+- `decision-plan.json` — serialized upgrade decisions
+- Lockfile snapshots for baseline diffing
+
+Exit codes must be deterministic: `0` / `1` / `2` — no other codes.
+
+---
+
+## ⚙️ Coding Style Quick Reference
+
+```ts
+// ✅ Good: focused module, typed, Bun IO
+import { z } from "zod";
+import type { UpgradeResult } from "../types/index.ts";
+
+const OptionSchema = z.object({
+  target: z.enum(["patch", "minor", "major", "latest"]).default("minor"),
+  ci: z.boolean().default(false),
+});
+
+export async function runCheck(
+  opts: z.infer<typeof OptionSchema>,
+): Promise<UpgradeResult[]> {
+  const pkgJson = await Bun.file("package.json").json();
+  // ...
+}
+
+// ❌ Bad: Node.js APIs, require, untyped
+const fs = require("fs");
+const data = JSON.parse(fs.readFileSync("package.json", "utf8"));
+```
+
+---
+
+## 🧭 When in Doubt
+
+1. **Check `DESIGN.md`** — architectural vision and pipeline design.
+2. **Check `CHANGELOG.md`** — recent decisions and breaking changes.
+3. **Read the existing module** before adding a new one — it probably already exists.
+4. **Bun docs**: `node_modules/bun-types/docs/**/*.mdx` or [bun.sh/docs](https://bun.sh/docs).
+5. **Run `bun run check`** before declaring anything done.
