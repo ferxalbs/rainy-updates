@@ -1,6 +1,6 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "The fastest DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and automates npm/pnpm dependencies in CI.",
   "type": "module",
   "private": false,
@@ -58,6 +58,7 @@
     "build": "bun run version:sync && tsc -p tsconfig.build.json",
     "build:exe": "bun run version:sync && bun build ./src/bin/cli.ts --compile --outfile dist/rup",
     "build:release-binary": "bun scripts/build-release-binary.mjs",
+    "generate:distribution-manifests": "bun scripts/generate-distribution-manifests.mjs",
     "typecheck": "bun run version:check && tsc --noEmit",
     "test": "bun run version:check && bun test",
     "lint": "bunx biome check src tests",

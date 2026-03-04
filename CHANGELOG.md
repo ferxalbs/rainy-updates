@@ -16,6 +16,10 @@ Dashboard hardening, cross-platform execution cleanup, and portable release oper
   - GitHub Releases now have a separate workflow from npm publishing,
   - tag builds can produce standalone binaries for Linux, macOS, and Windows,
   - packaged archives are uploaded with SHA-256 checksum files.
+- **Distribution manifest generator**:
+  - generates a Homebrew formula from release asset checksums,
+  - generates a Scoop manifest from the Windows release asset checksum,
+  - release artifacts now include copy-ready Homebrew and Scoop metadata.
 - **New test coverage** for:
   - shared shell invocation behavior across POSIX and Windows,
   - dashboard startup state derived from `--view` and `--focus`,

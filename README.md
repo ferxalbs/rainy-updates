@@ -22,6 +22,9 @@ Risk engine:
 Benchmarks:
 [Benchmark methodology](./docs/benchmarks.md)
 
+Distribution:
+[Distribution guide](./docs/distribution-guide.md)
+
 ## What it is
 
 Rainy Updates gives teams one dependency lifecycle:
@@ -78,6 +81,21 @@ pnpm add -D @rainy-updates/cli
 # or
 bun add -d @rainy-updates/cli
 ```
+
+### Standalone binaries from GitHub Releases
+
+If you do not want to depend on global npm or a project-local `node_modules`, use the standalone compiled binaries from GitHub Releases.
+
+Release assets are published for:
+
+- Linux x64
+- Linux arm64
+- macOS x64
+- macOS arm64
+- Windows x64
+
+See:
+[Distribution guide](./docs/distribution-guide.md)
 
 Once installed, three binary aliases are available in your `node_modules/.bin/`:
 

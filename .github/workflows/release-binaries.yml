@@ -110,12 +110,30 @@ jobs:
     needs: build-assets
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Download packaged assets
         uses: actions/download-artifact@v4
         with:
           path: dist/github-release
           pattern: release-*
           merge-multiple: true
+
+      - name: Generate Homebrew and Scoop manifests
+        run: |
+          mkdir -p dist/assets
+          cp dist/github-release/* dist/assets/
+          bun scripts/generate-distribution-manifests.mjs \
+            --version "${RELEASE_TAG}" \
+            --repo "${{ github.repository }}" \
+            --assets-dir dist/assets \
+            --output-dir dist/github-release/manifests
 
       - name: Create or update GitHub release
         env:
@@ -126,4 +144,8 @@ jobs:
               --title "${RELEASE_TAG}" \
               --generate-notes
 
-          gh release upload "${RELEASE_TAG}" dist/github-release/* --clobber
+          gh release upload "${RELEASE_TAG}" \
+            dist/github-release/* \
+            dist/github-release/manifests/homebrew/rup.rb \
+            dist/github-release/manifests/scoop/rup.json \
+            --clobber
