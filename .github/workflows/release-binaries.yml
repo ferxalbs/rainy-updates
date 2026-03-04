@@ -1,0 +1,129 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to package (for example: v0.6.2)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Validate source
+        run: bun run check
+
+  build-assets:
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-x64
+            target: bun-linux-x64-baseline
+            archive: tar.gz
+          - id: linux-arm64
+            target: bun-linux-arm64
+            archive: tar.gz
+          - id: macos-x64
+            target: bun-darwin-x64
+            archive: tar.gz
+          - id: macos-arm64
+            target: bun-darwin-arm64
+            archive: tar.gz
+          - id: windows-x64
+            target: bun-windows-x64-baseline
+            archive: zip
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Sync version metadata
+        run: bun run version:sync
+
+      - name: Build release directory
+        run: |
+          bun scripts/build-release-binary.mjs \
+            "${{ matrix.target }}" \
+            "dist/release/${{ matrix.id }}"
+
+      - name: Package tar.gz asset
+        if: matrix.archive == 'tar.gz'
+        run: |
+          mkdir -p dist/assets
+          tar -C "dist/release/${{ matrix.id }}" \
+            -czf "dist/assets/rup-${{ env.RELEASE_TAG }}-${{ matrix.id }}.tar.gz" .
+
+      - name: Package zip asset
+        if: matrix.archive == 'zip'
+        run: |
+          mkdir -p dist/assets
+          cd "dist/release/${{ matrix.id }}"
+          zip -r "../../assets/rup-${{ env.RELEASE_TAG }}-${{ matrix.id }}.zip" .
+
+      - name: Generate checksums
+        run: |
+          cd dist/assets
+          sha256sum "rup-${{ env.RELEASE_TAG }}-${{ matrix.id }}.${{ matrix.archive }}" \
+            > "rup-${{ env.RELEASE_TAG }}-${{ matrix.id }}.${{ matrix.archive }}.sha256"
+
+      - name: Upload packaged asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.id }}
+          path: |
+            dist/assets/rup-${{ env.RELEASE_TAG }}-${{ matrix.id }}.${{ matrix.archive }}
+            dist/assets/rup-${{ env.RELEASE_TAG }}-${{ matrix.id }}.${{ matrix.archive }}.sha256
+
+  publish-release:
+    needs: build-assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download packaged assets
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/github-release
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${RELEASE_TAG}" >/dev/null 2>&1 || \
+            gh release create "${RELEASE_TAG}" \
+              --title "${RELEASE_TAG}" \
+              --generate-notes
+
+          gh release upload "${RELEASE_TAG}" dist/github-release/* --clobber

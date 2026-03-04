@@ -57,6 +57,7 @@
     "version": "bun run version:sync",
     "build": "bun run version:sync && tsc -p tsconfig.build.json",
     "build:exe": "bun run version:sync && bun build ./src/bin/cli.ts --compile --outfile dist/rup",
+    "build:release-binary": "bun scripts/build-release-binary.mjs",
     "typecheck": "bun run version:check && tsc --noEmit",
     "test": "bun run version:check && bun test",
     "lint": "bunx biome check src tests",

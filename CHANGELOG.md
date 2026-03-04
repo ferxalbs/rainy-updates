@@ -12,6 +12,10 @@ Dashboard hardening, cross-platform execution cleanup, and portable release oper
   - added a root `Makefile` for common build/check/release flows,
   - added a `ga` package script so readiness checks can be invoked consistently from Bun scripts and `make`.
 - **Shared shell invocation layer** for Windows, macOS, and Linux command execution in verification and bisect flows.
+- **Dedicated binary release workflow**:
+  - GitHub Releases now have a separate workflow from npm publishing,
+  - tag builds can produce standalone binaries for Linux, macOS, and Windows,
+  - packaged archives are uploaded with SHA-256 checksum files.
 - **New test coverage** for:
   - shared shell invocation behavior across POSIX and Windows,
   - dashboard startup state derived from `--view` and `--focus`,
@@ -33,6 +37,9 @@ Dashboard hardening, cross-platform execution cleanup, and portable release oper
   - `clean` no longer depends on `rm -rf`,
   - `test:prod` no longer depends on POSIX `test -x`,
   - build and production validation now work with compiled Bun artifacts on Windows (`dist/rup.exe`) as well as POSIX (`dist/rup`).
+- Release automation is now intentionally split:
+  - one workflow publishes the npm package,
+  - one workflow creates and uploads GitHub binary assets for standalone installation.
 - `ga` readiness checks now also verify:
   - portable automation entrypoints,
   - obvious platform-specific script risks,
