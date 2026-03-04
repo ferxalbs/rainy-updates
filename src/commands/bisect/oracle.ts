@@ -5,6 +5,7 @@ import {
   createPackageManagerProfile,
   detectPackageManagerDetails,
 } from "../../pm/detect.js";
+import { buildShellInvocation } from "../../utils/shell.js";
 
 /**
  * The "oracle" for bisect: installs a specific version of a package
@@ -50,8 +51,8 @@ export async function bisectOracle(
 
 async function runShell(command: string, cwd: string): Promise<number> {
   try {
-    const shellCmd = process.env.SHELL || "sh";
-    const proc = Bun.spawn([shellCmd, "-c", command], {
+    const invocation = buildShellInvocation(command);
+    const proc = Bun.spawn([invocation.shell, ...invocation.args], {
       cwd: path.resolve(cwd),
       stdout: "pipe",
       stderr: "pipe",

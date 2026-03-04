@@ -1,18 +1,12 @@
-import React, { useState } from "react";
-import { Box, render, Text, useInput } from "ink";
+import React from "react";
+import { Box, render, Text, useInput, useStdout } from "ink";
 import type { DecisionState, ReviewItem } from "../types/index.js";
-
-const FILTER_ORDER = [
-  "all",
-  "security",
-  "risky",
-  "major",
-  "peer-conflict",
-  "license",
-  "unused",
-  "blocked",
-] as const;
-type FilterKey = (typeof FILTER_ORDER)[number];
+import {
+  DETAIL_TABS,
+  FILTER_ORDER,
+  type DashboardDetailTab,
+  type DashboardFilterKey,
+} from "./dashboard-state.js";
 
 const SORT_ORDER = ["risk", "advisories", "diff", "name", "workspace"] as const;
 type SortKey = (typeof SORT_ORDER)[number];
@@ -20,21 +14,12 @@ type SortKey = (typeof SORT_ORDER)[number];
 const GROUP_ORDER = ["none", "workspace", "scope", "risk", "decision"] as const;
 type GroupKey = (typeof GROUP_ORDER)[number];
 
-const DETAIL_TABS = [
-  "overview",
-  "risk",
-  "security",
-  "peer",
-  "license",
-  "health",
-  "changelog",
-] as const;
-type DetailTab = (typeof DETAIL_TABS)[number];
-
 interface TuiAppProps {
   items: ReviewItem[];
   title?: string;
   subtitle?: string;
+  initialFilter?: DashboardFilterKey;
+  initialTab?: DashboardDetailTab;
   onComplete: (selected: ReviewItem[]) => void;
 }
 
@@ -58,19 +43,37 @@ interface TuiState {
 
 type TuiAction =
   | { type: "SET_SEARCH_MODE"; active: boolean }
-  | { type: "SET_SEARCH"; value: string }
   | { type: "APPEND_SEARCH"; value: string }
   | { type: "BACKSPACE_SEARCH" }
   | { type: "TOGGLE_HELP" }
   | { type: "SET_HELP"; active: boolean }
   | { type: "MOVE_FILTER"; direction: 1 | -1; max: number }
   | { type: "MOVE_CURSOR"; direction: 1 | -1; max: number }
-  | { type: "RESET_CURSOR" }
   | { type: "CYCLE_SORT"; max: number }
   | { type: "CYCLE_GROUP"; max: number }
-  | { type: "CYCLE_TAB"; max: number }
+  | { type: "CYCLE_TAB"; direction: 1 | -1; max: number }
   | { type: "SET_SELECTED"; indices: Set<number> }
   | { type: "TOGGLE_SELECTED"; index: number };
+
+interface DashboardMetrics {
+  total: number;
+  selected: number;
+  actionable: number;
+  blocked: number;
+  security: number;
+}
+
+interface RenderWindow {
+  rows: VisibleRow[];
+  start: number;
+  end: number;
+}
+
+interface DashboardLayout {
+  railWidth: number;
+  detailWidth: number;
+  queueWidth: number;
+}
 
 function tuiReducer(state: TuiState, action: TuiAction): TuiState {
   switch (action.type) {
@@ -80,8 +83,6 @@ function tuiReducer(state: TuiState, action: TuiAction): TuiState {
         searchMode: action.active,
         ...(action.active ? {} : { search: "", cursorIndex: 0 }),
       };
-    case "SET_SEARCH":
-      return { ...state, search: action.value, cursorIndex: 0 };
     case "APPEND_SEARCH":
       return { ...state, search: state.search + action.value, cursorIndex: 0 };
     case "BACKSPACE_SEARCH":
@@ -107,8 +108,6 @@ function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           Math.max(0, state.cursorIndex + action.direction),
         ),
       };
-    case "RESET_CURSOR":
-      return { ...state, cursorIndex: 0 };
     case "CYCLE_SORT":
       return {
         ...state,
@@ -121,8 +120,10 @@ function tuiReducer(state: TuiState, action: TuiAction): TuiState {
         groupIndex: (state.groupIndex + 1) % action.max,
         cursorIndex: 0,
       };
-    case "CYCLE_TAB":
-      return { ...state, tabIndex: (state.tabIndex + 1) % action.max };
+    case "CYCLE_TAB": {
+      const next = (state.tabIndex + action.direction + action.max) % action.max;
+      return { ...state, tabIndex: next };
+    }
     case "SET_SELECTED":
       return { ...state, selectedIndices: action.indices };
     case "TOGGLE_SELECTED": {
@@ -136,13 +137,22 @@ function tuiReducer(state: TuiState, action: TuiAction): TuiState {
   }
 }
 
-function TuiApp({ items, title, subtitle, onComplete }: TuiAppProps) {
+function TuiApp({
+  items,
+  title,
+  subtitle,
+  initialFilter = "all",
+  initialTab = "overview",
+  onComplete,
+}: TuiAppProps) {
+  const { stdout } = useStdout();
+  const { columns: stdoutWidth = 160, rows: stdoutHeight = 32 } = stdout;
   const [state, dispatch] = React.useReducer(tuiReducer, undefined, () => ({
     cursorIndex: 0,
-    filterIndex: 0,
+    filterIndex: Math.max(0, FILTER_ORDER.indexOf(initialFilter)),
     sortIndex: 0,
     groupIndex: 0,
-    tabIndex: 0,
+    tabIndex: Math.max(0, DETAIL_TABS.indexOf(initialTab)),
     showHelp: false,
     searchMode: false,
     search: "",
@@ -157,17 +167,11 @@ function TuiApp({ items, title, subtitle, onComplete }: TuiAppProps) {
   const activeSort = SORT_ORDER[state.sortIndex] ?? "risk";
   const activeGroup = GROUP_ORDER[state.groupIndex] ?? "none";
   const activeTab = DETAIL_TABS[state.tabIndex] ?? "overview";
-  const searchMode = state.searchMode;
-  const search = state.search;
-  const showHelp = state.showHelp;
-  const selectedIndices = state.selectedIndices;
-  const filterIndex = state.filterIndex;
-
   const visibleRows = buildVisibleRows(items, {
     filter: activeFilter,
     sort: activeSort,
     group: activeGroup,
-    search,
+    search: state.search,
   });
   const itemRows = visibleRows.filter(
     (row): row is VisibleRow & { index: number } =>
@@ -179,16 +183,25 @@ function TuiApp({ items, title, subtitle, onComplete }: TuiAppProps) {
   );
   const focusedIndex = itemRows[boundedCursor]?.index ?? 0;
   const focusedItem = items[focusedIndex];
+  const visibleMetrics = summarizeVisibleItems(itemRows, items, state.selectedIndices);
+  const renderWindow = createRenderWindow({
+    visibleRows,
+    focusedIndex,
+    stdoutHeight,
+  });
+  const rowPositionByIndex = createRowPositionMap(itemRows);
+  const layout = createDashboardLayout(stdoutWidth);
+  const platformLabel = process.platform === "win32" ? "windows" : "unix";
+  const selectedItems = items.filter((_, index) => state.selectedIndices.has(index));
 
   useInput((input, key) => {
-    if (searchMode) {
+    if (state.searchMode) {
       if (key.escape) {
         dispatch({ type: "SET_SEARCH_MODE", active: false });
         return;
       }
       if (key.return) {
         dispatch({ type: "SET_SEARCH_MODE", active: false });
-        dispatch({ type: "SET_SEARCH", value: search }); // keeps search but exits mode
         return;
       }
       if (key.backspace || key.delete) {
@@ -209,81 +222,163 @@ function TuiApp({ items, title, subtitle, onComplete }: TuiAppProps) {
       dispatch({ type: "TOGGLE_HELP" });
       return;
     }
-    if (key.escape && showHelp) {
+    if (key.escape && state.showHelp) {
       dispatch({ type: "SET_HELP", active: false });
       return;
     }
-    if (key.leftArrow) {
+    if (key.leftArrow || input === "h") {
       dispatch({
         type: "MOVE_FILTER",
         direction: -1,
         max: FILTER_ORDER.length - 1,
       });
+      return;
     }
-    if (key.rightArrow) {
+    if (key.rightArrow || input === "l") {
       dispatch({
         type: "MOVE_FILTER",
         direction: 1,
         max: FILTER_ORDER.length - 1,
       });
+      return;
     }
-    if (key.upArrow) {
+    if (key.upArrow || input === "k") {
       dispatch({
         type: "MOVE_CURSOR",
         direction: -1,
         max: itemRows.length - 1,
       });
+      return;
     }
-    if (key.downArrow) {
-      dispatch({ type: "MOVE_CURSOR", direction: 1, max: itemRows.length - 1 });
+    if (key.downArrow || input === "j") {
+      dispatch({
+        type: "MOVE_CURSOR",
+        direction: 1,
+        max: itemRows.length - 1,
+      });
+      return;
     }
     if (input === "o") {
       dispatch({ type: "CYCLE_SORT", max: SORT_ORDER.length });
+      return;
     }
     if (input === "g") {
       dispatch({ type: "CYCLE_GROUP", max: GROUP_ORDER.length });
+      return;
     }
     if (key.tab) {
-      dispatch({ type: "CYCLE_TAB", max: DETAIL_TABS.length });
+      dispatch({
+        type: "CYCLE_TAB",
+        direction: key.shift ? -1 : 1,
+        max: DETAIL_TABS.length,
+      });
+      return;
     }
     if (input === "a") {
       dispatch({
         type: "SET_SELECTED",
-        indices: addVisible(selectedIndices, itemRows),
+        indices: addVisible(state.selectedIndices, itemRows),
       });
+      return;
     }
     if (input === "n") {
       dispatch({
         type: "SET_SELECTED",
-        indices: removeVisible(selectedIndices, itemRows),
+        indices: removeVisible(state.selectedIndices, itemRows),
       });
+      return;
     }
     if (input === "s") {
       dispatch({
         type: "SET_SELECTED",
-        indices: selectSafe(selectedIndices, itemRows, items),
+        indices: selectSafe(state.selectedIndices, itemRows, items),
       });
+      return;
     }
     if (input === "b") {
       dispatch({
         type: "SET_SELECTED",
-        indices: clearBlocked(selectedIndices, itemRows, items),
+        indices: clearBlocked(state.selectedIndices, itemRows, items),
       });
+      return;
+    }
+    if (input === "x") {
+      dispatch({
+        type: "SET_SELECTED",
+        indices: selectActionable(state.selectedIndices, itemRows, items),
+      });
+      return;
     }
     if (input === " ") {
       dispatch({ type: "TOGGLE_SELECTED", index: focusedIndex });
+      return;
     }
-    if (input === "q" || key.escape) {
-      onComplete(items.filter((_, index) => selectedIndices.has(index)));
+    if (input === "q" || (key.escape && !state.showHelp)) {
+      onComplete(selectedItems);
       return;
     }
     if (key.return) {
-      onComplete(items.filter((_, index) => selectedIndices.has(index)));
+      onComplete(selectedItems);
     }
   });
 
   return (
     <Box flexDirection="column" padding={1}>
+      <DashboardHeader
+        title={title}
+        subtitle={subtitle}
+        platformLabel={platformLabel}
+        metrics={visibleMetrics}
+      />
+
+      <Box marginTop={1} flexDirection="row">
+        <FilterRail
+          width={layout.railWidth}
+          filterIndex={state.filterIndex}
+          search={state.search}
+          searchMode={state.searchMode}
+          activeSort={activeSort}
+          activeGroup={activeGroup}
+          activeTab={activeTab}
+        />
+
+        <QueuePanel
+          width={layout.queueWidth}
+          items={items}
+          visibleRows={visibleRows}
+          itemRows={itemRows}
+          renderWindow={renderWindow}
+          rowPositionByIndex={rowPositionByIndex}
+          boundedCursor={boundedCursor}
+          selectedIndices={state.selectedIndices}
+        />
+
+        <DecisionPanel
+          width={layout.detailWidth}
+          activeTab={activeTab}
+          focusedItem={focusedItem}
+        />
+      </Box>
+
+      <ActionBar />
+      {state.showHelp ? <HelpPanel /> : null}
+    </Box>
+  );
+}
+
+function DashboardHeader({
+  title,
+  subtitle,
+  platformLabel,
+  metrics,
+}: {
+  title?: string;
+  subtitle?: string;
+  platformLabel: string;
+  metrics: DashboardMetrics;
+}) {
+  return (
+    <>
       <Text bold color="cyan">
         {title ?? "Rainy Dashboard"}
       </Text>
@@ -292,161 +387,246 @@ function TuiApp({ items, title, subtitle, onComplete }: TuiAppProps) {
           "Check detects, doctor summarizes, dashboard decides, upgrade applies."}
       </Text>
       <Text color="gray">
-        Filters: ←/→ Sort: o Group: g Tabs: Tab Search: / Help: ? Space: toggle
-        Enter: confirm
+        {platformLabel} keys: arrows or hjkl, Tab changes panel, / search, ?
+        help, Enter confirm
       </Text>
-
-      <Box marginTop={1} flexDirection="row">
-        <Box
-          width={24}
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          paddingX={1}
-        >
-          <Text bold>Filter Rail</Text>
-          {FILTER_ORDER.map((filter, index) => (
-            <Text key={filter} color={index === filterIndex ? "cyan" : "gray"}>
-              {index === filterIndex ? ">" : " "} {filter}
-            </Text>
-          ))}
-          <Box marginTop={1} flexDirection="column">
-            <Text bold>Search</Text>
-            <Text color={searchMode ? "cyan" : "gray"}>
-              {searchMode ? `/${search}` : search ? `/${search}` : "inactive"}
-            </Text>
-          </Box>
-          <Box marginTop={1} flexDirection="column">
-            <Text bold>Modes</Text>
-            <Text color="gray">sort: {activeSort}</Text>
-            <Text color="gray">group: {activeGroup}</Text>
-            <Text color="gray">tab: {activeTab}</Text>
-          </Box>
-        </Box>
-
-        <Box
-          marginLeft={1}
-          width={82}
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          paddingX={1}
-        >
-          <Text bold>Review Queue</Text>
-          {itemRows.length === 0 ? (
-            <Text color="gray">No review candidates match this view.</Text>
-          ) : (
-            visibleRows.map((row, visibleIndex) => {
-              if (row.kind === "group") {
-                return (
-                  <Text key={`group:${row.label}`} bold color="gray">
-                    {row.label}
-                  </Text>
-                );
-              }
-              const index = row.index ?? 0;
-              const item = items[index];
-              const update = item.update;
-              const decision = update.decisionState ?? deriveDecision(item);
-              const itemPosition = itemRows.findIndex(
-                (candidate) => candidate.index === index,
-              );
-              const isFocused = itemPosition === boundedCursor;
-              const isSelected = selectedIndices.has(index);
-              return (
-                <Box
-                  key={`${update.packagePath}:${update.name}`}
-                  flexDirection="row"
-                >
-                  <Text color={isFocused ? "cyan" : "gray"}>
-                    {isFocused ? ">" : " "} {isSelected ? "[x]" : "[ ]"}{" "}
-                  </Text>
-                  <Box width={22}>
-                    <Text bold={isFocused}>{update.name}</Text>
-                  </Box>
-                  <Box width={14}>
-                    <Text color={diffColor(update.diffType)}>
-                      {update.diffType}
-                    </Text>
-                  </Box>
-                  <Box width={14}>
-                    <Text color={riskColor(update.riskLevel)}>
-                      {update.riskLevel ?? "low"}
-                    </Text>
-                  </Box>
-                  <Box width={14}>
-                    <Text color={decisionColor(decision)}>{decision}</Text>
-                  </Box>
-                  <Box width={10}>
-                    <Text color={decisionColor(decision)}>
-                      {update.riskScore ?? "--"}
-                    </Text>
-                  </Box>
-                  <Text color="gray">{update.fromRange}</Text>
-                  <Text color="gray"> → </Text>
-                  <Text color="green">{update.toVersionResolved}</Text>
-                </Box>
-              );
-            })
-          )}
-        </Box>
-
-        <Box
-          marginLeft={1}
-          width={54}
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          paddingX={1}
-        >
-          <Text bold>Decision Panel</Text>
-          <Text color="gray">tab: {activeTab}</Text>
-          {focusedItem ? (
-            renderTab(focusedItem, activeTab)
-          ) : (
-            <Text color="gray">No review candidate selected.</Text>
-          )}
-        </Box>
-      </Box>
-
       <Box marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
-        <Text color="gray">
-          {selectedIndices.size} selected of {items.length}. view={activeFilter}{" "}
-          sort={activeSort} group={activeGroup}
+        <Text>
+          visible {metrics.total} | selected {metrics.selected} | actionable{" "}
+          {metrics.actionable} | blocked {metrics.blocked} | security{" "}
+          {metrics.security}
         </Text>
       </Box>
+    </>
+  );
+}
 
-      <Box marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
-        <Text color="gray">
-          A select visible N clear visible S select safe B clear blocked Q
-          finish Esc clears search/help
+function FilterRail({
+  width,
+  filterIndex,
+  search,
+  searchMode,
+  activeSort,
+  activeGroup,
+  activeTab,
+}: {
+  width: number;
+  filterIndex: number;
+  search: string;
+  searchMode: boolean;
+  activeSort: SortKey;
+  activeGroup: GroupKey;
+  activeTab: DashboardDetailTab;
+}) {
+  return (
+    <Box
+      width={width}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="gray"
+      paddingX={1}
+    >
+      <Text bold>Filter Rail</Text>
+      {FILTER_ORDER.map((filter, index) => (
+        <Text key={filter} color={index === filterIndex ? "cyan" : "gray"}>
+          {index === filterIndex ? ">" : " "} {filter}
+        </Text>
+      ))}
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>Search</Text>
+        <Text color={searchMode ? "cyan" : "gray"}>
+          {searchMode ? `/${search}` : search ? `/${search}` : "inactive"}
         </Text>
       </Box>
-
-      {showHelp ? (
-        <Box
-          marginTop={1}
-          borderStyle="round"
-          borderColor="cyan"
-          paddingX={1}
-          flexDirection="column"
-        >
-          <Text bold>Help</Text>
-          <Text color="gray">
-            Use review as the decision center. Search packages with / and
-            inspect details with Tab.
-          </Text>
-          <Text color="gray">
-            Blocked items default to deselected. Safe items can be bulk-selected
-            with S.
-          </Text>
-        </Box>
-      ) : null}
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>Modes</Text>
+        <Text color="gray">sort: {activeSort}</Text>
+        <Text color="gray">group: {activeGroup}</Text>
+        <Text color="gray">tab: {activeTab}</Text>
+      </Box>
     </Box>
   );
 }
 
-function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
+function QueuePanel({
+  width,
+  items,
+  visibleRows,
+  itemRows,
+  renderWindow,
+  rowPositionByIndex,
+  boundedCursor,
+  selectedIndices,
+}: {
+  width: number;
+  items: ReviewItem[];
+  visibleRows: VisibleRow[];
+  itemRows: Array<VisibleRow & { index: number }>;
+  renderWindow: RenderWindow;
+  rowPositionByIndex: Map<number, number>;
+  boundedCursor: number;
+  selectedIndices: Set<number>;
+}) {
+  return (
+    <Box
+      marginLeft={1}
+      width={width}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="gray"
+      paddingX={1}
+    >
+      <Text bold>
+        Review Queue
+        {renderWindow.start > 0 ? "  [more above]" : ""}
+        {renderWindow.end < visibleRows.length ? "  [more below]" : ""}
+      </Text>
+      {itemRows.length === 0 ? (
+        <Text color="gray">No review candidates match this view.</Text>
+      ) : (
+        renderWindow.rows.map((row) => (
+          <QueueRow
+            key={row.kind === "group" ? `group:${row.label}` : `${items[row.index ?? 0]?.update.packagePath}:${items[row.index ?? 0]?.update.name}`}
+            row={row}
+            items={items}
+            rowPositionByIndex={rowPositionByIndex}
+            boundedCursor={boundedCursor}
+            selectedIndices={selectedIndices}
+          />
+        ))
+      )}
+    </Box>
+  );
+}
+
+function QueueRow({
+  row,
+  items,
+  rowPositionByIndex,
+  boundedCursor,
+  selectedIndices,
+}: {
+  row: VisibleRow;
+  items: ReviewItem[];
+  rowPositionByIndex: Map<number, number>;
+  boundedCursor: number;
+  selectedIndices: Set<number>;
+}) {
+  if (row.kind === "group") {
+    return (
+      <Text bold color="gray">
+        {row.label}
+      </Text>
+    );
+  }
+
+  const index = row.index ?? 0;
+  const item = items[index];
+  const update = item.update;
+  const decision = update.decisionState ?? deriveDecision(item);
+  const itemPosition = rowPositionByIndex.get(index) ?? -1;
+  const isFocused = itemPosition === boundedCursor;
+  const isSelected = selectedIndices.has(index);
+
+  return (
+    <Box flexDirection="row">
+      <Text color={isFocused ? "cyan" : "gray"}>
+        {isFocused ? ">" : " "} {isSelected ? "[x]" : "[ ]"}{" "}
+      </Text>
+      <Box width={24}>
+        <Text bold={isFocused}>{truncate(update.name, 22)}</Text>
+      </Box>
+      <Box width={10}>
+        <Text color={diffColor(update.diffType)}>{update.diffType}</Text>
+      </Box>
+      <Box width={11}>
+        <Text color={riskColor(update.riskLevel)}>
+          {update.riskLevel ?? "low"}
+        </Text>
+      </Box>
+      <Box width={12}>
+        <Text color={decisionColor(decision)}>{truncate(decision, 10)}</Text>
+      </Box>
+      <Box width={7}>
+        <Text color={decisionColor(decision)}>{update.riskScore ?? "--"}</Text>
+      </Box>
+      <Text color="gray">
+        {truncate(update.fromRange, 12)} {"->"}{" "}
+      </Text>
+      <Text color="green">{truncate(update.toVersionResolved, 12)}</Text>
+    </Box>
+  );
+}
+
+function DecisionPanel({
+  width,
+  activeTab,
+  focusedItem,
+}: {
+  width: number;
+  activeTab: DashboardDetailTab;
+  focusedItem?: ReviewItem;
+}) {
+  return (
+    <Box
+      marginLeft={1}
+      width={width}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="gray"
+      paddingX={1}
+    >
+      <Text bold>Decision Panel</Text>
+      <Text color="gray">tab: {activeTab}</Text>
+      {focusedItem ? (
+        renderTab(focusedItem, activeTab)
+      ) : (
+        <Text color="gray">No review candidate selected.</Text>
+      )}
+    </Box>
+  );
+}
+
+function ActionBar() {
+  return (
+    <Box marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
+      <Text color="gray">
+        A add visible | N clear visible | S safe | X actionable | B clear blocked
+        | Space toggle | Q finish
+      </Text>
+    </Box>
+  );
+}
+
+function HelpPanel() {
+  return (
+    <Box
+      marginTop={1}
+      borderStyle="round"
+      borderColor="cyan"
+      paddingX={1}
+      flexDirection="column"
+    >
+      <Text bold>Help</Text>
+      <Text color="gray">
+        Use filters for queue slices, search with /, and switch panels with Tab.
+      </Text>
+      <Text color="gray">
+        The queue is windowed around the focused package for faster rendering in
+        large workspaces.
+      </Text>
+      <Text color="gray">
+        Actionable items can be bulk-selected with X. Blocked items stay easy to
+        clear with B.
+      </Text>
+    </Box>
+  );
+}
+
+function renderTab(
+  item: ReviewItem,
+  tab: DashboardDetailTab,
+): React.JSX.Element {
   const update = item.update;
   if (tab === "risk") {
     return (
@@ -468,13 +648,16 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
         <Text>risk score: {update.riskScore ?? 0}</Text>
         <Text>impact score: {update.impactScore?.score ?? 0}</Text>
         <Text>
-          recommended action:{" "}
-          {update.recommendedAction ?? "Safe to keep in the selected set."}
+          recommended:{" "}
+          {truncate(
+            update.recommendedAction ?? "Safe to keep in the selected set.",
+            80,
+          )}
         </Text>
         {update.riskReasons && update.riskReasons.length > 0 ? (
           update.riskReasons.slice(0, 5).map((reason) => (
             <Text key={reason} color="gray">
-              - {reason}
+              - {truncate(reason, 48)}
             </Text>
           ))
         ) : (
@@ -493,7 +676,10 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
               key={`${advisory.packageName}:${advisory.cveId}`}
               color="gray"
             >
-              - {advisory.severity} {advisory.cveId}: {advisory.title}
+              - {truncate(
+                `${advisory.severity} ${advisory.cveId}: ${advisory.title}`,
+                48,
+              )}
             </Text>
           ))
         ) : (
@@ -509,8 +695,10 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
         {item.peerConflicts.length > 0 ? (
           item.peerConflicts.slice(0, 4).map((conflict) => (
             <Text key={`${conflict.requester}:${conflict.peer}`} color="gray">
-              - {conflict.requester} requires {conflict.peer}{" "}
-              {conflict.requiredRange}
+              - {truncate(
+                `${conflict.requester} requires ${conflict.peer} ${conflict.requiredRange}`,
+                48,
+              )}
             </Text>
           ))
         ) : (
@@ -523,8 +711,8 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
     return (
       <>
         <Text>license status: {update.licenseStatus ?? "allowed"}</Text>
-        <Text>repository: {update.repository ?? "unavailable"}</Text>
-        <Text>homepage: {update.homepage ?? "unavailable"}</Text>
+        <Text>repository: {truncate(update.repository ?? "unavailable", 48)}</Text>
+        <Text>homepage: {truncate(update.homepage ?? "unavailable", 48)}</Text>
       </>
     );
   }
@@ -541,12 +729,13 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
   if (tab === "changelog") {
     return (
       <>
-        <Text>
-          {update.releaseNotesSummary?.title ?? "Release notes unavailable"}
-        </Text>
+        <Text>{truncate(update.releaseNotesSummary?.title ?? "Release notes unavailable", 48)}</Text>
         <Text color="gray">
-          {update.releaseNotesSummary?.excerpt ??
-            "Run review with changelog support or inspect the repository manually."}
+          {truncate(
+            update.releaseNotesSummary?.excerpt ??
+              "Run review with changelog support or inspect the repository manually.",
+            96,
+          )}
         </Text>
       </>
     );
@@ -554,7 +743,7 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
   return (
     <>
       <Text>{update.name}</Text>
-      <Text color="gray">package: {update.packagePath}</Text>
+      <Text color="gray">package: {truncate(update.packagePath, 48)}</Text>
       <Text>
         state:{" "}
         <Text
@@ -577,7 +766,10 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
       <Text>group: {update.groupKey ?? "none"}</Text>
       <Text>
         action:{" "}
-        {update.recommendedAction ?? "Safe to keep in the selected set."}
+        {truncate(
+          update.recommendedAction ?? "Safe to keep in the selected set.",
+          80,
+        )}
       </Text>
     </>
   );
@@ -585,7 +777,12 @@ function renderTab(item: ReviewItem, tab: DetailTab): React.JSX.Element {
 
 function buildVisibleRows(
   items: ReviewItem[],
-  config: { filter: FilterKey; sort: SortKey; group: GroupKey; search: string },
+  config: {
+    filter: DashboardFilterKey;
+    sort: SortKey;
+    group: GroupKey;
+    search: string;
+  },
 ): VisibleRow[] {
   const filtered = items
     .map((item, index) => ({ item, index }))
@@ -618,18 +815,18 @@ function buildVisibleRows(
   return rows;
 }
 
-function matchesFilter(item: ReviewItem, filter: FilterKey): boolean {
+function matchesFilter(item: ReviewItem, filter: DashboardFilterKey): boolean {
   if (filter === "security") return item.advisories.length > 0;
-  if (filter === "risky")
-    return (
-      item.update.riskLevel === "critical" || item.update.riskLevel === "high"
-    );
+  if (filter === "risky") {
+    return item.update.riskLevel === "critical" || item.update.riskLevel === "high";
+  }
   if (filter === "major") return item.update.diffType === "major";
   if (filter === "peer-conflict") return item.peerConflicts.length > 0;
   if (filter === "license") return item.update.licenseStatus === "denied";
   if (filter === "unused") return item.unusedIssues.length > 0;
-  if (filter === "blocked")
+  if (filter === "blocked") {
     return (item.update.decisionState ?? deriveDecision(item)) === "blocked";
+  }
   return true;
 }
 
@@ -648,8 +845,7 @@ function compareItems(
   sort: SortKey,
 ): number {
   if (sort === "advisories") {
-    const byAdvisories =
-      (right.advisories.length ?? 0) - (left.advisories.length ?? 0);
+    const byAdvisories = right.advisories.length - left.advisories.length;
     if (byAdvisories !== 0) return byAdvisories;
   }
   if (sort === "diff") {
@@ -681,8 +877,9 @@ function groupLabel(item: ReviewItem, group: GroupKey): string {
     return "unscoped";
   }
   if (group === "risk") return item.update.riskLevel ?? "low";
-  if (group === "decision")
+  if (group === "decision") {
     return item.update.decisionState ?? deriveDecision(item);
+  }
   return "all";
 }
 
@@ -738,6 +935,22 @@ function clearBlocked(
   return next;
 }
 
+function selectActionable(
+  selected: Set<number>,
+  rows: Array<VisibleRow & { index: number }>,
+  items: ReviewItem[],
+): Set<number> {
+  const next = new Set(selected);
+  for (const row of rows) {
+    const decision = items[row.index]?.update.decisionState ??
+      deriveDecision(items[row.index]!);
+    if (decision === "actionable" || decision === "review") {
+      next.add(row.index);
+    }
+  }
+  return next;
+}
+
 function deriveDecision(item: ReviewItem): DecisionState {
   if (
     item.update.peerConflictSeverity === "error" ||
@@ -745,10 +958,7 @@ function deriveDecision(item: ReviewItem): DecisionState {
   ) {
     return "blocked";
   }
-  if (
-    (item.update.advisoryCount ?? 0) > 0 ||
-    item.update.riskLevel === "critical"
-  ) {
+  if ((item.update.advisoryCount ?? 0) > 0 || item.update.riskLevel === "critical") {
     return "actionable";
   }
   if (item.update.riskLevel === "high" || item.update.diffType === "major") {
@@ -811,9 +1021,100 @@ function decisionColor(label: DecisionState): string {
   }
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function createDashboardLayout(stdoutWidth: number): DashboardLayout {
+  const railWidth = clamp(Math.floor(stdoutWidth * 0.2), 24, 30);
+  const detailWidth = clamp(Math.floor(stdoutWidth * 0.26), 36, 54);
+  const queueWidth = Math.max(48, stdoutWidth - railWidth - detailWidth - 8);
+  return { railWidth, detailWidth, queueWidth };
+}
+
+function truncate(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  if (maxLength <= 1) return value.slice(0, maxLength);
+  return `${value.slice(0, Math.max(1, maxLength - 1))}…`;
+}
+
+function createRowPositionMap(
+  rows: Array<VisibleRow & { index: number }>,
+): Map<number, number> {
+  const map = new Map<number, number>();
+  rows.forEach((row, position) => {
+    map.set(row.index, position);
+  });
+  return map;
+}
+
+function createRenderWindow(config: {
+  visibleRows: VisibleRow[];
+  focusedIndex: number;
+  stdoutHeight: number;
+}): RenderWindow {
+  const maxRows = clamp(config.stdoutHeight - 16, 8, 18);
+  if (config.visibleRows.length <= maxRows) {
+    return {
+      rows: config.visibleRows,
+      start: 0,
+      end: config.visibleRows.length,
+    };
+  }
+
+  const focusedRow = Math.max(
+    0,
+    config.visibleRows.findIndex(
+      (row) => row.kind === "item" && row.index === config.focusedIndex,
+    ),
+  );
+  let start = Math.max(0, focusedRow - Math.floor(maxRows / 2));
+  let end = Math.min(config.visibleRows.length, start + maxRows);
+  start = Math.max(0, end - maxRows);
+
+  return {
+    rows: config.visibleRows.slice(start, end),
+    start,
+    end,
+  };
+}
+
+function summarizeVisibleItems(
+  rows: Array<VisibleRow & { index: number }>,
+  items: ReviewItem[],
+  selected: Set<number>,
+): DashboardMetrics {
+  let actionable = 0;
+  let blocked = 0;
+  let security = 0;
+  let selectedCount = 0;
+
+  for (const row of rows) {
+    const item = items[row.index];
+    const decision = item.update.decisionState ?? deriveDecision(item);
+    if (selected.has(row.index)) selectedCount += 1;
+    if (decision === "actionable" || decision === "review") actionable += 1;
+    if (decision === "blocked") blocked += 1;
+    if (item.advisories.length > 0) security += 1;
+  }
+
+  return {
+    total: rows.length,
+    selected: selectedCount,
+    actionable,
+    blocked,
+    security,
+  };
+}
+
 export async function runTui(
   items: ReviewItem[],
-  options?: { title?: string; subtitle?: string },
+  options?: {
+    title?: string;
+    subtitle?: string;
+    initialFilter?: DashboardFilterKey;
+    initialTab?: DashboardDetailTab;
+  },
 ): Promise<ReviewItem[]> {
   return new Promise((resolve) => {
     const { unmount } = render(
@@ -821,6 +1122,8 @@ export async function runTui(
         items={items}
         title={options?.title}
         subtitle={options?.subtitle}
+        initialFilter={options?.initialFilter}
+        initialTab={options?.initialTab}
         onComplete={(selected) => {
           unmount();
           resolve(selected);

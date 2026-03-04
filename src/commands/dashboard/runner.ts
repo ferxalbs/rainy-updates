@@ -14,6 +14,10 @@ import { buildReviewResult, renderReviewResult } from "../../core/review-model.j
 import { applySelectedUpdates } from "../../core/upgrade.js";
 import { runVerification } from "../../core/verification.js";
 import { runTui } from "../../ui/tui.js";
+import {
+  deriveDashboardInitialFilter,
+  deriveDashboardInitialTab,
+} from "../../ui/dashboard-state.js";
 import { writeStderr, writeStdout } from "../../utils/runtime.js";
 
 export async function runDashboard(
@@ -113,5 +117,7 @@ async function selectDashboardItems(
         ? "Rainy Dashboard: Upgrade Queue"
         : "Rainy Dashboard: Review Queue",
     subtitle: `focus=${options.focus}  mode=${options.mode}  Enter confirms the selected decision set`,
+    initialFilter: deriveDashboardInitialFilter(options),
+    initialTab: deriveDashboardInitialTab(options),
   });
 }

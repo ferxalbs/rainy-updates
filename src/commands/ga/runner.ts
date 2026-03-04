@@ -52,14 +52,17 @@ export async function runGa(options: GaOptions): Promise<GaResult> {
       : "Built CLI entrypoint is missing; run the build before publishing a release artifact.",
   });
 
-  const compiledBinaryExists = await fileExists(path.resolve(options.cwd, "dist/rup"));
+  const compiledBinaryExists = await detectCompiledBinary(options.cwd);
   checks.push({
     name: "runtime-artifacts",
     status: compiledBinaryExists ? "pass" : "warn",
     detail: compiledBinaryExists
-      ? "Compiled Bun runtime artifact exists in dist/rup."
+      ? "Compiled Bun runtime artifact exists in dist/."
       : "Compiled Bun runtime artifact is missing; run bun run build:exe before publishing Bun-first release artifacts.",
   });
+
+  checks.push(await detectAutomationEntryPoints(options.cwd));
+  checks.push(await detectPlatformSupport(options.cwd));
 
   checks.push({
     name: "benchmark-gates",
@@ -144,6 +147,86 @@ async function detectLockfile(cwd: string): Promise<GaCheck> {
     name: "lockfile",
     status: "warn",
     detail: "No supported lockfile was detected.",
+  };
+}
+
+async function detectCompiledBinary(cwd: string): Promise<boolean> {
+  return (
+    (await fileExists(path.resolve(cwd, "dist/rup"))) ||
+    (await fileExists(path.resolve(cwd, "dist/rup.exe")))
+  );
+}
+
+async function detectAutomationEntryPoints(cwd: string): Promise<GaCheck> {
+  const packageJsonPath = path.resolve(cwd, "package.json");
+  let scripts: Record<string, string> = {};
+
+  try {
+    const manifest = (await Bun.file(packageJsonPath).json()) as {
+      scripts?: Record<string, string>;
+    };
+    scripts = manifest.scripts ?? {};
+  } catch {
+    scripts = {};
+  }
+
+  const hasMakefile =
+    (await fileExists(path.resolve(cwd, "Makefile"))) ||
+    (await fileExists(path.resolve(cwd, "makefile")));
+  const requiredScripts = ["build", "check", "test:prod"];
+  const missingScripts = requiredScripts.filter((script) => !scripts[script]);
+
+  if (hasMakefile && missingScripts.length === 0) {
+    return {
+      name: "automation-entrypoints",
+      status: "pass",
+      detail:
+        "Portable automation entrypoints are available via package scripts and Makefile targets.",
+    };
+  }
+
+  if (missingScripts.length === 0) {
+    return {
+      name: "automation-entrypoints",
+      status: "pass",
+      detail:
+        "Portable package scripts are available for build, check, and test:prod.",
+    };
+  }
+
+  return {
+    name: "automation-entrypoints",
+    status: "warn",
+    detail: `Missing automation entrypoints: ${missingScripts.join(", ")}.`,
+  };
+}
+
+async function detectPlatformSupport(cwd: string): Promise<GaCheck> {
+  const packageJsonPath = path.resolve(cwd, "package.json");
+  let scripts: Record<string, string> = {};
+
+  try {
+    const manifest = (await Bun.file(packageJsonPath).json()) as {
+      scripts?: Record<string, string>;
+    };
+    scripts = manifest.scripts ?? {};
+  } catch {
+    scripts = {};
+  }
+
+  const suspectScripts = Object.entries(scripts)
+    .filter(([, command]) =>
+      /\brm\s+-rf\b|\btest\s+-x\b|\bchmod\b|\bcp\s+-R\b/.test(command),
+    )
+    .map(([name]) => name);
+
+  return {
+    name: "platform-support",
+    status: suspectScripts.length === 0 ? "pass" : "warn",
+    detail:
+      suspectScripts.length === 0
+        ? "No obvious POSIX-only package scripts were detected for release-critical automation."
+        : `These scripts still look POSIX-specific and may need extra Windows work: ${suspectScripts.join(", ")}.`,
   };
 }
 

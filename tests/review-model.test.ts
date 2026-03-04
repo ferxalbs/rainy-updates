@@ -122,6 +122,9 @@ test("doctor recommends review when the aggregated result contains execution err
   expect(doctor.score).toBeLessThan(100);
   expect(doctor.scoreLabel).toBe("Strong");
   expect(doctor.findings[0]?.category).toBe("Registry / Execution");
+  expect(doctor.findings[0]?.recommendedAction).toBe(
+    "Run `rup dashboard --mode review` after fixing execution failures.",
+  );
   expect(doctor.recommendedCommand).toBe("rup dashboard --mode review");
   expect(doctor.primaryFindings[0]).toContain("Unable to resolve react");
   expect(doctor.summary.dependencyHealthScore).toBe(88);

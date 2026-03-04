@@ -44,6 +44,24 @@ Compatibility, git-aware workspace scoping, and release-readiness stabilization 
 - `ga` package-manager reporting now includes detection source details and respects the git-scoped workspace discovery flow.
 - `check`, `warm-cache`, `audit`, `unused`, `resolve`, `health`, `licenses`, `snapshot`, and `ga` now share the same git-aware workspace scoping path.
 - Command help and parser support were aligned so git-scoping flags are consistently accepted across the primary and standalone command surfaces.
+- Dashboard review operations were tightened for larger queues and cross-platform operators:
+  - initial dashboard focus and detail tabs now respect `--view` and `--focus`,
+  - the Ink queue renderer now windows large result sets instead of rendering the full queue every frame,
+  - bulk actions now include actionable/review selection in addition to safe and blocked flows,
+  - keyboard navigation now works cleanly with arrows and `hjkl`,
+  - terminal sizing is handled more defensively for smaller shells.
+- Verification and bisect shell execution are now portable across Windows, macOS, and Linux by routing command execution through a shared shell invocation layer.
+- Release automation scripts were made portable:
+  - `clean` no longer depends on `rm -rf`,
+  - `test:prod` no longer depends on POSIX `test -x`,
+  - build and production validation now work with compiled Bun artifacts on Windows (`dist/rup.exe`) as well as POSIX (`dist/rup`).
+- Repository operator entrypoints were consolidated:
+  - added a root `Makefile` for common build/check/release flows,
+  - added a `ga` package script so readiness checks can be invoked consistently from Bun scripts and `make`.
+- `ga` readiness checks now also verify:
+  - portable automation entrypoints,
+  - obvious platform-specific script risks,
+  - compiled runtime artifacts in either POSIX or Windows form.
 
 ### Tests
 
@@ -54,6 +72,14 @@ Compatibility, git-aware workspace scoping, and release-readiness stabilization 
   - `bun run build:exe`
   - `bun run test:prod`
   - `bun ./dist/bin/cli.js ga --workspace`
+- Additional validation completed for this step:
+  - `bun run lint`
+  - `bun run build`
+  - `bun run check`
+  - `bun run test:prod`
+  - `bun run ga`
+  - `bun run perf:check`
+  - `npx -y react-doctor@latest . --verbose --diff` (`99/100`)
 
 ## [0.6.0] - 2026-03-01
 

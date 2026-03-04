@@ -11,6 +11,7 @@ test("renderHelp returns command-specific help", () => {
 test("renderHelp includes dashboard-specific help", () => {
   const output = renderHelp("dashboard");
   expect(output).toContain("rainy-updates dashboard [options]");
+  expect(output).toContain("--view dependencies|security|health");
   expect(output).toContain("--mode check|review|upgrade");
   expect(output).toContain("--focus all|security|risk|major|blocked|workspace");
 });

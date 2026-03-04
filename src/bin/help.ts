@@ -273,6 +273,7 @@ Options:
   --base <ref>
   --head <ref>
   --since <ref>
+  --view dependencies|security|health
   --mode check|review|upgrade
   --focus all|security|risk|major|blocked|workspace
   --apply-selected

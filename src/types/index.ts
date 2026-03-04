@@ -843,6 +843,8 @@ export interface GaCheck {
     | "cache-backend"
     | "dist-build"
     | "runtime-artifacts"
+    | "automation-entrypoints"
+    | "platform-support"
     | "benchmark-gates"
     | "docs-contract";
   status: "pass" | "warn" | "fail";

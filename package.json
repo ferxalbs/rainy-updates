@@ -51,7 +51,7 @@
     "CODE_OF_CONDUCT.md"
   ],
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "bun scripts/clean.mjs",
     "version:sync": "bun scripts/sync-version.mjs",
     "version:check": "bun scripts/sync-version.mjs --check",
     "version": "bun run version:sync",
@@ -61,6 +61,7 @@
     "test": "bun run version:check && bun test",
     "lint": "bunx biome check src tests",
     "check": "bun run typecheck && bun test",
+    "ga": "bun ./src/bin/cli.ts ga",
     "bench:fixtures": "bun run scripts/generate-benchmark-fixtures.mjs",
     "bench:check": "bun run build && bun run bench:fixtures && bun run scripts/benchmark.mjs single-100 check cold 3 && bun run scripts/benchmark.mjs single-100 check warm 3",
     "bench:review": "bun run build && bun run bench:fixtures && bun run scripts/benchmark.mjs single-100 review cold 3 && bun run scripts/benchmark.mjs single-100 review warm 3",
@@ -70,7 +71,7 @@
     "perf:check": "bun run scripts/perf-smoke.mjs",
     "perf:resolve": "RAINY_UPDATES_PERF_SCENARIO=resolve bun run scripts/perf-smoke.mjs",
     "perf:ci": "RAINY_UPDATES_PERF_SCENARIO=ci bun run scripts/perf-smoke.mjs",
-    "test:prod": "bun ./dist/bin/cli.js --help && bun ./dist/bin/cli.js --version && (test -x ./dist/rup || bun run build:exe) && ./dist/rup --help && ./dist/rup --version",
+    "test:prod": "bun scripts/test-prod.mjs",
     "prepublishOnly": "bun run check && bun run build && bun run build:exe && bun run test:prod"
   },
   "engines": {

@@ -14,7 +14,7 @@ export function buildDoctorFindings(review: ReviewResult): DoctorFinding[] {
       summary: error,
       details: "Execution errors make the scan incomplete or require operator review.",
       help: "Resolve execution and registry issues before treating the run as clean.",
-      recommendedAction: "Run `rup review --interactive` after fixing execution failures.",
+      recommendedAction: "Run `rup dashboard --mode review` after fixing execution failures.",
       evidence: [error],
     });
   }
@@ -48,7 +48,7 @@ export function buildDoctorFindings(review: ReviewResult): DoctorFinding[] {
         summary: `${item.update.name} has ${item.update.peerConflictSeverity} peer conflicts after the proposed upgrade.`,
         details: item.peerConflicts[0]?.suggestion,
         help: "Inspect peer dependency requirements before applying the update.",
-        recommendedAction: item.update.recommendedAction ?? "Review peer requirements in `rup review --interactive`.",
+        recommendedAction: item.update.recommendedAction ?? "Review peer requirements in `rup dashboard --mode review`.",
         evidence: item.peerConflicts.map((conflict) => `${conflict.requester} -> ${conflict.peer}@${conflict.requiredRange}`),
       });
     }
@@ -65,7 +65,7 @@ export function buildDoctorFindings(review: ReviewResult): DoctorFinding[] {
         summary: `${item.update.name} violates the current license policy.`,
         details: item.license?.license,
         help: "Keep denied licenses out of the approved update set.",
-        recommendedAction: item.update.recommendedAction ?? "Block this package in `rup review --interactive`.",
+        recommendedAction: item.update.recommendedAction ?? "Block this package in `rup dashboard --mode review --focus blocked`.",
       });
     }
 
@@ -116,7 +116,7 @@ export function buildDoctorFindings(review: ReviewResult): DoctorFinding[] {
         workspace,
         summary: `${item.update.name} is a major version upgrade.`,
         help: "Major upgrades should be reviewed explicitly before being applied.",
-        recommendedAction: item.update.recommendedAction ?? "Review major changes in `rup review --interactive`.",
+        recommendedAction: item.update.recommendedAction ?? "Review major changes in `rup dashboard --mode review --focus major`.",
       });
     }
 

@@ -241,6 +241,8 @@ test("parseCliArgs supports dashboard command", async () => {
   const parsed = await parseCliArgs([
     "dashboard",
     "--workspace",
+    "--view",
+    "health",
     "--mode",
     "upgrade",
     "--focus",
@@ -256,6 +258,7 @@ test("parseCliArgs supports dashboard command", async () => {
   expect(parsed.command).toBe("dashboard");
   if (parsed.command === "dashboard") {
     expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.view).toBe("health");
     expect(parsed.options.mode).toBe("upgrade");
     expect(parsed.options.focus).toBe("security");
     expect(parsed.options.applySelected).toBe(true);
