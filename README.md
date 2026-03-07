@@ -148,7 +148,12 @@ Release assets are published for:
 - macOS arm64
 - Windows x64
 
-Once installed, three binary aliases are available in your `node_modules/.bin/`:
+Each release archive now includes both executable surfaces:
+
+- `rup` for the human CLI
+- `rup-mcp` for editor and agent integrations
+
+Once installed from npm, the following aliases are available in your `node_modules/.bin/`:
 
 | Alias           | Use case                                    |
 | --------------- | ------------------------------------------- |

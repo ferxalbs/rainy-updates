@@ -1,7 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
-const [target, outputDirArg, entrypointArg, binaryBaseNameArg] = process.argv.slice(2);
+const [target, outputDirArg, entrypointArg, binaryBaseNameArg, preserveOutputArg] = process.argv.slice(2);
 
 if (!target || !outputDirArg) {
   throw new Error(
@@ -13,10 +13,13 @@ const cwd = process.cwd();
 const outputDir = path.resolve(cwd, outputDirArg);
 const entrypoint = entrypointArg ?? "./src/bin/cli.ts";
 const binaryBaseName = binaryBaseNameArg ?? "rup";
+const preserveOutput = preserveOutputArg === "preserve";
 const binaryName = target.includes("windows") ? `${binaryBaseName}.exe` : binaryBaseName;
 const binaryPath = path.join(outputDir, binaryName);
 
-await rm(outputDir, { recursive: true, force: true });
+if (!preserveOutput) {
+  await rm(outputDir, { recursive: true, force: true });
+}
 await mkdir(outputDir, { recursive: true });
 
 const build = Bun.spawn(

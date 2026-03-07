@@ -3,11 +3,11 @@ name: Release Binaries
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag to package (for example: v0.6.2)'
+        description: "Existing release tag to package (for example: v0.6.2)"
         required: true
         type: string
 
@@ -72,11 +72,22 @@ jobs:
       - name: Sync version metadata
         run: bun run version:sync
 
-      - name: Build release directory
+      - name: Build CLI binary into release directory
         run: |
           bun scripts/build-release-binary.mjs \
             "${{ matrix.target }}" \
-            "dist/release/${{ matrix.id }}"
+            "dist/release/${{ matrix.id }}" \
+            "./src/bin/cli.ts" \
+            "rup"
+
+      - name: Build MCP binary into release directory
+        run: |
+          bun scripts/build-release-binary.mjs \
+            "${{ matrix.target }}" \
+            "dist/release/${{ matrix.id }}" \
+            "./src/bin/mcp.ts" \
+            "rup-mcp" \
+            preserve
 
       - name: Package tar.gz asset
         if: matrix.archive == 'tar.gz'
@@ -133,7 +144,7 @@ jobs:
             --version "${RELEASE_TAG}" \
             --repo "${{ github.repository }}" \
             --assets-dir dist/assets \
-            --output-dir dist/github-release/manifests
+            --output-dir dist/manifests
 
       - name: Create or update GitHub release
         env:
@@ -146,6 +157,6 @@ jobs:
 
           gh release upload "${RELEASE_TAG}" \
             dist/github-release/* \
-            dist/github-release/manifests/homebrew/rup.rb \
-            dist/github-release/manifests/scoop/rup.json \
+            dist/manifests/homebrew/rup.rb \
+            dist/manifests/scoop/rup.json \
             --clobber

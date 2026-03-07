@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.5] - 2026-03-06
+
+Release packaging fix for the stable MCP line. This patch makes the public binary release assets include both Rainy executable surfaces so editor integrations can use `rup-mcp` directly from GitHub releases.
+
+### Added
+
+- **Dual-binary release packaging**:
+  - each GitHub release asset now packages both `rup` and `rup-mcp`,
+  - release build automation now compiles the CLI binary and the MCP binary into the same platform archive.
+
+### Changed
+
+- `release-binaries` GitHub Actions packaging now invokes the release builder twice per target:
+  - once for `rup`,
+  - once for `rup-mcp`.
+- Standalone release documentation now clarifies that release archives contain both the human CLI and the dedicated MCP binary.
+
+### Tests
+
+- Release validation completed for `0.6.5`:
+  - `bun run check`
+  - `bun run build`
+  - `bun run build:exe`
+  - `bun run test:prod`
+
 ## [0.6.4] - 2026-03-06
 
 Stable MCP release with a dedicated agent-facing binary, reusable service adapters, and production-ready local editor integration.
