@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.7] - 2026-03-06
+
+MCP compatibility and operator docs hardening for agent integrations (Kilo, Cursor, Claude) with a stable tool contract for model-driven workflows.
+
+### Added
+
+- **MCP tool contract documentation**:
+  - added a dedicated MCP tools reference covering all `rup_*` tools,
+  - documented required inputs, mutating behavior, and expected `structuredContent` outputs,
+  - documented MCP error contract (`UNKNOWN_TOOL`, `INVALID_PARAMS`, `TOOL_TIMEOUT`, `CONFIRMATION_REQUIRED`) and retry guidance.
+- **Tool surface stability checks**:
+  - added test coverage to assert the complete public MCP tool catalog remains stable.
+
+### Changed
+
+- MCP docs now include a model/operator-oriented usage path with deterministic workflows and stable contract expectations.
+- MCP overview and README now link directly to the tools reference so agents can bootstrap without reverse-engineering tool behavior.
+
+### Tests
+
+- `bun run check`
+- focused MCP contract tests (`bun test tests/mcp.test.ts`)
+
 ## [0.6.5] - 2026-03-06
 
 Release packaging fix for the stable MCP line. This patch makes the public binary release assets include both Rainy executable surfaces so editor integrations can use `rup-mcp` directly from GitHub releases.

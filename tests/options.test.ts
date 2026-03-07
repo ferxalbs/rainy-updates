@@ -283,7 +283,7 @@ test("parseCliArgs supports mcp command", async () => {
   if (parsed.command === "mcp") {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.toolTimeoutMs).toBe(15000);
-    expect(parsed.options.transport).toBe("sse");
+    expect(parsed.options.transport).toBe("http");
     expect(parsed.options.port).toBe(3741);
     expect(parsed.options.authToken).toBe("secret");
   }

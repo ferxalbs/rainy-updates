@@ -9,9 +9,9 @@ Rainy Updates treats MCP as a **local integration surface**, not as a hosted AI 
 - The CLI does not send code or dependency state to a Rainy cloud service
 - Any network calls still come from the existing CLI behaviors, such as registry metadata or advisory lookups
 
-## SSE mode
+## HTTP mode
 
-If you enable `SSE`:
+If you enable HTTP:
 
 - bind to a local host unless you have a strong reason not to
 - use `--auth-token` or `RAINY_MCP_AUTH_TOKEN`
@@ -20,7 +20,7 @@ If you enable `SSE`:
 Example:
 
 ```bash
-rup-mcp --transport sse --host 127.0.0.1 --port 3741 --auth-token local-dev-token
+rup-mcp --transport http --host 127.0.0.1 --port 3741 --http-path /mcp --auth-token local-dev-token
 ```
 
 ## Mutating tools

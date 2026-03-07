@@ -14,7 +14,7 @@ Recommended production entrypoint:
 - `rup mcp` remains available as a compatibility alias
 
 - Default transport: `stdio` via `rup-mcp`
-- Optional transport: `SSE` via `rup-mcp --transport sse --port 3741`
+- Optional transport: `HTTP` via `rup-mcp --transport http --port 3741 --http-path /mcp`
 - Default safety posture: local process, no cloud relay, no HTTP listener unless you opt in
 
 Quick start:
@@ -46,6 +46,8 @@ Cursor:
 }
 ```
 
+If your IDE does not inherit shell `PATH`, set an absolute command path (for example `/Users/<you>/.bun/bin/rup-mcp`) instead of `rup`/`rup-mcp`.
+
 Example prompts:
 
 - `Do I have any critical vulnerabilities in this workspace?`
@@ -53,7 +55,7 @@ Example prompts:
 - `Create a dependency decision plan for the packages changed in this branch.`
 
 Docs:
-[MCP overview](./docs/mcp.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [MCP security model](./docs/mcp-security-model.md)
+[MCP overview](./docs/mcp.md) · [MCP tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [MCP security model](./docs/mcp-security-model.md)
 
 Comparison:
 [Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
@@ -287,8 +289,8 @@ rup ga --workspace
 # 15) Start the local MCP server over stdio
 rup mcp
 
-# 16) Start the local MCP server over SSE
-rup mcp --transport sse --port 3741
+# 16) Start the local MCP server over HTTP
+rup mcp --transport http --port 3741 --http-path /mcp
 
 # 17) Explain a package update
 rup explain react
@@ -546,7 +548,7 @@ For editor integrations, prefer the dedicated MCP binary instead of shelling thr
 
 ```bash
 rup-mcp
-rup-mcp --transport sse --port 3741 --auth-token local-dev-token
+rup-mcp --transport http --port 3741 --http-path /mcp --auth-token local-dev-token
 ```
 
 `rup mcp` remains supported, but `rup-mcp` is the stable integration surface for editors, IDEs, and agent hosts.

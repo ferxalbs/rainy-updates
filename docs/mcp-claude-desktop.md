@@ -35,15 +35,30 @@ Preferred dedicated binary:
 }
 ```
 
-## SSE configuration
+If Claude Desktop does not inherit your shell `PATH`, use the absolute command path:
 
-If you prefer SSE instead of stdio:
-
-```bash
-rup-mcp --transport sse --port 3741 --auth-token local-dev-token
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "/Users/<you>/.bun/bin/rup-mcp",
+      "env": {
+        "FORCE_COLOR": "0"
+      }
+    }
+  }
+}
 ```
 
-Then point Claude Desktop at the local endpoint using your MCP client’s HTTP/SSE settings.
+## HTTP configuration
+
+If you prefer HTTP instead of stdio:
+
+```bash
+rup-mcp --transport http --port 3741 --http-path /mcp --auth-token local-dev-token
+```
+
+Then point Claude Desktop at `http://127.0.0.1:3741/mcp` using your MCP client’s HTTP settings.
 
 ## Good first prompts
 

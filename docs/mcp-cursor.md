@@ -29,15 +29,27 @@ Preferred dedicated binary:
 }
 ```
 
-## Optional SSE configuration
+If Cursor does not inherit your shell `PATH`, use the absolute command path:
 
-Start Rainy in SSE mode:
-
-```bash
-rup-mcp --transport sse --port 3741 --auth-token local-dev-token
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "/Users/<you>/.bun/bin/rup-mcp"
+    }
+  }
+}
 ```
 
-Then configure Cursor to connect to the local endpoint if your setup prefers HTTP/SSE over stdio.
+## Optional HTTP configuration
+
+Start Rainy in HTTP mode:
+
+```bash
+rup-mcp --transport http --port 3741 --http-path /mcp --auth-token local-dev-token
+```
+
+Then configure Cursor to connect to `http://127.0.0.1:3741/mcp` if your setup prefers HTTP over stdio.
 
 ## Recommended workflows
 

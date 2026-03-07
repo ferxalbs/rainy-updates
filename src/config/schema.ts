@@ -38,11 +38,12 @@ export const WatchConfigSchema = z.object({
 });
 
 export const McpConfigSchema = z.object({
-  transport: z.enum(["stdio", "sse"]).optional(),
+  transport: z.enum(["stdio", "http"]).optional(),
   toolTimeoutMs: z.number().int().positive().optional(),
   port: z.number().int().positive().max(65535).optional(),
   host: z.string().min(1).optional(),
   authToken: z.string().min(1).optional(),
+  httpPath: z.string().min(1).optional(),
 });
 
 export const FileConfigSchema = z.object({

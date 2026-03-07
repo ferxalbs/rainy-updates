@@ -313,11 +313,12 @@ Options:
   --cwd <path>
   --workspace
   --log-level error|warn|info|debug
-  --transport stdio|sse
+  --transport stdio|http
   --tool-timeout-ms <n>
   --host <addr>
   --port <n>
-  --auth-token <token>`;
+  --auth-token <token>
+  --http-path <path>`;
   }
 
   if (isCommand && command === "explain") {

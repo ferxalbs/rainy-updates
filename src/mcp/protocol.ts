@@ -17,36 +17,25 @@ export interface JsonRpcResponse {
 }
 
 export function encodeMessage(message: object): string {
-  const payload = JSON.stringify(message);
-  return `Content-Length: ${Buffer.byteLength(payload, "utf8")}\r\n\r\n${payload}`;
+  return `${JSON.stringify(message)}\n`;
 }
 
-export class ContentLengthMessageParser {
+export class NdjsonMessageParser {
   private buffer = "";
 
-  push(chunk: string): object[] {
+  push(chunk: string): string[] {
     this.buffer += chunk;
-    const messages: object[] = [];
+    const lines: string[] = [];
 
     while (true) {
-      const headerEnd = this.buffer.indexOf("\r\n\r\n");
-      if (headerEnd === -1) break;
-      const header = this.buffer.slice(0, headerEnd);
-      const lengthMatch = header.match(/Content-Length:\s*(\d+)/i);
-      if (!lengthMatch) {
-        this.buffer = "";
-        break;
-      }
-
-      const contentLength = Number(lengthMatch[1]);
-      const bodyStart = headerEnd + 4;
-      if (this.buffer.length < bodyStart + contentLength) break;
-
-      const body = this.buffer.slice(bodyStart, bodyStart + contentLength);
-      this.buffer = this.buffer.slice(bodyStart + contentLength);
-      messages.push(JSON.parse(body));
+      const lineEnd = this.buffer.indexOf("\n");
+      if (lineEnd === -1) break;
+      const line = this.buffer.slice(0, lineEnd).trim();
+      this.buffer = this.buffer.slice(lineEnd + 1);
+      if (line.length === 0) continue;
+      lines.push(line);
     }
 
-    return messages;
+    return lines;
   }
 }

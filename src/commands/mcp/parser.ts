@@ -12,6 +12,7 @@ export function parseMcpArgs(args: string[]): McpOptions {
     host: "127.0.0.1",
     authToken: undefined,
     port: undefined,
+    httpPath: "/mcp",
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -38,8 +39,8 @@ export function parseMcpArgs(args: string[]): McpOptions {
     }
     if (current === "--log-level") throw new Error("Missing value for --log-level");
     if (current === "--transport" && next) {
-      if (next !== "stdio" && next !== "sse") {
-        throw new Error("--transport must be stdio or sse");
+      if (next !== "stdio" && next !== "http") {
+        throw new Error("--transport must be stdio or http");
       }
       options.transport = next;
       index += 1;
@@ -64,25 +65,32 @@ export function parseMcpArgs(args: string[]): McpOptions {
         throw new Error("--port must be an integer between 1 and 65535");
       }
       options.port = parsed;
-      options.transport = "sse";
+      options.transport = "http";
       index += 1;
       continue;
     }
     if (current === "--port") throw new Error("Missing value for --port");
     if (current === "--host" && next) {
       options.host = next;
-      options.transport = "sse";
+      options.transport = "http";
       index += 1;
       continue;
     }
     if (current === "--host") throw new Error("Missing value for --host");
     if (current === "--auth-token" && next) {
       options.authToken = next;
-      options.transport = "sse";
+      options.transport = "http";
       index += 1;
       continue;
     }
     if (current === "--auth-token") throw new Error("Missing value for --auth-token");
+    if (current === "--http-path" && next) {
+      options.httpPath = next.startsWith("/") ? next : `/${next}`;
+      options.transport = "http";
+      index += 1;
+      continue;
+    }
+    if (current === "--http-path") throw new Error("Missing value for --http-path");
     if (current.startsWith("-")) throw new Error(`Unknown mcp option: ${current}`);
     throw new Error(`Unexpected mcp argument: ${current}`);
   }

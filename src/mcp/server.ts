@@ -4,23 +4,58 @@ import type { JsonRpcRequest, JsonRpcResponse } from "./protocol.js";
 import { callMcpTool, listMcpTools } from "./tools.js";
 import { toMcpErrorShape } from "./errors.js";
 
+const SUPPORTED_PROTOCOL_VERSIONS = [
+  "2024-11-05",
+  "2025-03-26",
+  "2025-06-18",
+] as const;
+const DEFAULT_PROTOCOL_VERSION = "2025-03-26";
+
+class JsonRpcError extends Error {
+  constructor(
+    readonly code: number,
+    message: string,
+    readonly data?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = "JsonRpcError";
+  }
+}
+
 export class RainyMcpServer {
   constructor(private readonly options: McpOptions) {}
 
   async handleMessage(message: JsonRpcRequest): Promise<JsonRpcResponse | null> {
-    if (!message.id && message.method === "notifications/initialized") {
+    if (
+      (message.id === undefined || message.id === null) &&
+      message.method === "notifications/initialized"
+    ) {
       return null;
     }
 
     try {
       if (message.method === "initialize") {
+        const requestedVersion =
+          typeof message.params?.protocolVersion === "string"
+            ? message.params.protocolVersion
+            : DEFAULT_PROTOCOL_VERSION;
+        const negotiatedVersion = negotiateProtocolVersion(requestedVersion);
+        if (!negotiatedVersion) {
+          throw new JsonRpcError(-32602, "Unsupported protocol version", {
+            supportedProtocolVersions: [...SUPPORTED_PROTOCOL_VERSIONS],
+            requestedProtocolVersion: requestedVersion,
+          });
+        }
+
         return {
           jsonrpc: "2.0",
           id: message.id ?? null,
           result: {
-            protocolVersion: "2025-03-26",
+            protocolVersion: negotiatedVersion,
             capabilities: {
-              tools: {},
+              tools: {
+                listChanged: false,
+              },
             },
             serverInfo: {
               name: "@rainy-updates/cli",
@@ -84,6 +119,18 @@ export class RainyMcpServer {
         },
       };
     } catch (error) {
+      if (error instanceof JsonRpcError) {
+        return {
+          jsonrpc: "2.0",
+          id: message.id ?? null,
+          error: {
+            code: error.code,
+            message: error.message,
+            data: error.data,
+          },
+        };
+      }
+
       const shape = toMcpErrorShape(error);
       return {
         jsonrpc: "2.0",
@@ -96,4 +143,21 @@ export class RainyMcpServer {
       };
     }
   }
+}
+
+function negotiateProtocolVersion(requestedVersion: string): string | null {
+  if (SUPPORTED_PROTOCOL_VERSIONS.includes(requestedVersion as never)) {
+    return requestedVersion;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedVersion)) {
+    return null;
+  }
+
+  const compatible = [...SUPPORTED_PROTOCOL_VERSIONS]
+    .filter((version) => version <= requestedVersion)
+    .sort()
+    .pop();
+
+  return compatible ?? null;
 }

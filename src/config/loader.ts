@@ -56,11 +56,12 @@ export interface FileConfig {
   packageManager?: SelectedPackageManager;
   sync?: boolean;
   mcp?: {
-    transport?: "stdio" | "sse";
+    transport?: "stdio" | "http";
     toolTimeoutMs?: number;
     port?: number;
     host?: string;
     authToken?: string;
+    httpPath?: string;
   };
   watch?: {
     intervalMs?: number;

@@ -31,21 +31,21 @@ This is the recommended mode for Claude Desktop, Cursor, Antigravity, and simila
 
 `rup mcp` still works as a compatibility alias, but `rup-mcp` is the preferred production entrypoint.
 
-## Optional SSE transport
+## Optional HTTP transport
 
-If your client prefers HTTP-style connectivity, Rainy can expose an SSE-compatible endpoint:
+If your client prefers HTTP connectivity, Rainy can expose an MCP endpoint:
 
 ```bash
-rup-mcp --transport sse --port 3741
+rup-mcp --transport http --port 3741 --http-path /mcp
 ```
 
 You can also provide a bind host and auth token:
 
 ```bash
-rup-mcp --transport sse --host 127.0.0.1 --port 3741 --auth-token local-dev-token
+rup-mcp --transport http --host 127.0.0.1 --port 3741 --http-path /mcp --auth-token local-dev-token
 ```
 
-By default, Rainy does **not** expose an HTTP listener unless you opt in with `--transport sse` or `--port`.
+By default, Rainy does **not** expose an HTTP listener unless you opt in with `--transport http` or `--port`.
 
 ## Naming: baseline vs snapshot
 
@@ -61,3 +61,4 @@ The MCP tool is named `rup_baseline` because it maps to the existing `baseline` 
 - [Claude Desktop setup](./mcp-claude-desktop.md)
 - [Cursor setup](./mcp-cursor.md)
 - [Security model](./mcp-security-model.md)
+- [Tool reference and stability contract](./mcp-tools.md)

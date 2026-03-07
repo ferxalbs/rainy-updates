@@ -14,10 +14,55 @@ test("mcp initialize returns server capabilities", async () => {
     jsonrpc: "2.0",
     id: 1,
     method: "initialize",
+    params: {
+      protocolVersion: "2025-03-26",
+    },
   });
 
   expect(response?.result).toBeDefined();
   expect((response?.result as { capabilities?: object }).capabilities).toBeDefined();
+});
+
+test("mcp initialize rejects unsupported protocol version", async () => {
+  const response = await server.handleMessage({
+    jsonrpc: "2.0",
+    id: 10,
+    method: "initialize",
+    params: {
+      protocolVersion: "2023-01-01",
+    },
+  });
+
+  expect(response?.error?.code).toBe(-32602);
+  expect(response?.error?.message).toContain("Unsupported protocol version");
+});
+
+test("mcp initialize accepts older supported version", async () => {
+  const response = await server.handleMessage({
+    jsonrpc: "2.0",
+    id: 11,
+    method: "initialize",
+    params: {
+      protocolVersion: "2024-11-05",
+    },
+  });
+
+  const result = response?.result as { protocolVersion?: string };
+  expect(result.protocolVersion).toBe("2024-11-05");
+});
+
+test("mcp initialize negotiates down from newer requested version", async () => {
+  const response = await server.handleMessage({
+    jsonrpc: "2.0",
+    id: 12,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-11-25",
+    },
+  });
+
+  const result = response?.result as { protocolVersion?: string };
+  expect(result.protocolVersion).toBe("2025-06-18");
 });
 
 test("mcp lists tools", async () => {
@@ -31,6 +76,29 @@ test("mcp lists tools", async () => {
   expect(tools.some((tool) => tool.name === "rup_check")).toBe(true);
   expect(tools.some((tool) => tool.name === "rup_upgrade")).toBe(true);
   expect(tools.some((tool) => tool.name === "rup_explain")).toBe(true);
+});
+
+test("mcp tool catalog remains stable", async () => {
+  const response = await server.handleMessage({
+    jsonrpc: "2.0",
+    id: 20,
+    method: "tools/list",
+  });
+
+  const tools = (response?.result as { tools: Array<{ name: string }> }).tools;
+  const names = tools.map((tool) => tool.name);
+  expect(names).toEqual([
+    "rup_check",
+    "rup_doctor",
+    "rup_review",
+    "rup_audit",
+    "rup_upgrade",
+    "rup_health",
+    "rup_bisect",
+    "rup_resolve",
+    "rup_baseline",
+    "rup_explain",
+  ]);
 });
 
 test("mcp rejects mutating upgrade without confirmation", async () => {

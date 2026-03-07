@@ -6,7 +6,7 @@ export type DependencyKind =
 export type SupportedPackageManager = "bun" | "npm" | "pnpm" | "yarn";
 export type DetectedPackageManager = SupportedPackageManager | "unknown";
 export type SelectedPackageManager = "auto" | SupportedPackageManager;
-export type McpTransport = "stdio" | "sse";
+export type McpTransport = "stdio" | "http";
 
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
 export type GroupBy = "none" | "name" | "scope" | "kind" | "risk";
@@ -924,6 +924,7 @@ export interface McpOptions {
   port?: number;
   host?: string;
   authToken?: string;
+  httpPath?: string;
 }
 
 export type McpToolName =
