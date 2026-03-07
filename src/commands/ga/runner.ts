@@ -52,13 +52,13 @@ export async function runGa(options: GaOptions): Promise<GaResult> {
       : "Built CLI entrypoint is missing; run the build before publishing a release artifact.",
   });
 
-  const compiledBinaryExists = await detectCompiledBinary(options.cwd);
+  const compiledBinaryExists = await detectCompiledBinaries(options.cwd);
   checks.push({
     name: "runtime-artifacts",
     status: compiledBinaryExists ? "pass" : "warn",
     detail: compiledBinaryExists
-      ? "Compiled Bun runtime artifact exists in dist/."
-      : "Compiled Bun runtime artifact is missing; run bun run build:exe before publishing Bun-first release artifacts.",
+      ? "Compiled Bun runtime artifacts exist in dist/ for both CLI and MCP entrypoints."
+      : "Compiled Bun runtime artifacts are missing; run bun run build:exe before publishing Bun-first release artifacts.",
   });
 
   checks.push(await detectAutomationEntryPoints(options.cwd));
@@ -150,10 +150,12 @@ async function detectLockfile(cwd: string): Promise<GaCheck> {
   };
 }
 
-async function detectCompiledBinary(cwd: string): Promise<boolean> {
+async function detectCompiledBinaries(cwd: string): Promise<boolean> {
   return (
-    (await fileExists(path.resolve(cwd, "dist/rup"))) ||
-    (await fileExists(path.resolve(cwd, "dist/rup.exe")))
+    ((await fileExists(path.resolve(cwd, "dist/rup"))) ||
+      (await fileExists(path.resolve(cwd, "dist/rup.exe")))) &&
+    ((await fileExists(path.resolve(cwd, "dist/rup-mcp"))) ||
+      (await fileExists(path.resolve(cwd, "dist/rup-mcp.exe"))))
   );
 }
 

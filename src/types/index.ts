@@ -6,6 +6,7 @@ export type DependencyKind =
 export type SupportedPackageManager = "bun" | "npm" | "pnpm" | "yarn";
 export type DetectedPackageManager = SupportedPackageManager | "unknown";
 export type SelectedPackageManager = "auto" | SupportedPackageManager;
+export type McpTransport = "stdio" | "sse";
 
 export type TargetLevel = "patch" | "minor" | "major" | "latest";
 export type GroupBy = "none" | "name" | "scope" | "kind" | "risk";
@@ -372,6 +373,21 @@ export interface VersionResolver {
   resolveLatestVersion(packageName: string): Promise<string | null>;
 }
 
+export type ExecutionMode = "cli" | "mcp" | "test";
+
+export interface ServiceEvent {
+  level: "debug" | "info" | "warn" | "error";
+  message: string;
+}
+
+export interface ServiceContext {
+  mode: ExecutionMode;
+  silent: boolean;
+  cwd: string;
+  logLevel: LogLevel;
+  onEvent?: (event: ServiceEvent) => void;
+}
+
 // ─── New v0.5.1 command types ──────────────────────────────────────────────
 
 export type AuditSeverity = "critical" | "high" | "medium" | "low";
@@ -466,6 +482,49 @@ export interface BisectResult {
   lastGoodVersion: string | null;
   totalVersionsTested: number;
   iterations: number;
+}
+
+export interface ExplainSecurityFinding {
+  cveId: string;
+  severity: AuditSeverity;
+  title: string;
+  url: string;
+  patchedVersion: string | null;
+}
+
+export interface ExplainReleaseNote {
+  source: ReleaseNotesSummary["source"];
+  title: string;
+  excerpt: string;
+}
+
+export interface ExplainResult {
+  packageName: string;
+  fromVersion: string;
+  toVersion: string;
+  diffType: TargetLevel;
+  riskLevel?: RiskLevel;
+  riskScore?: number;
+  securityFindings: ExplainSecurityFinding[];
+  releaseNotes?: ExplainReleaseNote;
+  breakingSignals: string[];
+  recommendedAction: string;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ExplainOptions {
+  cwd: string;
+  packageName: string;
+  fromVersion?: string;
+  toVersion?: string;
+  workspace: boolean;
+  format: "table" | "json" | "minimal";
+  jsonFile?: string;
+  concurrency: number;
+  registryTimeoutMs: number;
+  registryRetries: number;
+  cacheTtlSeconds: number;
 }
 
 export type HealthFlag = "stale" | "deprecated" | "archived" | "unmaintained";
@@ -805,6 +864,87 @@ export interface SnapshotResult {
   diff?: Array<{ name: string; from: string; to: string }>;
   errors: string[];
   warnings: string[];
+}
+
+export type WatchNotifyTarget = "slack" | "discord" | "http";
+export type WatchAction = "start" | "stop" | "run";
+export type WebhookEvent =
+  | "audit.critical"
+  | "upgrade.applied"
+  | "health.degraded"
+  | "check.complete"
+  | "doctor.score";
+
+export interface WebhookConfig {
+  event: WebhookEvent;
+  url: string;
+  headers?: Record<string, string>;
+  secret?: string;
+}
+
+export interface WatchOptions {
+  cwd: string;
+  workspace: boolean;
+  action: WatchAction;
+  intervalMs: number;
+  severity?: AuditSeverity;
+  notify?: WatchNotifyTarget;
+  webhook?: string;
+  daemon: boolean;
+  decisionPlanFile?: string;
+  pidFile?: string;
+  stateFile?: string;
+}
+
+export interface WatchNotification {
+  target: WatchNotifyTarget | "webhook-config";
+  delivered: boolean;
+  message: string;
+}
+
+export interface WatchResult {
+  action: WatchAction;
+  running: boolean;
+  pid?: number;
+  stateFile: string;
+  pidFile: string;
+  updatesDetected: number;
+  advisoriesDetected: number;
+  notifications: WatchNotification[];
+  errors: string[];
+  warnings: string[];
+}
+
+export interface McpOptions {
+  cwd: string;
+  workspace: boolean;
+  logLevel: LogLevel;
+  transport: McpTransport;
+  toolTimeoutMs: number;
+  port?: number;
+  host?: string;
+  authToken?: string;
+}
+
+export type McpToolName =
+  | "rup_check"
+  | "rup_doctor"
+  | "rup_review"
+  | "rup_audit"
+  | "rup_upgrade"
+  | "rup_health"
+  | "rup_bisect"
+  | "rup_resolve"
+  | "rup_baseline"
+  | "rup_explain";
+
+export interface McpToolCallResult<T> {
+  content: Array<{
+    type: "text";
+    text: string;
+  }>;
+  structuredContent: T;
+  isError?: boolean;
 }
 
 export type HookAction = "install" | "uninstall" | "doctor";

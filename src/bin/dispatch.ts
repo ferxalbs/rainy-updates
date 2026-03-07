@@ -4,7 +4,6 @@ import { upgrade } from "../core/upgrade.js";
 import { warmCache } from "../core/warm-cache.js";
 import { runCi } from "../core/ci.js";
 import { initCiWorkflow } from "../core/init-ci.js";
-import { diffBaseline, saveBaseline } from "../core/baseline.js";
 import type {
   CheckOptions,
   CheckResult,
@@ -14,6 +13,7 @@ import {
   setRuntimeExitCode,
   writeStdout,
 } from "../utils/runtime.js";
+import { diffBaselineService, saveBaselineService } from "../services/baseline.js";
 
 export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolean> {
   if (parsed.command === "init-ci") {
@@ -35,14 +35,14 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
 
   if (parsed.command === "baseline") {
     if (parsed.options.action === "save") {
-      const saved = await saveBaseline(parsed.options);
+      const saved = await saveBaselineService(parsed.options);
       writeStdout(
         `Saved baseline at ${saved.filePath} (${saved.entries} entries)\n`,
       );
       return true;
     }
 
-    const diff = await diffBaseline(parsed.options);
+    const diff = await diffBaselineService(parsed.options);
     const changes = diff.added.length + diff.removed.length + diff.changed.length;
 
     if (changes === 0) {
@@ -145,6 +145,25 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
     const { runHook } = await import("../commands/hook/runner.js");
     const result = await runHook(parsed.options);
     setRuntimeExitCode(result.errors.length > 0 ? 1 : 0);
+    return true;
+  }
+
+  if (parsed.command === "mcp") {
+    const { runMcp } = await import("../commands/mcp/runner.js");
+    await runMcp(parsed.options);
+    return true;
+  }
+
+  if (parsed.command === "explain") {
+    const { runExplain } = await import("../commands/explain/runner.js");
+    await runExplain(parsed.options);
+    return true;
+  }
+
+  if (parsed.command === "watch") {
+    const { runWatch } = await import("../commands/watch/runner.js");
+    const result = await runWatch(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 2 : result.updatesDetected > 0 ? 1 : 0);
     return true;
   }
 

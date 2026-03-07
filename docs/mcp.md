@@ -1,0 +1,63 @@
+# MCP Overview
+
+Rainy Updates can expose its dependency analysis as a local MCP server.
+
+## What it gives an agent
+
+Agents can call local tools such as:
+
+- `rup_check`
+- `rup_doctor`
+- `rup_review`
+- `rup_audit`
+- `rup_upgrade`
+- `rup_health`
+- `rup_bisect`
+- `rup_resolve`
+- `rup_baseline`
+- `rup_explain`
+
+These tools map to the same dependency analysis used by the CLI. The model does the reasoning; Rainy provides deterministic local data.
+
+## Default transport
+
+The default transport is `stdio`:
+
+```bash
+rup-mcp
+```
+
+This is the recommended mode for Claude Desktop, Cursor, Antigravity, and similar local agent integrations.
+
+`rup mcp` still works as a compatibility alias, but `rup-mcp` is the preferred production entrypoint.
+
+## Optional SSE transport
+
+If your client prefers HTTP-style connectivity, Rainy can expose an SSE-compatible endpoint:
+
+```bash
+rup-mcp --transport sse --port 3741
+```
+
+You can also provide a bind host and auth token:
+
+```bash
+rup-mcp --transport sse --host 127.0.0.1 --port 3741 --auth-token local-dev-token
+```
+
+By default, Rainy does **not** expose an HTTP listener unless you opt in with `--transport sse` or `--port`.
+
+## Naming: baseline vs snapshot
+
+Rainy has two separate concepts:
+
+- `baseline`: compare dependency manifest drift over time
+- `snapshot`: save and restore a broader dependency state
+
+The MCP tool is named `rup_baseline` because it maps to the existing `baseline` CLI command. It does **not** map to `snapshot`.
+
+## Related docs
+
+- [Claude Desktop setup](./mcp-claude-desktop.md)
+- [Cursor setup](./mcp-cursor.md)
+- [Security model](./mcp-security-model.md)

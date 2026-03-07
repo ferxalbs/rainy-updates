@@ -2,6 +2,58 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.4] - 2026-03-06
+
+Stable MCP release with a dedicated agent-facing binary, reusable service adapters, and production-ready local editor integration.
+
+### Added
+
+- **Dedicated MCP runtime surface**:
+  - added a new `rup-mcp` bin entrypoint for editors and MCP clients,
+  - added a dedicated `src/bin/mcp.ts` runtime entrypoint,
+  - production validation now covers both the CLI binary and the MCP binary.
+- **Local MCP server implementation**:
+  - `stdio` transport for editor-native integrations,
+  - optional `SSE` transport with local token support,
+  - MCP tools for `check`, `doctor`, `review`, `audit`, `upgrade`, `health`, `bisect`, `resolve`, `baseline`, and `explain`,
+  - explicit mutating-tool confirmation requirement for `rup_upgrade`.
+- **New `explain` command**:
+  - summarizes package update risk,
+  - surfaces advisory context,
+  - reuses review analysis and release-note summaries for agent-friendly output.
+- **New `watch` command foundation**:
+  - local state and pid files,
+  - webhook-capable notification path,
+  - draft decision-plan generation path for repeated monitoring flows.
+- **Validated external config schema**:
+  - Zod validation for `.rainyupdatesrc`,
+  - Zod validation for `.rainyupdatesrc.json`,
+  - Zod validation for `package.json#rainyUpdates`,
+  - config support for MCP, watch, and webhook sections.
+- **New test coverage** for:
+  - MCP initialize and tool listing,
+  - mutating-tool confirmation behavior,
+  - parser coverage for `mcp`, `explain`, and `watch`,
+  - config validation for MCP and webhook settings.
+
+### Changed
+
+- The codebase now routes shared dependency logic through reusable services so the CLI and MCP server consume the same business logic without mixing rendering and execution.
+- `rup mcp` remains supported as a compatibility alias, but `rup-mcp` is now the recommended integration surface for editors and agent hosts.
+- Release tooling now builds and validates both compiled runtime artifacts:
+  - `dist/rup`,
+  - `dist/rup-mcp`.
+- Readiness docs and MCP setup guides now recommend the dedicated MCP binary and document the baseline vs snapshot distinction for agent integrations.
+- GA readiness checks now expect both CLI and MCP compiled artifacts when evaluating Bun runtime release completeness.
+
+### Tests
+
+- Release validation completed for `0.6.4`:
+  - `bun run check`
+  - `bun run build`
+  - `bun run build:exe`
+  - `bun run test:prod`
+
 ## [0.6.2] - 2026-03-04
 
 Dashboard hardening, cross-platform execution cleanup, and portable release operations for the next `v0.6` patch.

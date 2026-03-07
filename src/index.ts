@@ -5,6 +5,9 @@ export { runCi } from "./core/ci.js";
 export { initCiWorkflow } from "./core/init-ci.js";
 export { saveBaseline, diffBaseline } from "./core/baseline.js";
 export { runHook } from "./commands/hook/runner.js";
+export { runExplain } from "./commands/explain/runner.js";
+export { runWatch } from "./commands/watch/runner.js";
+export { runMcp } from "./commands/mcp/runner.js";
 export { createSarifReport } from "./output/sarif.js";
 export { writeGitHubOutput, renderGitHubAnnotations } from "./output/github.js";
 export { renderPrReport } from "./output/pr-report.js";
@@ -27,6 +30,15 @@ export type {
   ReviewResult,
   DoctorOptions,
   DoctorResult,
+  ExplainOptions,
+  ExplainResult,
+  WatchOptions,
+  WatchResult,
+  McpOptions,
+  McpTransport,
+  McpToolName,
+  WebhookConfig,
+  WebhookEvent,
   HookOptions,
   HookResult,
   Verdict,

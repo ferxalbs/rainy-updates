@@ -9,7 +9,9 @@ import type {
   LogLevel,
   OutputFormat,
   TargetLevel,
+  WebhookConfig,
 } from "../types/index.js";
+import { FileConfigSchema } from "./schema.js";
 
 export interface FileConfig {
   target?: TargetLevel;
@@ -53,6 +55,21 @@ export interface FileConfig {
   install?: boolean;
   packageManager?: SelectedPackageManager;
   sync?: boolean;
+  mcp?: {
+    transport?: "stdio" | "sse";
+    toolTimeoutMs?: number;
+    port?: number;
+    host?: string;
+    authToken?: string;
+  };
+  watch?: {
+    intervalMs?: number;
+    severity?: "critical" | "high" | "medium" | "low";
+    notify?: "slack" | "discord" | "http";
+    webhook?: string;
+    daemon?: boolean;
+  };
+  webhooks?: WebhookConfig[];
 }
 
 export async function loadConfig(cwd: string): Promise<FileConfig> {
@@ -69,11 +86,9 @@ async function loadRcFile(cwd: string): Promise<FileConfig> {
 
   for (const candidate of candidates) {
     const filePath = path.join(cwd, candidate);
-    try {
-      return (await Bun.file(filePath).json()) as FileConfig;
-    } catch {
-      // noop
-    }
+    const file = Bun.file(filePath);
+    if (!(await file.exists())) continue;
+    return validateFileConfig(await file.json(), filePath);
   }
 
   return {};
@@ -81,13 +96,29 @@ async function loadRcFile(cwd: string): Promise<FileConfig> {
 
 async function loadPackageConfig(cwd: string): Promise<FileConfig> {
   const packagePath = path.join(cwd, "package.json");
+  const file = Bun.file(packagePath);
+  if (!(await file.exists())) {
+    return {};
+  }
 
   try {
-    const parsed = (await Bun.file(packagePath).json()) as {
-      rainyUpdates?: FileConfig;
+    const parsed = (await file.json()) as {
+      rainyUpdates?: unknown;
     };
-    return parsed.rainyUpdates ?? {};
+    return validateFileConfig(parsed.rainyUpdates ?? {}, `${packagePath}#rainyUpdates`);
   } catch {
     return {};
   }
+}
+
+function validateFileConfig(input: unknown, source: string): FileConfig {
+  const parsed = FileConfigSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(
+      `Invalid config in ${source}: ${parsed.error.issues
+        .map((issue) => `${issue.path.join(".") || "<root>"} ${issue.message}`)
+        .join("; ")}`,
+    );
+  }
+  return parsed.data;
 }

@@ -4,6 +4,57 @@ Rainy Updates is a deterministic dependency review and upgrade operator for Node
 
 `@rainy-updates/cli` is built for teams that need fast dependency detection, trustworthy review, controlled upgrades, and automation-ready outputs for CI/CD.
 
+## Use with AI Agents (MCP)
+
+Rainy Updates can run as a **local MCP server** so Claude Desktop, Cursor, and other MCP-capable agents can inspect dependency health without adding any AI logic to the CLI itself.
+
+Recommended production entrypoint:
+
+- `rup-mcp` for editors and agent clients
+- `rup mcp` remains available as a compatibility alias
+
+- Default transport: `stdio` via `rup-mcp`
+- Optional transport: `SSE` via `rup-mcp --transport sse --port 3741`
+- Default safety posture: local process, no cloud relay, no HTTP listener unless you opt in
+
+Quick start:
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "rup",
+      "args": ["mcp"],
+      "env": {
+        "FORCE_COLOR": "0"
+      }
+    }
+  }
+}
+```
+
+Cursor:
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "rup",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Example prompts:
+
+- `Do I have any critical vulnerabilities in this workspace?`
+- `Explain whether updating react is safe right now.`
+- `Create a dependency decision plan for the packages changed in this branch.`
+
+Docs:
+[MCP overview](./docs/mcp.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [MCP security model](./docs/mcp-security-model.md)
+
 Comparison:
 [Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
 
@@ -33,6 +84,12 @@ Rainy Updates gives teams one dependency lifecycle:
 - `upgrade` applies the approved change set.
 
 Everything else supports that lifecycle: CI orchestration, advisory lookup, peer resolution, licenses, snapshots, baselines, and fix-PR automation.
+
+`baseline` and `snapshot` are intentionally different:
+
+- `baseline` saves and compares dependency manifests over time for drift detection.
+- `snapshot` saves, lists, restores, and diffs a fuller dependency state snapshot for recovery workflows.
+- In MCP, the baseline capability is exposed as `rup_baseline` to match the existing `baseline` command, not `snapshot`.
 
 ## Who it is for
 
@@ -142,6 +199,9 @@ npx @rainy-updates/cli ci --workspace --mode strict
 - `ci` — run CI-focused dependency automation (warm cache, check/upgrade, policy gates)
 - `warm-cache` — prefetch package metadata for fast and offline checks
 - `baseline` — save and compare dependency baseline snapshots
+- `mcp` — run the local MCP server for AI agents
+- `explain` — summarize a package update with risk, changelog, and security context
+- `watch` — monitor dependency updates and advisories from the local checkout
 
 ### Security & health (_new in v0.5.1_)
 
@@ -218,6 +278,18 @@ rup review --risk high --diff major
 
 # 14) Audit GA / CI readiness
 rup ga --workspace
+
+# 15) Start the local MCP server over stdio
+rup mcp
+
+# 16) Start the local MCP server over SSE
+rup mcp --transport sse --port 3741
+
+# 17) Explain a package update
+rup explain react
+
+# 18) Run a watch cycle
+rup watch --workspace --severity high
 ```
 
 ## Decision Plans And Verification
@@ -463,3 +535,13 @@ The long-term roadmap is maintained in [`ROADMAP.md`](./ROADMAP.md).
 ## License
 
 MIT
+# Dedicated MCP binary
+
+For editor integrations, prefer the dedicated MCP binary instead of shelling through the general CLI subcommand:
+
+```bash
+rup-mcp
+rup-mcp --transport sse --port 3741 --auth-token local-dev-token
+```
+
+`rup mcp` remains supported, but `rup-mcp` is the stable integration surface for editors, IDEs, and agent hosts.

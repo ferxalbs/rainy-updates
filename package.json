@@ -1,6 +1,6 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.6.2",
+  "version": "0.6.4",
   "description": "The fastest DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and automates npm/pnpm dependencies in CI.",
   "type": "module",
   "private": false,
@@ -25,6 +25,7 @@
     "audit",
     "security",
     "bisect",
+    "mcp",
     "ncu",
     "taze",
     "renovate"
@@ -33,7 +34,8 @@
     "cli": "./dist/bin/cli.js",
     "rainy-updates": "./dist/bin/cli.js",
     "rainy-up": "./dist/bin/cli.js",
-    "rup": "./dist/bin/cli.js"
+    "rup": "./dist/bin/cli.js",
+    "rup-mcp": "./dist/bin/mcp.js"
   },
   "types": "./dist/index.d.ts",
   "exports": {
@@ -56,7 +58,9 @@
     "version:check": "bun scripts/sync-version.mjs --check",
     "version": "bun run version:sync",
     "build": "bun run version:sync && tsc -p tsconfig.build.json",
-    "build:exe": "bun run version:sync && bun build ./src/bin/cli.ts --compile --outfile dist/rup",
+    "build:exe": "bun run build:exe:cli && bun run build:exe:mcp",
+    "build:exe:cli": "bun run version:sync && bun build ./src/bin/cli.ts --compile --outfile dist/rup",
+    "build:exe:mcp": "bun run version:sync && bun build ./src/bin/mcp.ts --compile --outfile dist/rup-mcp",
     "build:release-binary": "bun scripts/build-release-binary.mjs",
     "generate:distribution-manifests": "bun scripts/generate-distribution-manifests.mjs",
     "typecheck": "bun run version:check && tsc --noEmit",

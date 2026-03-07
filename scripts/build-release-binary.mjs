@@ -1,7 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
-const [target, outputDirArg] = process.argv.slice(2);
+const [target, outputDirArg, entrypointArg, binaryBaseNameArg] = process.argv.slice(2);
 
 if (!target || !outputDirArg) {
   throw new Error(
@@ -11,7 +11,9 @@ if (!target || !outputDirArg) {
 
 const cwd = process.cwd();
 const outputDir = path.resolve(cwd, outputDirArg);
-const binaryName = target.includes("windows") ? "rup.exe" : "rup";
+const entrypoint = entrypointArg ?? "./src/bin/cli.ts";
+const binaryBaseName = binaryBaseNameArg ?? "rup";
+const binaryName = target.includes("windows") ? `${binaryBaseName}.exe` : binaryBaseName;
 const binaryPath = path.join(outputDir, binaryName);
 
 await rm(outputDir, { recursive: true, force: true });
@@ -21,7 +23,7 @@ const build = Bun.spawn(
   [
     "bun",
     "build",
-    "./src/bin/cli.ts",
+    entrypoint,
     "--compile",
     `--target=${target}`,
     "--outfile",
@@ -47,4 +49,3 @@ for (const fileName of ["README.md", "CHANGELOG.md", "LICENSE"]) {
 }
 
 console.log(outputDir);
-

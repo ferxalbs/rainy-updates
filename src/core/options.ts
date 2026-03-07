@@ -28,6 +28,9 @@ import type {
   HookOptions,
   VerificationMode,
   CiGate,
+  McpOptions,
+  ExplainOptions,
+  WatchOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 
@@ -56,6 +59,9 @@ const KNOWN_COMMANDS = [
   "dashboard",
   "ga",
   "hook",
+  "mcp",
+  "explain",
+  "watch",
 ] as const;
 
 export type ParsedCliArgs =
@@ -87,7 +93,10 @@ export type ParsedCliArgs =
   | { command: "doctor"; options: DoctorOptions }
   | { command: "dashboard"; options: DashboardOptions }
   | { command: "ga"; options: GaOptions }
-  | { command: "hook"; options: HookOptions };
+  | { command: "hook"; options: HookOptions }
+  | { command: "mcp"; options: McpOptions }
+  | { command: "explain"; options: ExplainOptions }
+  | { command: "watch"; options: WatchOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -154,6 +163,18 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   if (command === "hook") {
     const { parseHookArgs } = await import("../commands/hook/parser.js");
     return { command, options: parseHookArgs(args) };
+  }
+  if (command === "mcp") {
+    const { parseMcpArgs } = await import("../commands/mcp/parser.js");
+    return { command, options: parseMcpArgs(args) };
+  }
+  if (command === "explain") {
+    const { parseExplainArgs } = await import("../commands/explain/parser.js");
+    return { command, options: parseExplainArgs(args) };
+  }
+  if (command === "watch") {
+    const { parseWatchArgs } = await import("../commands/watch/parser.js");
+    return { command, options: parseWatchArgs(args) };
   }
 
   const base: CheckOptions = {

@@ -14,6 +14,9 @@ import {
 } from "./analysis/options.js";
 import { buildReviewItems } from "./analysis/review-items.js";
 import { runSilenced } from "./analysis/run-silenced.js";
+import { runAuditService } from "../services/audit.js";
+import { runResolveService } from "../services/resolve.js";
+import { runHealthService } from "../services/health.js";
 
 export async function buildAnalysisBundle(
   options: ReviewOptions | DoctorOptions | CheckOptions,
@@ -30,15 +33,9 @@ export async function buildAnalysisBundle(
   const [auditResult, resolveResult, healthResult, licenseResult, unusedResult] =
     await runSilenced(() =>
       Promise.all([
-        import("../commands/audit/runner.js").then((mod) =>
-          mod.runAudit(toAuditOptions(options)),
-        ),
-        import("../commands/resolve/runner.js").then((mod) =>
-          mod.runResolve(toResolveOptions(options)),
-        ),
-        import("../commands/health/runner.js").then((mod) =>
-          mod.runHealth(toHealthOptions(options)),
-        ),
+        runAuditService(toAuditOptions(options)),
+        runResolveService(toResolveOptions(options)),
+        runHealthService(toHealthOptions(options)),
         import("../commands/licenses/runner.js").then((mod) =>
           mod.runLicenses(toLicenseOptions(options)),
         ),

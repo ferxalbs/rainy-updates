@@ -23,17 +23,24 @@ async function fileExists(filePath) {
 
 const cwd = process.cwd();
 const distCli = path.resolve(cwd, "dist/bin/cli.js");
+const distMcp = path.resolve(cwd, "dist/bin/mcp.js");
 const compiledBase = path.resolve(cwd, "dist/rup");
 const compiledBinary =
   process.platform === "win32" ? `${compiledBase}.exe` : compiledBase;
+const compiledMcpBase = path.resolve(cwd, "dist/rup-mcp");
+const compiledMcpBinary =
+  process.platform === "win32" ? `${compiledMcpBase}.exe` : compiledMcpBase;
 
 await runCommand(["bun", distCli, "--help"], cwd);
 await runCommand(["bun", distCli, "--version"], cwd);
+await runCommand(["bun", distMcp, "--help"], cwd);
+await runCommand(["bun", distMcp, "--version"], cwd);
 
-if (!(await fileExists(compiledBinary))) {
+if (!(await fileExists(compiledBinary)) || !(await fileExists(compiledMcpBinary))) {
   await runCommand(["bun", "run", "build:exe"], cwd);
 }
 
 await runCommand([compiledBinary, "--help"], cwd);
 await runCommand([compiledBinary, "--version"], cwd);
-
+await runCommand([compiledMcpBinary, "--help"], cwd);
+await runCommand([compiledMcpBinary, "--version"], cwd);

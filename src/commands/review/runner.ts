@@ -1,13 +1,12 @@
-import { buildReviewResult, renderReviewResult } from "../../core/review-model.js";
-import { applySelectedUpdates } from "../../core/upgrade.js";
-import { createDecisionPlan, writeDecisionPlan } from "../../core/decision-plan.js";
+import { renderReviewResult } from "../../core/review-model.js";
 import { stableStringify } from "../../utils/stable-json.js";
 import { writeFileAtomic } from "../../utils/io.js";
 import { writeStdout } from "../../utils/runtime.js";
 import type { ReviewOptions, ReviewResult } from "../../types/index.js";
+import { runReviewService } from "../../services/review.js";
 
 export async function runReview(options: ReviewOptions): Promise<ReviewResult> {
-  const review = await buildReviewResult(options);
+  const review = await runReviewService(options);
 
   if (options.interactive && review.updates.length > 0) {
     const { runDashboard } = await import("../dashboard/runner.js");
@@ -28,39 +27,10 @@ export async function runReview(options: ReviewOptions): Promise<ReviewResult> {
     }
     return review;
   }
-  let selectedItems = review.items;
-  const selectedUpdates = selectedItems.map((item) => item.update);
-
-  if (options.decisionPlanFile) {
-    const decisionPlan = createDecisionPlan({
-      review,
-      selectedItems,
-      sourceCommand: "review",
-      mode: options.applySelected ? "upgrade" : "review",
-      focus: options.queueFocus ?? "all",
-    });
-    const decisionPlanFile = options.decisionPlanFile;
-    await writeDecisionPlan(decisionPlanFile, decisionPlan);
-    review.decisionPlan = decisionPlan;
-    review.summary.decisionPlan = decisionPlanFile;
-  }
-
-  if (options.applySelected && selectedUpdates.length > 0) {
-    await applySelectedUpdates(
-      {
-        ...options,
-        install: false,
-        packageManager: "auto",
-        sync: false,
-      },
-      selectedUpdates,
-    );
-  }
-
   writeStdout(renderReviewResult({
     ...review,
-    items: selectedItems,
-    updates: selectedUpdates,
+    items: review.items,
+    updates: review.items.map((item) => item.update),
   }) + "\n");
 
   if (options.jsonFile) {

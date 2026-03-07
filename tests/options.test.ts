@@ -268,6 +268,69 @@ test("parseCliArgs supports dashboard command", async () => {
   }
 });
 
+test("parseCliArgs supports mcp command", async () => {
+  const parsed = await parseCliArgs([
+    "mcp",
+    "--workspace",
+    "--tool-timeout-ms",
+    "15000",
+    "--port",
+    "3741",
+    "--auth-token",
+    "secret",
+  ]);
+  expect(parsed.command).toBe("mcp");
+  if (parsed.command === "mcp") {
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.toolTimeoutMs).toBe(15000);
+    expect(parsed.options.transport).toBe("sse");
+    expect(parsed.options.port).toBe(3741);
+    expect(parsed.options.authToken).toBe("secret");
+  }
+});
+
+test("parseCliArgs supports explain command", async () => {
+  const parsed = await parseCliArgs([
+    "explain",
+    "react",
+    "--from",
+    "18.2.0",
+    "--to",
+    "19.0.0",
+    "--format",
+    "json",
+  ]);
+  expect(parsed.command).toBe("explain");
+  if (parsed.command === "explain") {
+    expect(parsed.options.packageName).toBe("react");
+    expect(parsed.options.fromVersion).toBe("18.2.0");
+    expect(parsed.options.toVersion).toBe("19.0.0");
+    expect(parsed.options.format).toBe("json");
+  }
+});
+
+test("parseCliArgs supports watch command", async () => {
+  const parsed = await parseCliArgs([
+    "watch",
+    "stop",
+    "--workspace",
+    "--interval",
+    "6h",
+    "--notify",
+    "slack",
+    "--webhook",
+    "https://example.com/hook",
+  ]);
+  expect(parsed.command).toBe("watch");
+  if (parsed.command === "watch") {
+    expect(parsed.options.action).toBe("stop");
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.intervalMs).toBe(6 * 60 * 60 * 1000);
+    expect(parsed.options.notify).toBe("slack");
+    expect(parsed.options.webhook).toBe("https://example.com/hook");
+  }
+});
+
 test("parseCliArgs supports ga command", async () => {
   const parsed = await parseCliArgs(["ga", "--workspace", "--json-file", "ga.json"]);
   expect(parsed.command).toBe("ga");

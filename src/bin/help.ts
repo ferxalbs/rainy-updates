@@ -304,6 +304,52 @@ Options:
   --cwd <path>`;
   }
 
+  if (isCommand && command === "mcp") {
+    return `rainy-updates mcp [options]
+
+Run the local MCP server for AI agents.
+
+Options:
+  --cwd <path>
+  --workspace
+  --log-level error|warn|info|debug
+  --transport stdio|sse
+  --tool-timeout-ms <n>
+  --host <addr>
+  --port <n>
+  --auth-token <token>`;
+  }
+
+  if (isCommand && command === "explain") {
+    return `rainy-updates explain <package> [options]
+
+Explain the update context for a specific package.
+
+Options:
+  --from <version>
+  --to <version>
+  --workspace
+  --format table|json|minimal
+  --json-file <path>
+  --cwd <path>`;
+  }
+
+  if (isCommand && command === "watch") {
+    return `rainy-updates watch [stop|run] [options]
+
+Monitor dependency updates and advisories from the local checkout.
+
+Options:
+  --workspace
+  --interval <duration>
+  --severity critical|high|medium|low
+  --notify slack|discord|http
+  --webhook <url>
+  --plan-file <path>
+  --daemon
+  --cwd <path>`;
+  }
+
   return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
@@ -325,6 +371,9 @@ Commands:
   snapshot    Save, list, restore, and diff dependency state snapshots
   ga          Audit GA and CI readiness for this checkout
   hook        Install or inspect Rainy-managed git hooks
+  mcp         Run the local MCP server for AI agents
+  explain     Summarize a package update with risk/security context
+  watch       Monitor dependency updates and advisories locally
 
 Global options:
   --cwd <path>
