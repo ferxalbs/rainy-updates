@@ -57,6 +57,16 @@ Example prompts:
 Docs:
 [MCP overview](./docs/mcp.md) · [MCP tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [MCP security model](./docs/mcp-security-model.md)
 
+## Repo Health Badge
+
+Publish doctor health to a Shields endpoint badge using GitHub Pages:
+
+```md
+![Repo Health](https://img.shields.io/endpoint?url=https://ferxalbs.github.io/rainy-updates/badges/health.json)
+```
+
+The JSON endpoint is generated from `rup doctor --badge-file .artifacts/badges/health.json`.
+
 Comparison:
 [Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
 
@@ -81,6 +91,7 @@ Rainy Updates gives teams one dependency lifecycle:
 
 - `check` detects candidate updates.
 - `doctor` summarizes the current situation.
+- `predict` estimates upgrade break risk before applying changes.
 - `review` decides what should happen.
 - `dashboard` is the primary interactive decision surface.
 - `upgrade` applies the approved change set.
@@ -111,7 +122,10 @@ bunx --bun @rainy-updates/cli doctor --workspace
 # 3) Decide in the dashboard
 bunx --bun @rainy-updates/cli dashboard --mode review --plan-file .artifacts/decision-plan.json
 
-# 4) Apply the approved plan
+# 4) Predict break risk
+bunx --bun @rainy-updates/cli predict --workspace
+
+# 5) Apply the approved plan
 bunx --bun @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json
 ```
 
@@ -197,6 +211,7 @@ npx @rainy-updates/cli ci --workspace --mode strict
 - `check` — detect candidate dependency updates
 - `doctor` — summarize the current dependency situation
 - `review` — decide what to do with security, risk, peer, and policy context
+- `predict` — estimate break risk and confidence before apply
 - `dashboard` — open the primary interactive decision console
 - `upgrade` — apply the approved change set
 - `ga` — audit GA and CI readiness for the current checkout

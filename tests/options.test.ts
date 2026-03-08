@@ -309,6 +309,26 @@ test("parseCliArgs supports explain command", async () => {
   }
 });
 
+test("parseCliArgs supports predict command", async () => {
+  const packageParsed = await parseCliArgs([
+    "predict",
+    "react",
+    "--format",
+    "json",
+  ]);
+  expect(packageParsed.command).toBe("predict");
+  if (packageParsed.command === "predict") {
+    expect(packageParsed.options.packageName).toBe("react");
+    expect(packageParsed.options.format).toBe("json");
+  }
+
+  const workspaceParsed = await parseCliArgs(["predict", "--workspace"]);
+  expect(workspaceParsed.command).toBe("predict");
+  if (workspaceParsed.command === "predict") {
+    expect(workspaceParsed.options.workspace).toBe(true);
+  }
+});
+
 test("parseCliArgs supports watch command", async () => {
   const parsed = await parseCliArgs([
     "watch",

@@ -8,6 +8,7 @@ Agents can call local tools such as:
 
 - `rup_check`
 - `rup_doctor`
+- `rup_predict`
 - `rup_review`
 - `rup_audit`
 - `rup_upgrade`

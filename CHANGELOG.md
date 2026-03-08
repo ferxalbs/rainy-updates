@@ -2,6 +2,47 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.10] - 2026-03-08
+
+Major polish and modularization release for dependency operations, adding predictive risk analysis, a richer doctor interface, MCP expansion, and a publishable repository health badge flow.
+
+### Added
+
+- **New `predict` command** with full scope support:
+  - package mode: `rup predict <package>`,
+  - workspace mode: `rup predict --workspace`,
+  - decision plan mode: `rup predict --from-plan <path>`.
+- **Prediction engine + renderer modules**:
+  - structured prediction output with `prediction`, `riskLevel`, `confidence`, top risky changes, recommended action, and next commands,
+  - table/json/minimal predict output formats.
+- **New MCP tool: `rup_predict`**:
+  - non-mutating prediction tool for package/workspace/decision-plan analysis,
+  - strict scope validation (exactly one of `packageName`, `workspace=true`, or `fromPlanFile`).
+- **Doctor badge output support**:
+  - added `rup doctor --badge-file <path>` to emit Shields endpoint JSON (`schemaVersion`, `label`, `message`, `color`).
+- **GitHub Pages badge publishing workflow**:
+  - new workflow to generate and publish `badges/health.json` for README badge endpoints.
+
+### Changed
+
+- **Doctor terminal output redesigned** into an executive and scan-friendly layout:
+  - header with health score, state, risk level, package manager, workspace, and duration,
+  - summary bullets,
+  - prioritized findings,
+  - recommended action,
+  - next commands.
+- **Lifecycle docs and help text updated** to include the new prediction step:
+  - `check → doctor → predict → review → upgrade`.
+- **MCP documentation updated** to include `rup_predict` and revised read-only flow guidance.
+- **Public contract compatibility preserved**:
+  - existing machine-readable `doctor`/review/check contracts remain stable,
+  - `explain` command/tool remains available for compatibility while `predict` is introduced.
+
+### Tests
+
+- `bun run typecheck`
+- `bun test`
+
 ## [0.6.7] - 2026-03-06
 
 MCP compatibility and operator docs hardening for agent integrations (Kilo, Cursor, Claude) with a stable tool contract for model-driven workflows.

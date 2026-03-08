@@ -20,5 +20,6 @@ test("renderHelp returns global help for unknown command context", () => {
   const output = renderHelp(undefined);
   expect(output).toContain("rainy-updates (rup / rainy-up) <command> [options]");
   expect(output).toContain("check       Detect candidate updates");
+  expect(output).toContain("predict     Predict upgrade break risk with confidence");
   expect(output).toContain("--version, -v");
 });

@@ -60,6 +60,7 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
     verdictOnly: false,
     includeChangelog: false,
     agentReport: false,
+    badgeFile: undefined,
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -123,6 +124,12 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
       continue;
     }
     if (current === "--json-file") throw new Error("Missing value for --json-file");
+    if (current === "--badge-file" && next) {
+      options.badgeFile = path.resolve(options.cwd, next);
+      i += 1;
+      continue;
+    }
+    if (current === "--badge-file") throw new Error("Missing value for --badge-file");
     if (current === "--help" || current === "-h") {
       writeStdout(DOCTOR_HELP);
       exitProcess(0);
@@ -144,6 +151,7 @@ Options:
   --verdict-only         Print the 3-line quick verdict without counts
   --include-changelog    Include release note summaries in the aggregated review data
   --agent-report         Print a prompt-ready remediation report for coding agents
+  --badge-file <path>    Write a Shields endpoint badge JSON from doctor state
   --workspace            Scan all workspace packages
   --only-changed         Limit analysis to changed packages
   --affected             Include changed packages and their dependents

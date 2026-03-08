@@ -132,6 +132,6 @@ test("doctor recommends review when the aggregated result contains execution err
   expect(doctor.summary.primaryFindingCategory).toBe("Registry / Execution");
   expect(doctor.summary.findingCountsBySeverity?.error).toBe(1);
   expect(doctor.summary.suggestedCommand).toBe("rup dashboard --mode review");
-  expect(renderDoctorResult(doctor, true)).toContain("Score: 88/100");
+  expect(renderDoctorResult(doctor, true)).toContain("Health Score: 88/100");
   expect(renderDoctorAgentReport(doctor)).toContain("Priority findings:");
 });

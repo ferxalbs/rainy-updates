@@ -17,5 +17,29 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorResult> {
   if (options.jsonFile) {
     await writeFileAtomic(options.jsonFile, stableStringify(doctor, 2) + "\n");
   }
+  if (options.badgeFile) {
+    await writeFileAtomic(
+      options.badgeFile,
+      stableStringify(createDoctorBadge(doctor.score), 2) + "\n",
+    );
+  }
   return doctor;
+}
+
+function createDoctorBadge(score: number): {
+  schemaVersion: 1;
+  label: string;
+  message: string;
+  color: string;
+} {
+  if (score >= 90) {
+    return { schemaVersion: 1, label: "repo health", message: `${score}/100 healthy`, color: "2ea043" };
+  }
+  if (score >= 75) {
+    return { schemaVersion: 1, label: "repo health", message: `${score}/100 warning`, color: "d29922" };
+  }
+  if (score >= 50) {
+    return { schemaVersion: 1, label: "repo health", message: `${score}/100 at risk`, color: "f85149" };
+  }
+  return { schemaVersion: 1, label: "repo health", message: `${score}/100 critical`, color: "a40e26" };
 }

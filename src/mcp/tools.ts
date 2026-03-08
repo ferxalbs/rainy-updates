@@ -8,6 +8,7 @@ import type {
   CheckOptions,
   DoctorOptions,
   ExplainOptions,
+  PredictOptions,
   HealthOptions,
   McpOptions,
   McpToolCallResult,
@@ -28,6 +29,7 @@ import { runBisectService } from "../services/bisect.js";
 import { runResolveService } from "../services/resolve.js";
 import { diffBaselineService, saveBaselineService } from "../services/baseline.js";
 import { runExplainService } from "../services/explain.js";
+import { runPredictService } from "../services/predict.js";
 import { McpToolError } from "./errors.js";
 
 const gitScopeSchema = {
@@ -122,6 +124,55 @@ export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
           nextAction: result.recommendedCommand,
           nextActionReason: result.nextActionReason,
         });
+      },
+    },
+    {
+      name: "rup_predict",
+      description: "Predict upgrade break risk for package, workspace, or decision plan scope.",
+      inputSchema: baseInputSchema.extend({
+        packageName: z.string().optional(),
+        fromPlanFile: z.string().optional(),
+        includeChangelog: z.boolean().optional(),
+      }).superRefine((value, ctx) => {
+        const selected = [
+          value.packageName ? 1 : 0,
+          value.workspace ? 1 : 0,
+          value.fromPlanFile ? 1 : 0,
+        ].reduce((sum, item) => sum + item, 0);
+        if (selected !== 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              "Specify exactly one scope: packageName, workspace=true, or fromPlanFile.",
+          });
+        }
+      }),
+      jsonSchema: {
+        type: "object",
+        properties: {
+          cwd: { type: "string" },
+          workspace: { type: "boolean" },
+          packageName: { type: "string" },
+          fromPlanFile: { type: "string" },
+          includeChangelog: { type: "boolean" },
+        },
+      },
+      call: async (args, context) => {
+        const options: PredictOptions = {
+          cwd: resolveString(args.cwd, serverOptions.cwd),
+          workspace: resolveBoolean(args.workspace, serverOptions.workspace),
+          packageName: args.packageName as string | undefined,
+          fromPlanFile: args.fromPlanFile as string | undefined,
+          includeChangelog: (args.includeChangelog as boolean | undefined) ?? true,
+          format: "json",
+          jsonFile: undefined,
+          concurrency: 16,
+          registryTimeoutMs: 8000,
+          registryRetries: 3,
+          cacheTtlSeconds: 3600,
+        };
+        const result = await runPredictService(options, context);
+        return wrapResult(result);
       },
     },
     {

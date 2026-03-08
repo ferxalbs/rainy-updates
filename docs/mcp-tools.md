@@ -41,6 +41,14 @@ For tool failures, `error.data` includes structured codes:
 - Key input: `onlyChanged`, `includeChangelog`, git-scope flags.
 - Key output: `verdict`, `score`, `findings`, `nextAction`.
 
+### `rup_predict`
+
+- Mutating: no
+- Purpose: predict upgrade break risk with confidence scoring.
+- Scope input (exactly one): `packageName`, `workspace=true`, or `fromPlanFile`.
+- Optional input: `includeChangelog`.
+- Key output: `prediction`, `riskLevel`, `confidence`, `highestRiskChanges`, `nextCommands`.
+
 ### `rup_review`
 
 - Mutating: no
@@ -104,7 +112,7 @@ For tool failures, `error.data` includes structured codes:
 ## Model usage guidance
 
 - Prefer `structuredContent` over parsing text.
-- Use read-only tools first (`check` → `doctor` → `review`) before mutating operations.
+- Use read-only tools first (`check` → `doctor` → `predict` → `review`) before mutating operations.
 - Only call `rup_upgrade` when:
   - a decision plan exists and
   - `confirm=true` is intentionally provided.

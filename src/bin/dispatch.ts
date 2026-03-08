@@ -160,6 +160,13 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
     return true;
   }
 
+  if (parsed.command === "predict") {
+    const { runPredict } = await import("../commands/predict/runner.js");
+    const result = await runPredict(parsed.options);
+    setRuntimeExitCode(result.riskLevel === "Low" ? 0 : 1);
+    return true;
+  }
+
   if (parsed.command === "watch") {
     const { runWatch } = await import("../commands/watch/runner.js");
     const result = await runWatch(parsed.options);

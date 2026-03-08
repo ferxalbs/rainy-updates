@@ -527,6 +527,63 @@ export interface ExplainOptions {
   cacheTtlSeconds: number;
 }
 
+export type PredictScope = "package" | "workspace" | "plan";
+export type PredictVerdict =
+  | "Safe Upgrade"
+  | "Review Recommended"
+  | "Risky Upgrade"
+  | "Blocked by Policy";
+export type PredictRiskLevel = "Low" | "Moderate" | "High" | "Severe";
+
+export interface PredictItem {
+  packageName: string;
+  packagePath: string;
+  fromVersion: string;
+  toVersion: string;
+  diffType: TargetLevel;
+  riskLevel?: RiskLevel;
+  riskScore?: number;
+  decisionState?: DecisionState;
+  policyAction?: PolicyAction;
+  advisories: number;
+  peerConflicts: number;
+  reasons: string[];
+}
+
+export interface PredictResult {
+  scope: PredictScope;
+  packageName?: string;
+  fromPlanFile?: string;
+  prediction: PredictVerdict;
+  riskLevel: PredictRiskLevel;
+  confidence: number;
+  checkedInMs: number;
+  analyzed: number;
+  predictedSafe: number;
+  predictedRisky: number;
+  predictedBlocked: number;
+  summary: string[];
+  highestRiskChanges: PredictItem[];
+  recommendedAction: string[];
+  nextCommands: string[];
+  warnings: string[];
+  errors: string[];
+}
+
+export interface PredictOptions {
+  cwd: string;
+  workspace: boolean;
+  packageName?: string;
+  fromPlanFile?: string;
+  format: "table" | "json" | "minimal";
+  jsonFile?: string;
+  includeChangelog: boolean;
+  concurrency: number;
+  registryTimeoutMs: number;
+  registryRetries: number;
+  cacheTtlSeconds: number;
+}
+
 export type HealthFlag = "stale" | "deprecated" | "archived" | "unmaintained";
 
 export interface HealthOptions {
@@ -675,6 +732,7 @@ export interface DoctorOptions extends CheckOptions {
   verdictOnly: boolean;
   includeChangelog?: boolean;
   agentReport?: boolean;
+  badgeFile?: string;
 }
 
 export interface DoctorFinding {
@@ -930,6 +988,7 @@ export interface McpOptions {
 export type McpToolName =
   | "rup_check"
   | "rup_doctor"
+  | "rup_predict"
   | "rup_review"
   | "rup_audit"
   | "rup_upgrade"

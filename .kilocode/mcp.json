@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "/Users/fer/.bun/bin/rup-mcp",
+      "args": [
+        "--cwd",
+        "/Users/fer/Projects/rainy-updates"
+      ],
+      "env": {
+        "FORCE_COLOR": "0"
+      }
+    }
+  }
+}

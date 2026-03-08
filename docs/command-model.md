@@ -4,8 +4,9 @@ Rainy Updates has one intended lifecycle:
 
 1. `check` detects
 2. `doctor` summarizes
-3. `review` decides
-4. `upgrade` applies
+3. `predict` estimates break risk
+4. `review` decides
+5. `upgrade` applies
 
 ## `check`
 
@@ -34,6 +35,14 @@ Use `doctor` when you need a quick verdict.
 - package selection
 
 If you need to decide, use `review`.
+
+## `predict`
+
+Use `predict` when you need a risk forecast before mutation.
+
+- package mode: `rup predict <package>`
+- workspace mode: `rup predict --workspace`
+- plan mode: `rup predict --from-plan .artifacts/decision-plan.json`
 
 ## `upgrade`
 

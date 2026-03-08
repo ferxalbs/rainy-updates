@@ -6,6 +6,7 @@ export function renderHelp(command?: string): string {
 Detect candidate dependency updates. This is the first step in the flow:
   check detects
   doctor summarizes
+  predict estimates
   review decides
   upgrade applies
 
@@ -119,6 +120,7 @@ Options:
 Run CI-oriented automation around the same lifecycle:
   check detects
   doctor summarizes
+  predict estimates
   review decides
   upgrade applies
 
@@ -257,6 +259,7 @@ Options:
   --since <ref>
   --verdict-only
   --include-changelog
+  --badge-file <path>
   --json-file <path>`;
   }
 
@@ -335,6 +338,20 @@ Options:
   --cwd <path>`;
   }
 
+  if (isCommand && command === "predict") {
+    return `rainy-updates predict <package>|--workspace|--from-plan <path> [options]
+
+Predict break risk before applying dependency changes.
+
+Options:
+  --workspace
+  --from-plan <path>
+  --format table|json|minimal
+  --json-file <path>
+  --no-changelog
+  --cwd <path>`;
+  }
+
   if (isCommand && command === "watch") {
     return `rainy-updates watch [stop|run] [options]
 
@@ -374,6 +391,7 @@ Commands:
   hook        Install or inspect Rainy-managed git hooks
   mcp         Run the local MCP server for AI agents
   explain     Summarize a package update with risk/security context
+  predict     Predict upgrade break risk with confidence
   watch       Monitor dependency updates and advisories locally
 
 Global options:

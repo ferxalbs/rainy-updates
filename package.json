@@ -1,6 +1,6 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.6.7",
+  "version": "0.6.10",
   "description": "The fastest DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and automates npm/pnpm dependencies in CI.",
   "type": "module",
   "private": false,
