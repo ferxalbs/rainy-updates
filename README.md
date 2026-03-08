@@ -4,87 +4,6 @@ Rainy Updates is a deterministic dependency review and upgrade operator for Node
 
 `@rainy-updates/cli` is built for teams that need fast dependency detection, trustworthy review, controlled upgrades, and automation-ready outputs for CI/CD.
 
-## Use with AI Agents (MCP)
-
-Rainy Updates can run as a **local MCP server** so Claude Desktop, Cursor, and other MCP-capable agents can inspect dependency health without adding any AI logic to the CLI itself.
-
-Recommended production entrypoint:
-
-- `rup-mcp` for editors and agent clients
-- `rup mcp` remains available as a compatibility alias
-
-- Default transport: `stdio` via `rup-mcp`
-- Optional transport: `HTTP` via `rup-mcp --transport http --port 3741 --http-path /mcp`
-- Default safety posture: local process, no cloud relay, no HTTP listener unless you opt in
-
-Quick start:
-
-```json
-{
-  "mcpServers": {
-    "rainy-updates": {
-      "command": "rup",
-      "args": ["mcp"],
-      "env": {
-        "FORCE_COLOR": "0"
-      }
-    }
-  }
-}
-```
-
-Cursor:
-
-```json
-{
-  "mcpServers": {
-    "rainy-updates": {
-      "command": "rup",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-If your IDE does not inherit shell `PATH`, set an absolute command path (for example `/Users/<you>/.bun/bin/rup-mcp`) instead of `rup`/`rup-mcp`.
-
-Example prompts:
-
-- `Do I have any critical vulnerabilities in this workspace?`
-- `Explain whether updating react is safe right now.`
-- `Create a dependency decision plan for the packages changed in this branch.`
-
-Docs:
-[MCP overview](./docs/mcp.md) · [MCP tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [MCP security model](./docs/mcp-security-model.md)
-
-## Repo Health Badge
-
-Publish doctor health to a Shields endpoint badge using GitHub Pages:
-
-```md
-![Repo Health](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ferxalbs/rainy-updates/gh-pages/badges/health.json)
-```
-
-The JSON endpoint is generated from `rup doctor --badge-file .public/badges/health.json` and published to the `gh-pages` branch.
-
-Comparison:
-[Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
-
-Command model:
-[Check → Doctor → Review → Upgrade](./docs/command-model.md)
-
-Review workflow:
-[Review workflow guide](./docs/review-workflow.md)
-
-TUI usage:
-[TUI guide](./docs/tui-guide.md)
-
-Risk engine:
-[Risk engine guide](./docs/risk-engine.md)
-
-Benchmarks:
-[Benchmark methodology](./docs/benchmarks.md)
-
 ## What it is
 
 Rainy Updates gives teams one dependency lifecycle:
@@ -551,13 +470,91 @@ This package ships with production CI/CD pipelines in the repository:
 - Tag-driven release pipeline for npm publishing with provenance.
 - Release preflight validation for npm auth/scope checks before publishing.
 
+## Use with AI Agents (MCP)
+
+Rainy Updates can run as a **local MCP server** so Claude Desktop, Cursor, and other MCP-capable agents can inspect dependency health without adding any AI logic to the CLI itself.
+
+Recommended production entrypoint:
+
+- `rup-mcp` for editors and agent clients
+- `rup mcp` remains available as a compatibility alias
+
+- Default transport: `stdio` via `rup-mcp`
+- Optional transport: `HTTP` via `rup-mcp --transport http --port 3741 --http-path /mcp`
+- Default safety posture: local process, no cloud relay, no HTTP listener unless you opt in
+
+Quick start:
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "rup",
+      "args": ["mcp"],
+      "env": {
+        "FORCE_COLOR": "0"
+      }
+    }
+  }
+}
+```
+
+Cursor:
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "rup",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+If your IDE does not inherit shell `PATH`, set an absolute command path (for example `/Users/<you>/.bun/bin/rup-mcp`) instead of `rup`/`rup-mcp`.
+
+Example prompts:
+
+- `Do I have any critical vulnerabilities in this workspace?`
+- `Explain whether updating react is safe right now.`
+- `Create a dependency decision plan for the packages changed in this branch.`
+
+Docs:
+[MCP overview](./docs/mcp.md) · [MCP tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [MCP security model](./docs/mcp-security-model.md)
+
+## Repo Health Badge
+
+Publish doctor health to a Shields endpoint badge using GitHub Pages:
+
+```md
+![Repo Health](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ferxalbs/rainy-updates/gh-pages/badges/health.json)
+```
+
+The JSON endpoint is generated from `rup doctor --badge-file .public/badges/health.json` and published to the `gh-pages` branch.
+
+Comparison:
+[Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
+
+Command model:
+[Check → Doctor → Review → Upgrade](./docs/command-model.md)
+
+Review workflow:
+[Review workflow guide](./docs/review-workflow.md)
+
+TUI usage:
+[TUI guide](./docs/tui-guide.md)
+
+Risk engine:
+[Risk engine guide](./docs/risk-engine.md)
+
+Benchmarks:
+[Benchmark methodology](./docs/benchmarks.md)
+
 ## Product roadmap
 
 The long-term roadmap is maintained in [`ROADMAP.md`](./ROADMAP.md).
 
-## License
-
-MIT
 # Dedicated MCP binary
 
 For editor integrations, prefer the dedicated MCP binary instead of shelling through the general CLI subcommand:
@@ -568,3 +565,7 @@ rup-mcp --transport http --port 3741 --http-path /mcp --auth-token local-dev-tok
 ```
 
 `rup mcp` remains supported, but `rup-mcp` is the stable integration surface for editors, IDEs, and agent hosts.
+
+## License
+
+MIT
