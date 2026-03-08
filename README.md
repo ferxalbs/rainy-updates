@@ -1,4 +1,4 @@
-# @rainy-updates/cli codex resume 019ccbb5-3144-7212-b17a-b7a835c2daab
+# @rainy-updates/cli
 
 Rainy Updates is a deterministic dependency review and upgrade operator for Node monorepos and CI.
 
@@ -51,6 +51,29 @@ bunx --bun @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json
 ```
 
 ## Installation
+
+### Fast install (global)
+
+Pick one:
+
+```bash
+bun add -g @rainy-updates/cli
+```
+
+```bash
+npm i -g @rainy-updates/cli
+```
+
+```bash
+pnpm add -g @rainy-updates/cli
+```
+
+Verify:
+
+```bash
+rup --version
+rup mcp --help
+```
 
 ### Option 1: Bun runtime (recommended, no install needed)
 
@@ -264,9 +287,11 @@ Configuration can be loaded from:
 
 Rainy Updates runs as a **local MCP server** for Claude Desktop, Cursor, and other MCP-capable agents to inspect dependency health.
 
-### Setup
+### 5-minute setup
 
-Claude Desktop:
+1) Install globally (`rup`) using the commands above.
+
+2) Add this MCP JSON entry:
 
 ```json
 {
@@ -282,7 +307,36 @@ Claude Desktop:
 }
 ```
 
-Cursor:
+3) If your client doesn't inherit `PATH`, use absolute binary path:
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "/Users/<you>/.bun/bin/rup",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+4) Start asking:
+
+- `Run rup_doctor for this workspace`
+- `Show high-risk updates with rup_review`
+- `Check critical CVEs with rup_audit`
+
+Generate config JSON automatically:
+
+```bash
+rup mcp --print-config --client claude
+rup mcp --print-config --client cursor
+rup mcp --print-config --client generic
+```
+
+### More client examples
+
+Cursor example:
 
 ```json
 {
@@ -294,16 +348,6 @@ Cursor:
   }
 }
 ```
-
-> If your IDE doesn't inherit shell `PATH`, use absolute path: `/Users/<you>/.bun/bin/rup-mcp`
-
-### Usage
-
-Example prompts:
-
-- `Do I have any critical vulnerabilities in this workspace?`
-- `Explain whether updating react is safe right now.`
-- `Create a dependency decision plan for the packages changed in this branch.`
 
 ### Transport options
 
@@ -321,11 +365,14 @@ Rainy includes a phased SDK migration path:
 - `RAINY_MCP_ENGINE=sdk`: official `@modelcontextprotocol/sdk` engine path
 - `RAINY_MCP_ENGINE_FALLBACK=0`: disable automatic fallback when `sdk` engine fails
 
-Docs: [MCP overview](./docs/mcp.md) · [Tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [Security model](./docs/mcp-security-model.md)
+Docs: [MCP quickstart](./docs/mcp-install.md) · [Compatibility guide](./docs/mcp-compatibility.md) · [Agent playbook](./docs/agent-playbook.md) · [MCP overview](./docs/mcp.md) · [Tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [Security model](./docs/mcp-security-model.md)
 
 ## Documentation
 
 - [Command model](./docs/command-model.md) — Check → Doctor → Review → Upgrade
+- [MCP quickstart](./docs/mcp-install.md) — Copy-paste setup for MCP clients
+- [MCP compatibility](./docs/mcp-compatibility.md) — Multi-client and multi-environment setup
+- [Agent playbook](./docs/agent-playbook.md) — Best practices for agent workflows
 - [Review workflow](./docs/review-workflow.md) — Decision-making guide
 - [TUI guide](./docs/tui-guide.md) — Dashboard usage
 - [Risk engine](./docs/risk-engine.md) — Risk assessment methodology

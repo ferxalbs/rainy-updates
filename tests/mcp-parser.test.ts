@@ -39,3 +39,9 @@ test("parseMcpArgs rejects removed sse transport", () => {
     "--transport must be stdio or http",
   );
 });
+
+test("parseMcpArgs supports print-config with client profile", () => {
+  const parsed = parseMcpArgs(["--print-config", "--client", "claude"]);
+  expect(parsed.printConfig).toBe(true);
+  expect(parsed.configClient).toBe("claude");
+});

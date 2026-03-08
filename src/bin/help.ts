@@ -317,6 +317,8 @@ Options:
   --workspace
   --log-level error|warn|info|debug
   --transport stdio|http
+  --print-config
+  --client claude|cursor|generic
   --tool-timeout-ms <n>
   --initialize-timeout-ms <n>
   --max-inflight <n>

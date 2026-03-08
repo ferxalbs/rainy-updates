@@ -1,8 +1,8 @@
 # Cursor Setup
 
-Cursor can connect to Rainy Updates through MCP using the local `rup-mcp` command.
+Cursor can connect to Rainy Updates through MCP using local `rup mcp`.
 
-## stdio configuration
+## Recommended config (stdio)
 
 Example `.cursor/mcp.json`:
 
@@ -11,42 +11,58 @@ Example `.cursor/mcp.json`:
   "mcpServers": {
     "rainy-updates": {
       "command": "rup",
+      "args": ["mcp"],
+      "env": {
+        "FORCE_COLOR": "0"
+      }
+    }
+  }
+}
+```
+
+## Optional SDK engine mode
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "rup",
+      "args": ["mcp"],
+      "env": {
+        "RAINY_MCP_ENGINE": "sdk"
+      }
+    }
+  }
+}
+```
+
+## If PATH is not inherited
+
+Use absolute command path:
+
+- Bun global (macOS/Linux): `/Users/<you>/.bun/bin/rup`
+- npm/pnpm global: use `npm bin -g` or `pnpm bin -g`, then append `/rup`
+- Windows Bun global: `C:\\Users\\<you>\\.bun\\bin\\rup.exe`
+
+Example:
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "/Users/<you>/.bun/bin/rup",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-Preferred dedicated binary:
+## Optional HTTP mode
 
-```json
-{
-  "mcpServers": {
-    "rainy-updates": {
-      "command": "rup-mcp"
-    }
-  }
-}
-```
-
-If Cursor does not inherit your shell `PATH`, use the absolute command path:
-
-```json
-{
-  "mcpServers": {
-    "rainy-updates": {
-      "command": "/Users/<you>/.bun/bin/rup-mcp"
-    }
-  }
-}
-```
-
-## Optional HTTP configuration
-
-Start Rainy in HTTP mode:
+Start server:
 
 ```bash
-rup-mcp --transport http --port 3741 --http-path /mcp --auth-token local-dev-token
+rup mcp --transport http --host 127.0.0.1 --port 3741 --http-path /mcp --auth-token local-dev-token
 ```
 
 Then configure Cursor to connect to `http://127.0.0.1:3741/mcp` if your setup prefers HTTP over stdio.

@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { McpOptions } from "../../types/index.js";
 import { getRuntimeCwd } from "../../utils/runtime.js";
+import { normalizeMcpConfigClient } from "./config-template.js";
 
 export function parseMcpArgs(args: string[]): McpOptions {
   const options: McpOptions = {
@@ -8,6 +9,8 @@ export function parseMcpArgs(args: string[]): McpOptions {
     workspace: false,
     logLevel: "info",
     transport: "stdio",
+    printConfig: false,
+    configClient: "generic",
     toolTimeoutMs: 30_000,
     initializeTimeoutMs: 10_000,
     maxInflight: 4,
@@ -142,6 +145,16 @@ export function parseMcpArgs(args: string[]): McpOptions {
       options.diagJson = true;
       continue;
     }
+    if (current === "--print-config") {
+      options.printConfig = true;
+      continue;
+    }
+    if (current === "--client" && next) {
+      options.configClient = normalizeMcpConfigClient(next);
+      index += 1;
+      continue;
+    }
+    if (current === "--client") throw new Error("Missing value for --client");
     if (current.startsWith("-")) throw new Error(`Unknown mcp option: ${current}`);
     throw new Error(`Unexpected mcp argument: ${current}`);
   }

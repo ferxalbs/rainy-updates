@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.14] - 2026-03-08
+
+MCP usability and compatibility release focused on simpler setup and broader client/environment support.
+
+### Added
+
+- **New MCP config generator command flow**:
+  - added `rup mcp --print-config --client claude|cursor|generic`,
+  - outputs ready-to-paste MCP JSON entries for faster onboarding.
+- **New MCP config template module + tests**:
+  - added reusable config template renderer for MCP client profiles,
+  - added parser and template tests to lock output behavior.
+- **Expanded MCP compatibility documentation**:
+  - added multi-client and multi-environment compatibility guide,
+  - added agent playbook and quickstart references for setup, retries, and runtime modes.
+
+### Changed
+
+- **Claude and Cursor setup docs expanded**:
+  - improved examples for SDK mode, PATH fallback, and HTTP usage.
+- **README onboarding simplified**:
+  - added fast global install path,
+  - added direct config-generation commands for MCP setup.
+
+### Tests
+
+- `bun run typecheck`
+- `bun test`
+
 ## [0.6.13] - 2026-03-08
 
 MCP stability and SDK migration release focused on zero-break rollout hardening.

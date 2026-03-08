@@ -1,10 +1,8 @@
 # Claude Desktop Setup
 
-Use Rainy Updates with Claude Desktop by registering `rup-mcp` as a local MCP server.
+Use Rainy Updates with Claude Desktop by registering `rup` (or `rup-mcp`) as a local MCP server.
 
-## stdio configuration
-
-Add this to your Claude Desktop MCP config:
+## Recommended config (stdio)
 
 ```json
 {
@@ -20,13 +18,40 @@ Add this to your Claude Desktop MCP config:
 }
 ```
 
-Preferred dedicated binary:
+## Optional SDK engine mode
 
 ```json
 {
   "mcpServers": {
     "rainy-updates": {
-      "command": "rup-mcp",
+      "command": "rup",
+      "args": ["mcp"],
+      "env": {
+        "FORCE_COLOR": "0",
+        "RAINY_MCP_ENGINE": "sdk"
+      }
+    }
+  }
+}
+```
+
+## If PATH is not inherited
+
+Use absolute command path by runtime/environment:
+
+- Bun global (macOS/Linux): `/Users/<you>/.bun/bin/rup`
+- npm global (macOS/Linux): output of `npm bin -g` + `/rup`
+- pnpm global (macOS/Linux): output of `pnpm bin -g` + `/rup`
+- Windows Bun global: `C:\\Users\\<you>\\.bun\\bin\\rup.exe`
+
+Example:
+
+```json
+{
+  "mcpServers": {
+    "rainy-updates": {
+      "command": "/Users/<you>/.bun/bin/rup",
+      "args": ["mcp"],
       "env": {
         "FORCE_COLOR": "0"
       }
@@ -35,34 +60,19 @@ Preferred dedicated binary:
 }
 ```
 
-If Claude Desktop does not inherit your shell `PATH`, use the absolute command path:
+## Optional HTTP mode
 
-```json
-{
-  "mcpServers": {
-    "rainy-updates": {
-      "command": "/Users/<you>/.bun/bin/rup-mcp",
-      "env": {
-        "FORCE_COLOR": "0"
-      }
-    }
-  }
-}
-```
-
-## HTTP configuration
-
-If you prefer HTTP instead of stdio:
+Start server:
 
 ```bash
-rup-mcp --transport http --port 3741 --http-path /mcp --auth-token local-dev-token
+rup mcp --transport http --host 127.0.0.1 --port 3741 --http-path /mcp --auth-token local-dev-token
 ```
 
-Then point Claude Desktop at `http://127.0.0.1:3741/mcp` using your MCP client’s HTTP settings.
+Then configure Claude to connect to `http://127.0.0.1:3741/mcp` if your client supports HTTP transport.
 
-## Good first prompts
+## First prompts
 
-- `Run a dependency health check for this workspace.`
-- `Review which updates are high risk and why.`
-- `Explain whether upgrading lodash is safe right now.`
-- `Scan for critical advisories and summarize the fix path.`
+- `Run rup_doctor for this workspace`
+- `Show high-risk updates with rup_review`
+- `Check critical vulnerabilities with rup_audit`
+- `Predict break risk for react with rup_predict`

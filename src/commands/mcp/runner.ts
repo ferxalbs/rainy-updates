@@ -3,9 +3,15 @@ import { RainyMcpServer } from "../../mcp/server.js";
 import { runStdioTransport } from "../../mcp/transports/stdio.js";
 import { runHttpTransport } from "../../mcp/transports/http.js";
 import { runSdkMcp } from "../../mcp/sdk-engine.js";
-import { readEnv, writeStderr } from "../../utils/runtime.js";
+import { readEnv, writeStderr, writeStdout } from "../../utils/runtime.js";
+import { renderMcpConfigTemplate } from "./config-template.js";
 
 export async function runMcp(options: McpOptions): Promise<void> {
+  if (options.printConfig) {
+    writeStdout(renderMcpConfigTemplate(options) + "\n");
+    return;
+  }
+
   const engine = (readEnv("RAINY_MCP_ENGINE") ?? "legacy").toLowerCase();
   if (engine === "sdk") {
     try {

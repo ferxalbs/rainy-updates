@@ -1009,6 +1009,8 @@ export interface McpOptions {
   workspace: boolean;
   logLevel: LogLevel;
   transport: McpTransport;
+  printConfig?: boolean;
+  configClient?: "claude" | "cursor" | "generic";
   toolTimeoutMs: number;
   initializeTimeoutMs?: number;
   maxInflight?: number;
