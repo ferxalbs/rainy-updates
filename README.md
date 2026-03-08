@@ -310,6 +310,8 @@ Example prompts:
 - **Default:** `stdio` via `rup-mcp`
 - **HTTP:** `rup-mcp --transport http --port 3741 --http-path /mcp`
 - **Auth:** `rup-mcp --transport http --port 3741 --auth-token local-dev-token`
+- **Reliability controls:** `--max-inflight 4 --max-queue 64 --tool-timeout-ms 30000 --initialize-timeout-ms 10000`
+- **Diagnostics:** `--diag-json` emits structured MCP diagnostics to `stderr`
 
 Docs: [MCP overview](./docs/mcp.md) · [Tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [Security model](./docs/mcp-security-model.md)
 

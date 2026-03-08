@@ -40,6 +40,11 @@ export const WatchConfigSchema = z.object({
 export const McpConfigSchema = z.object({
   transport: z.enum(["stdio", "http"]).optional(),
   toolTimeoutMs: z.number().int().positive().optional(),
+  initializeTimeoutMs: z.number().int().positive().optional(),
+  maxInflight: z.number().int().positive().optional(),
+  maxQueue: z.number().int().nonnegative().optional(),
+  httpMode: z.enum(["stateless", "stateful"]).optional(),
+  diagJson: z.boolean().optional(),
   port: z.number().int().positive().max(65535).optional(),
   host: z.string().min(1).optional(),
   authToken: z.string().min(1).optional(),

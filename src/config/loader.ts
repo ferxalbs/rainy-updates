@@ -59,6 +59,11 @@ export interface FileConfig {
   mcp?: {
     transport?: "stdio" | "http";
     toolTimeoutMs?: number;
+    initializeTimeoutMs?: number;
+    maxInflight?: number;
+    maxQueue?: number;
+    httpMode?: "stateless" | "stateful";
+    diagJson?: boolean;
     port?: number;
     host?: string;
     authToken?: string;

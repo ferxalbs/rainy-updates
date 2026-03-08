@@ -46,6 +46,19 @@ You can also provide a bind host and auth token:
 rup-mcp --transport http --host 127.0.0.1 --port 3741 --http-path /mcp --auth-token local-dev-token
 ```
 
+Reliability and diagnostics controls:
+
+```bash
+rup-mcp \
+  --transport http \
+  --port 3741 \
+  --max-inflight 4 \
+  --max-queue 64 \
+  --tool-timeout-ms 30000 \
+  --initialize-timeout-ms 10000 \
+  --diag-json
+```
+
 By default, Rainy does **not** expose an HTTP listener unless you opt in with `--transport http` or `--port`.
 
 ## Naming: baseline vs snapshot

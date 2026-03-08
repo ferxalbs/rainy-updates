@@ -35,7 +35,37 @@ describe("mcp http transport handler", () => {
 
   test("handles tools/list request over POST", async () => {
     const options = createServerOptions();
-    const handler = createHttpMcpHandler(new RainyMcpServer(options), options);
+    const server = new RainyMcpServer(options);
+    const handler = createHttpMcpHandler(server, options);
+    await handler(
+      new Request("http://127.0.0.1:3741/mcp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer secret",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-06-18" },
+        }),
+      }),
+    );
+    await handler(
+      new Request("http://127.0.0.1:3741/mcp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer secret",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "notifications/initialized",
+        }),
+      }),
+    );
+
     const response = await handler(
       new Request("http://127.0.0.1:3741/mcp", {
         method: "POST",
@@ -52,5 +82,42 @@ describe("mcp http transport handler", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(payload.result.tools.some((tool) => tool.name === "rup_check")).toBe(true);
+  });
+
+  test("returns 202 for notifications", async () => {
+    const options = createServerOptions();
+    const handler = createHttpMcpHandler(new RainyMcpServer(options), options);
+    const response = await handler(
+      new Request("http://127.0.0.1:3741/mcp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer secret",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "notifications/initialized",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(202);
+  });
+
+  test("returns 415 for non-json content type", async () => {
+    const options = createServerOptions();
+    const handler = createHttpMcpHandler(new RainyMcpServer(options), options);
+    const response = await handler(
+      new Request("http://127.0.0.1:3741/mcp", {
+        method: "POST",
+        headers: {
+          "content-type": "text/plain",
+          authorization: "Bearer secret",
+        },
+        body: "ping",
+      }),
+    );
+
+    expect(response.status).toBe(415);
   });
 });

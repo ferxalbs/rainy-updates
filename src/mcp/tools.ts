@@ -53,6 +53,14 @@ type ToolDefinition = {
   call: (args: Record<string, unknown>, context: ServiceContext) => Promise<McpToolCallResult<unknown>>;
 };
 
+export interface McpToolRegistry {
+  list: () => Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
+  call: (
+    name: string,
+    args: Record<string, unknown> | undefined,
+  ) => Promise<McpToolCallResult<unknown>>;
+}
+
 export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
   const definitions: ToolDefinition[] = [
     {
@@ -542,11 +550,7 @@ export function listMcpTools(serverOptions: McpOptions): Array<{
   description: string;
   inputSchema: Record<string, unknown>;
 }> {
-  return createMcpTools(serverOptions).map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    inputSchema: tool.jsonSchema,
-  }));
+  return createMcpToolRegistry(serverOptions).list();
 }
 
 export async function callMcpTool(
@@ -554,32 +558,52 @@ export async function callMcpTool(
   name: string,
   args: Record<string, unknown> | undefined,
 ): Promise<McpToolCallResult<unknown>> {
-  const tool = createMcpTools(serverOptions).find((entry) => entry.name === name);
-  if (!tool) {
-    throw new McpToolError({
-      code: "UNKNOWN_TOOL",
-      message: `Unknown MCP tool: ${name}`,
-      retryable: false,
-      details: { availableTools: createMcpTools(serverOptions).map((entry) => entry.name) },
-    });
-  }
+  return createMcpToolRegistry(serverOptions).call(name, args);
+}
 
-  const parsed = tool.inputSchema.safeParse(args ?? {});
-  if (!parsed.success) {
-    throw new McpToolError({
-      code: "INVALID_PARAMS",
-      message: `Invalid params for ${name}`,
-      retryable: false,
-      details: { issues: parsed.error.issues },
-    });
-  }
+export function createMcpToolRegistry(serverOptions: McpOptions): McpToolRegistry {
+  const definitions = createMcpTools(serverOptions);
+  const toolByName = new Map(definitions.map((entry) => [entry.name, entry] as const));
+  const availableTools = definitions.map((entry) => entry.name);
 
-  const context = createMcpServiceContext(serverOptions);
-  return withTimeout(
-    tool.call(parsed.data as Record<string, unknown>, context),
-    serverOptions.toolTimeoutMs,
-    name,
-  );
+  return {
+    list: () => definitions.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.jsonSchema,
+    })),
+    call: async (
+      name: string,
+      args: Record<string, unknown> | undefined,
+    ): Promise<McpToolCallResult<unknown>> => {
+      const tool = toolByName.get(name as McpToolName);
+      if (!tool) {
+        throw new McpToolError({
+          code: "UNKNOWN_TOOL",
+          message: `Unknown MCP tool: ${name}`,
+          retryable: false,
+          details: { availableTools },
+        });
+      }
+
+      const parsed = tool.inputSchema.safeParse(args ?? {});
+      if (!parsed.success) {
+        throw new McpToolError({
+          code: "INVALID_PARAMS",
+          message: `Invalid params for ${name}`,
+          retryable: false,
+          details: { issues: parsed.error.issues },
+        });
+      }
+
+      const context = createMcpServiceContext(serverOptions);
+      return withTimeout(
+        tool.call(parsed.data as Record<string, unknown>, context),
+        serverOptions.toolTimeoutMs,
+        name,
+      );
+    },
+  };
 }
 
 function withTimeout<T>(

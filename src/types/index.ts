@@ -1010,6 +1010,11 @@ export interface McpOptions {
   logLevel: LogLevel;
   transport: McpTransport;
   toolTimeoutMs: number;
+  initializeTimeoutMs?: number;
+  maxInflight?: number;
+  maxQueue?: number;
+  httpMode?: "stateless" | "stateful";
+  diagJson?: boolean;
   port?: number;
   host?: string;
   authToken?: string;

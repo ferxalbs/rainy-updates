@@ -9,6 +9,21 @@ const server = new RainyMcpServer({
   toolTimeoutMs: 30_000,
 });
 
+async function initializeServerSession(): Promise<void> {
+  await server.handleMessage({
+    jsonrpc: "2.0",
+    id: 999,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-06-18",
+    },
+  });
+  await server.handleMessage({
+    jsonrpc: "2.0",
+    method: "notifications/initialized",
+  });
+}
+
 test("mcp initialize returns server capabilities", async () => {
   const response = await server.handleMessage({
     jsonrpc: "2.0",
@@ -66,6 +81,7 @@ test("mcp initialize negotiates down from newer requested version", async () => 
 });
 
 test("mcp lists tools", async () => {
+  await initializeServerSession();
   const response = await server.handleMessage({
     jsonrpc: "2.0",
     id: 2,
@@ -79,6 +95,7 @@ test("mcp lists tools", async () => {
 });
 
 test("mcp tool catalog remains stable", async () => {
+  await initializeServerSession();
   const response = await server.handleMessage({
     jsonrpc: "2.0",
     id: 20,
@@ -103,6 +120,7 @@ test("mcp tool catalog remains stable", async () => {
 });
 
 test("mcp rejects mutating upgrade without confirmation", async () => {
+  await initializeServerSession();
   const response = await server.handleMessage({
     jsonrpc: "2.0",
     id: 3,
@@ -118,4 +136,58 @@ test("mcp rejects mutating upgrade without confirmation", async () => {
 
   expect(response?.error?.data).toBeDefined();
   expect((response?.error?.data as { code?: string }).code).toBe("CONFIRMATION_REQUIRED");
+});
+
+test("mcp rejects tools/call before initialize", async () => {
+  const uninitialized = new RainyMcpServer({
+    cwd: process.cwd(),
+    workspace: false,
+    logLevel: "error",
+    transport: "stdio",
+    toolTimeoutMs: 30_000,
+  });
+  const response = await uninitialized.handleMessage({
+    jsonrpc: "2.0",
+    id: 41,
+    method: "tools/call",
+    params: {
+      name: "rup_check",
+      arguments: {},
+    },
+  });
+
+  expect(response?.error?.code).toBe(-32002);
+});
+
+test("mcp handles batch payloads", async () => {
+  const batchServer = new RainyMcpServer({
+    cwd: process.cwd(),
+    workspace: false,
+    logLevel: "error",
+    transport: "stdio",
+    toolTimeoutMs: 30_000,
+  });
+
+  const batch = await batchServer.handlePayload([
+    {
+      jsonrpc: "2.0",
+      id: 51,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18" },
+    },
+    {
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    },
+    {
+      jsonrpc: "2.0",
+      id: 52,
+      method: "tools/list",
+    },
+  ]);
+
+  expect(Array.isArray(batch)).toBe(true);
+  const responses = batch as Array<{ id: number | null }>;
+  expect(responses.some((item) => item.id === 51)).toBe(true);
+  expect(responses.some((item) => item.id === 52)).toBe(true);
 });

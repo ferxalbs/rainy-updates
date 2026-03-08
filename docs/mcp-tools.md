@@ -23,7 +23,17 @@ For tool failures, `error.data` includes structured codes:
 - `UNKNOWN_TOOL`: tool name is not exposed by server.
 - `INVALID_PARAMS`: request arguments failed schema validation.
 - `TOOL_TIMEOUT`: execution exceeded `toolTimeoutMs` (retryable).
+- `OVERLOADED`: in-flight/queue limits reached (retryable).
 - `CONFIRMATION_REQUIRED`: mutating tool called without explicit confirmation.
+
+## Runtime behavior notes
+
+- Tools are available after MCP initialization flow:
+  - `initialize` request
+  - `notifications/initialized` notification
+- Server-side overload controls are configurable:
+  - `--max-inflight <n>`
+  - `--max-queue <n>`
 
 ## Tool catalog (stable names)
 

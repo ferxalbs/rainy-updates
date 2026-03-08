@@ -1,7 +1,7 @@
 import { CLI_VERSION } from "../../generated/version.js";
 import { readEnv } from "../../utils/runtime.js";
 import type { McpOptions } from "../../types/index.js";
-import type { JsonRpcRequest } from "../protocol.js";
+import type { JsonRpcRequest, JsonRpcRequestBatch } from "../protocol.js";
 import { RainyMcpServer } from "../server.js";
 
 export function createHttpMcpHandler(server: RainyMcpServer, options: McpOptions) {
@@ -18,6 +18,8 @@ export function createHttpMcpHandler(server: RainyMcpServer, options: McpOptions
         version: CLI_VERSION,
         transport: "http",
         endpointPath,
+        httpMode: options.httpMode ?? "stateless",
+        runtime: server.getRuntimeState(),
       });
     }
 
@@ -32,13 +34,18 @@ export function createHttpMcpHandler(server: RainyMcpServer, options: McpOptions
     if (request.method !== "POST") {
       return new Response("Method not allowed", {
         status: 405,
-        headers: { allow: "POST" },
+        headers: { allow: "POST, GET" },
       });
     }
 
-    let message: JsonRpcRequest;
+    const contentType = request.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().includes("application/json")) {
+      return new Response("Unsupported media type", { status: 415 });
+    }
+
+    let payload: JsonRpcRequest | JsonRpcRequestBatch;
     try {
-      message = (await request.json()) as JsonRpcRequest;
+      payload = (await request.json()) as JsonRpcRequest | JsonRpcRequestBatch;
     } catch {
       return Response.json(
         {
@@ -53,8 +60,11 @@ export function createHttpMcpHandler(server: RainyMcpServer, options: McpOptions
       );
     }
 
-    const response = await server.handleMessage(message);
-    return Response.json(response ?? { jsonrpc: "2.0", id: null, result: null });
+    const response = await server.handlePayload(payload);
+    if (!response) {
+      return new Response(null, { status: 202 });
+    }
+    return Response.json(response);
   };
 }
 

@@ -5,6 +5,8 @@ export interface JsonRpcRequest {
   params?: Record<string, unknown>;
 }
 
+export type JsonRpcRequestBatch = JsonRpcRequest[];
+
 export interface JsonRpcResponse {
   jsonrpc: "2.0";
   id: string | number | null;

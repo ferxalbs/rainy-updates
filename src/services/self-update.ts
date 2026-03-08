@@ -19,6 +19,11 @@ type SelfUpdateDeps = {
   detectManager?: () => "bun" | "npm" | "pnpm";
   useCache?: boolean;
   ttlHours?: number;
+  getCachedLatestVersion?: () => Promise<string | null>;
+  setCachedLatestVersion?: (
+    latestVersion: string,
+    ttlHours: number,
+  ) => Promise<void>;
 };
 
 export async function runSelfUpdateService(
@@ -92,36 +97,74 @@ export async function resolveSelfUpdateStatus(
     return client.resolveLatestVersion(CLI_PACKAGE_NAME);
   });
 
-  let latestVersion: string | null = null;
   let cache: VersionCache | null = null;
-  try {
-    if (useCache) {
+  const readCachedLatestVersion = deps.getCachedLatestVersion ?? (async () => {
+    if (!useCache) return null;
+    try {
       cache = await VersionCache.create();
       const cached = await cache.getValid(SELF_CACHE_KEY, "latest");
-      if (cached?.latestVersion) {
-        latestVersion = cached.latestVersion;
-      }
+      return cached?.latestVersion ?? null;
+    } catch {
+      warnings.push("Unable to read self-update cache; continuing with registry check.");
+      return null;
     }
-  } catch {
-    warnings.push("Unable to read self-update cache; continuing with registry check.");
+  });
+  const writeCachedLatestVersion = deps.setCachedLatestVersion ?? (async (
+    latestVersion: string,
+    cacheTtlHours: number,
+  ) => {
+    if (!useCache) return;
+    try {
+      const activeCache = cache ?? await VersionCache.create();
+      await activeCache.set(
+        SELF_CACHE_KEY,
+        "latest",
+        latestVersion,
+        [latestVersion],
+        cacheTtlHours * 3600,
+      );
+    } catch {
+      warnings.push("Unable to update self-update cache; continuing.");
+    }
+  });
+
+  let latestVersion: string | null = await readCachedLatestVersion();
+  const cachedLatestVersion = latestVersion;
+  const forceRegistryRefresh = latestVersion
+    ? isRegistryDataStale(CLI_VERSION, latestVersion)
+    : false;
+  if (forceRegistryRefresh && latestVersion) {
+    warnings.push(
+      `Cached latest version (v${latestVersion}) is behind current version (v${CLI_VERSION}); refreshing from registry.`,
+    );
   }
 
-  if (!latestVersion) {
+  if (!latestVersion || forceRegistryRefresh) {
     try {
-      latestVersion = await resolveLatestVersion();
-      if (latestVersion && useCache) {
-        const activeCache = cache ?? await VersionCache.create();
-        await activeCache.set(
-          SELF_CACHE_KEY,
-          "latest",
-          latestVersion,
-          [latestVersion],
-          ttlHours * 3600,
-        );
+      const resolvedLatest = await resolveLatestVersion();
+      if (resolvedLatest) {
+        latestVersion = resolvedLatest;
+      } else if (forceRegistryRefresh && cachedLatestVersion) {
+        latestVersion = cachedLatestVersion;
+        warnings.push("Registry returned no latest version; using cached self-update data.");
+      }
+
+      if (latestVersion) {
+        await writeCachedLatestVersion(latestVersion, ttlHours);
       }
     } catch (error) {
       warnings.push(`Unable to check latest CLI version: ${String(error)}`);
+      if (forceRegistryRefresh && cachedLatestVersion) {
+        latestVersion = cachedLatestVersion;
+        warnings.push("Registry refresh failed; using cached self-update data.");
+      }
     }
+  }
+
+  if (latestVersion && isRegistryDataStale(CLI_VERSION, latestVersion)) {
+    warnings.push(
+      `Installed CLI version (v${CLI_VERSION}) is newer than published latest (v${latestVersion}); verify release propagation and cache state.`,
+    );
   }
 
   const outdated = isOutdated(CLI_VERSION, latestVersion);
@@ -144,6 +187,13 @@ function isOutdated(currentVersion: string, latestVersion: string | null): boole
   const latest = parseVersion(latestVersion);
   if (!current || !latest) return false;
   return compareVersions(latest, current) > 0;
+}
+
+function isRegistryDataStale(currentVersion: string, latestVersion: string): boolean {
+  const current = parseVersion(currentVersion);
+  const latest = parseVersion(latestVersion);
+  if (!current || !latest) return false;
+  return compareVersions(latest, current) < 0;
 }
 
 function detectSelfUpdateChannel(): SelfUpdateChannel {

@@ -20,6 +20,15 @@ Patch release focused on `audit_v2` follow-up correctness, risk semantics, and c
 - **Upgrade verification readability**:
   - terminal output now explicitly highlights `Verification Failed` versus `Success`,
   - verification failures are listed in a dedicated section for faster diagnosis.
+- **Self-update stale-cache safeguard**:
+  - `rup self-update --check` now forces a registry refresh when cached latest is behind the current CLI version,
+  - fallback to cached data is explicitly warned when registry refresh fails.
+- **MCP server reliability hardening**:
+  - added MCP session gating (`initialize` + `notifications/initialized`) before tool execution,
+  - added bounded MCP request scheduling (`--max-inflight`, `--max-queue`) to avoid overload stalls,
+  - improved stdio transport stability with serialized message processing to prevent request races,
+  - improved HTTP transport request validation (`application/json` enforcement, notification `202`),
+  - added optional structured MCP diagnostics (`--diag-json`) and expanded health runtime state.
 
 ### Tests
 

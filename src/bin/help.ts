@@ -318,10 +318,15 @@ Options:
   --log-level error|warn|info|debug
   --transport stdio|http
   --tool-timeout-ms <n>
+  --initialize-timeout-ms <n>
+  --max-inflight <n>
+  --max-queue <n>
+  --diag-json
   --host <addr>
   --port <n>
   --auth-token <token>
-  --http-path <path>`;
+  --http-path <path>
+  --http-mode stateless|stateful`;
   }
 
   if (isCommand && command === "explain") {
