@@ -167,6 +167,13 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
     return true;
   }
 
+  if (parsed.command === "self-update") {
+    const { runSelfUpdate } = await import("../commands/self-update/runner.js");
+    const result = await runSelfUpdate(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 2 : 0);
+    return true;
+  }
+
   if (parsed.command === "watch") {
     const { runWatch } = await import("../commands/watch/runner.js");
     const result = await runWatch(parsed.options);

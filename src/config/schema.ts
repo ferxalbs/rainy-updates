@@ -46,6 +46,11 @@ export const McpConfigSchema = z.object({
   httpPath: z.string().min(1).optional(),
 });
 
+export const SelfUpdateConfigSchema = z.object({
+  check: z.enum(["auto", "off"]).optional(),
+  ttlHours: z.number().int().positive().optional(),
+});
+
 export const FileConfigSchema = z.object({
   target: targetSchema.optional(),
   filter: z.string().optional(),
@@ -89,6 +94,7 @@ export const FileConfigSchema = z.object({
   packageManager: packageManagerSchema.optional(),
   sync: z.boolean().optional(),
   mcp: McpConfigSchema.optional(),
+  selfUpdate: SelfUpdateConfigSchema.optional(),
   watch: WatchConfigSchema.optional(),
   webhooks: z.array(WebhookConfigSchema).optional(),
 });

@@ -10,6 +10,7 @@ import type {
   OutputFormat,
   TargetLevel,
   WebhookConfig,
+  SelfUpdateCheckMode,
 } from "../types/index.js";
 import { FileConfigSchema } from "./schema.js";
 
@@ -62,6 +63,10 @@ export interface FileConfig {
     host?: string;
     authToken?: string;
     httpPath?: string;
+  };
+  selfUpdate?: {
+    check?: SelfUpdateCheckMode;
+    ttlHours?: number;
   };
   watch?: {
     intervalMs?: number;

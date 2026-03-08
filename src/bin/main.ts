@@ -20,6 +20,10 @@ import {
 import { CLI_VERSION } from "../generated/version.js";
 import { handleDirectCommand, runPrimaryCommand } from "./dispatch.js";
 import { renderHelp } from "./help.js";
+import type { ParsedCliArgs } from "../core/options.js";
+import { loadConfig } from "../config/loader.js";
+import { readEnv } from "../utils/runtime.js";
+import { runSelfUpdateService, formatSelfUpdateNotice } from "../services/self-update.js";
 
 export async function runCli(): Promise<void> {
   try {
@@ -35,7 +39,14 @@ export async function runCli(): Promise<void> {
     }
 
     const parsed = await parseCliArgs(argv);
-    if (await handleDirectCommand(parsed)) return;
+    const selfUpdateNoticePromise = prepareSelfUpdateNotice(parsed);
+    if (await handleDirectCommand(parsed)) {
+      const selfUpdateNotice = await selfUpdateNoticePromise;
+      if (selfUpdateNotice) {
+        writeStdout(`\n${selfUpdateNotice}\n`);
+      }
+      return;
+    }
     if (
       parsed.command !== "check" &&
       parsed.command !== "upgrade" &&
@@ -157,12 +168,67 @@ export async function runCli(): Promise<void> {
     }
 
     writeStdout(rendered + "\n");
+    const selfUpdateNotice = await selfUpdateNoticePromise;
+    if (selfUpdateNotice) {
+      writeStdout(`\n${selfUpdateNotice}\n`);
+    }
 
     setRuntimeExitCode(resolveExitCode(result, result.summary.failReason));
   } catch (error) {
     writeStderr(`rainy-updates (rup): ${String(error)}\n`);
     setRuntimeExitCode(2);
   }
+}
+
+async function prepareSelfUpdateNotice(parsed: ParsedCliArgs): Promise<string | null> {
+  if (!process.stdout.isTTY) return null;
+  if (parsed.command === "mcp" || parsed.command === "self-update") return null;
+  if (readEnv("CI")) return null;
+  if ("options" in parsed && "ci" in parsed.options && parsed.options.ci) return null;
+  if ("options" in parsed && "format" in parsed.options) {
+    const format = parsed.options.format;
+    if (format === "json" || format === "github" || format === "metrics") return null;
+  }
+  if (readEnv("RAINY_UPDATES_SELF_UPDATE_CHECK") === "0") return null;
+
+  const cwd = "options" in parsed && "cwd" in parsed.options
+    ? parsed.options.cwd
+    : process.cwd();
+  const config = await loadConfig(cwd).catch(
+    () => ({} as Awaited<ReturnType<typeof loadConfig>>),
+  );
+  if (config.selfUpdate?.check === "off") return null;
+
+  const ttlHours = config.selfUpdate?.ttlHours ?? 24;
+  const statusPromise = runSelfUpdateService({
+    cwd,
+    action: "check",
+    yes: false,
+    packageManager: "auto",
+  }, { ttlHours });
+
+  const status = await withTimeout(statusPromise, 500);
+  if (!status || status.errors.length > 0) return null;
+  return formatSelfUpdateNotice(status);
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+    );
+  });
 }
 
 async function readPackageVersion(): Promise<string> {

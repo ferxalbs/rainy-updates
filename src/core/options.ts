@@ -31,6 +31,7 @@ import type {
   McpOptions,
   ExplainOptions,
   PredictOptions,
+  SelfUpdateOptions,
   WatchOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
@@ -63,6 +64,7 @@ const KNOWN_COMMANDS = [
   "mcp",
   "explain",
   "predict",
+  "self-update",
   "watch",
 ] as const;
 
@@ -99,6 +101,7 @@ export type ParsedCliArgs =
   | { command: "mcp"; options: McpOptions }
   | { command: "explain"; options: ExplainOptions }
   | { command: "predict"; options: PredictOptions }
+  | { command: "self-update"; options: SelfUpdateOptions }
   | { command: "watch"; options: WatchOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
@@ -178,6 +181,10 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   if (command === "predict") {
     const { parsePredictArgs } = await import("../commands/predict/parser.js");
     return { command, options: parsePredictArgs(args) };
+  }
+  if (command === "self-update") {
+    const { parseSelfUpdateArgs } = await import("../commands/self-update/parser.js");
+    return { command, options: parseSelfUpdateArgs(args) };
   }
   if (command === "watch") {
     const { parseWatchArgs } = await import("../commands/watch/parser.js");

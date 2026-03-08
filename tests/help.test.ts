@@ -16,10 +16,18 @@ test("renderHelp includes dashboard-specific help", () => {
   expect(output).toContain("--focus all|security|risk|major|blocked|workspace");
 });
 
+test("renderHelp includes self-update command help", () => {
+  const output = renderHelp("self-update");
+  expect(output).toContain("rainy-updates self-update [options]");
+  expect(output).toContain("--apply");
+  expect(output).toContain("--pm auto|bun|npm|pnpm");
+});
+
 test("renderHelp returns global help for unknown command context", () => {
   const output = renderHelp(undefined);
   expect(output).toContain("rainy-updates (rup / rainy-up) <command> [options]");
   expect(output).toContain("check       Detect candidate updates");
   expect(output).toContain("predict     Predict upgrade break risk with confidence");
+  expect(output).toContain("self-update Check or apply Rainy CLI updates");
   expect(output).toContain("--version, -v");
 });

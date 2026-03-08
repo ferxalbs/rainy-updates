@@ -20,8 +20,13 @@ Major polish and modularization release for dependency operations, adding predic
   - strict scope validation (exactly one of `packageName`, `workspace=true`, or `fromPlanFile`).
 - **Doctor badge output support**:
   - added `rup doctor --badge-file <path>` to emit Shields endpoint JSON (`schemaVersion`, `label`, `message`, `color`).
-- **GitHub Pages badge publishing workflow**:
-  - new workflow to generate and publish `badges/health.json` for README badge endpoints.
+- **Badge publishing workflow (no Pages dependency)**:
+  - workflow generates `badges/health.json` and publishes it to `gh-pages`,
+  - README badge endpoint now reads from `raw.githubusercontent.com/.../gh-pages/...` for stable access even when GitHub Pages is not enabled.
+- **New `self-update` command**:
+  - `rup self-update --check` checks if a newer CLI is available,
+  - `rup self-update --apply --yes` applies global updates for npm/pnpm/bun installs,
+  - standalone binary installs are detected and routed to manual replacement guidance.
 
 ### Changed
 
@@ -37,6 +42,9 @@ Major polish and modularization release for dependency operations, adding predic
 - **Public contract compatibility preserved**:
   - existing machine-readable `doctor`/review/check contracts remain stable,
   - `explain` command/tool remains available for compatibility while `predict` is introduced.
+- **CLI update notices**:
+  - local interactive runs now show a non-blocking update-available notice when a newer CLI version is published,
+  - checks are cached (24h) and suppressed in CI and MCP flows.
 
 ### Tests
 

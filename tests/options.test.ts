@@ -329,6 +329,25 @@ test("parseCliArgs supports predict command", async () => {
   }
 });
 
+test("parseCliArgs supports self-update command", async () => {
+  const parsed = await parseCliArgs([
+    "self-update",
+    "--apply",
+    "--yes",
+    "--pm",
+    "pnpm",
+    "--json-file",
+    ".artifacts/self-update.json",
+  ]);
+  expect(parsed.command).toBe("self-update");
+  if (parsed.command === "self-update") {
+    expect(parsed.options.action).toBe("apply");
+    expect(parsed.options.yes).toBe(true);
+    expect(parsed.options.packageManager).toBe("pnpm");
+    expect(parsed.options.jsonFile?.endsWith(".artifacts/self-update.json")).toBe(true);
+  }
+});
+
 test("parseCliArgs supports watch command", async () => {
   const parsed = await parseCliArgs([
     "watch",

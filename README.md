@@ -62,10 +62,10 @@ Docs:
 Publish doctor health to a Shields endpoint badge using GitHub Pages:
 
 ```md
-![Repo Health](https://img.shields.io/endpoint?url=https://ferxalbs.github.io/rainy-updates/badges/health.json)
+![Repo Health](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ferxalbs/rainy-updates/gh-pages/badges/health.json)
 ```
 
-The JSON endpoint is generated from `rup doctor --badge-file .artifacts/badges/health.json`.
+The JSON endpoint is generated from `rup doctor --badge-file .public/badges/health.json` and published to the `gh-pages` branch.
 
 Comparison:
 [Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
@@ -220,6 +220,7 @@ npx @rainy-updates/cli ci --workspace --mode strict
 
 - `ci` — run CI-focused dependency automation (warm cache, check/upgrade, policy gates)
 - `warm-cache` — prefetch package metadata for fast and offline checks
+- `self-update` — check/apply Rainy CLI global updates (`rup self-update --check`, `rup self-update --apply --yes`)
 - `baseline` — save and compare dependency baseline snapshots
 - `mcp` — run the local MCP server for AI agents
 - `explain` — summarize a package update with risk, changelog, and security context

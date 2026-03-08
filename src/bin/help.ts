@@ -352,6 +352,20 @@ Options:
   --cwd <path>`;
   }
 
+  if (isCommand && command === "self-update") {
+    return `rainy-updates self-update [options]
+
+Check or apply Rainy CLI updates for global installs.
+
+Options:
+  --check
+  --apply
+  --yes
+  --pm auto|bun|npm|pnpm
+  --json-file <path>
+  --cwd <path>`;
+  }
+
   if (isCommand && command === "watch") {
     return `rainy-updates watch [stop|run] [options]
 
@@ -392,6 +406,7 @@ Commands:
   mcp         Run the local MCP server for AI agents
   explain     Summarize a package update with risk/security context
   predict     Predict upgrade break risk with confidence
+  self-update Check or apply Rainy CLI updates
   watch       Monitor dependency updates and advisories locally
 
 Global options:

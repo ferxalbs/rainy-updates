@@ -973,6 +973,36 @@ export interface WatchResult {
   warnings: string[];
 }
 
+export type SelfUpdateCheckMode = "auto" | "off";
+export type SelfUpdateChannel =
+  | "global-bun"
+  | "global-npm"
+  | "global-pnpm"
+  | "binary"
+  | "unknown";
+export type SelfUpdateAction = "check" | "apply";
+
+export interface SelfUpdateOptions {
+  cwd: string;
+  action: SelfUpdateAction;
+  yes: boolean;
+  packageManager: "auto" | "bun" | "npm" | "pnpm";
+  jsonFile?: string;
+}
+
+export interface SelfUpdateResult {
+  currentVersion: string;
+  latestVersion: string | null;
+  outdated: boolean;
+  channel: SelfUpdateChannel;
+  action: SelfUpdateAction;
+  applied: boolean;
+  recommendedCommand: string;
+  checkedAt: string;
+  errors: string[];
+  warnings: string[];
+}
+
 export interface McpOptions {
   cwd: string;
   workspace: boolean;
