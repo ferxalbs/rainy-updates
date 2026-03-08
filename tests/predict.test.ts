@@ -65,6 +65,7 @@ test("predict analyzes decision plan scope", async () => {
     format: "json",
     jsonFile: undefined,
     includeChangelog: false,
+    failOnRisk: false,
     concurrency: 16,
     registryTimeoutMs: 8000,
     registryRetries: 3,

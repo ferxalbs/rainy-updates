@@ -578,6 +578,7 @@ export interface PredictOptions {
   format: "table" | "json" | "minimal";
   jsonFile?: string;
   includeChangelog: boolean;
+  failOnRisk: boolean;
   concurrency: number;
   registryTimeoutMs: number;
   registryRetries: number;

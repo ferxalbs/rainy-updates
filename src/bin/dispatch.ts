@@ -163,7 +163,18 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
   if (parsed.command === "predict") {
     const { runPredict } = await import("../commands/predict/runner.js");
     const result = await runPredict(parsed.options);
-    setRuntimeExitCode(result.riskLevel === "Low" ? 0 : 1);
+    if (result.errors.length > 0) {
+      setRuntimeExitCode(2);
+    } else if (
+      parsed.options.failOnRisk &&
+      (result.riskLevel === "Moderate" ||
+        result.riskLevel === "High" ||
+        result.riskLevel === "Severe")
+    ) {
+      setRuntimeExitCode(1);
+    } else {
+      setRuntimeExitCode(0);
+    }
     return true;
   }
 

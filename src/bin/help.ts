@@ -349,6 +349,7 @@ Options:
   --format table|json|minimal
   --json-file <path>
   --no-changelog
+  --fail-on-risk
   --cwd <path>`;
   }
 

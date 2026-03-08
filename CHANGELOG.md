@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.11] - 2026-03-08
+
+Patch release focused on terminal exit-code correctness and clearer command semantics for local operators and CI users.
+
+### Changed
+
+- **`predict` exit behavior fixed**:
+  - `rup predict` now exits `0` by default when command execution succeeds,
+  - added `--fail-on-risk` for CI gating scenarios where Moderate/High/Severe predictions should return exit code `1`,
+  - operational failures still return non-zero error exit codes.
+- **`self-update --check` error semantics hardened**:
+  - transient registry lookup failures are now surfaced as warnings instead of hard errors during check mode,
+  - local runs no longer appear failed when update lookup is unavailable.
+- **CLI help and parser updates**:
+  - documented `--fail-on-risk` in predict help output and parser behavior.
+
+### Tests
+
+- `bun test`
+- `bun run typecheck`
+
 ## [0.6.10] - 2026-03-08
 
 Major polish and modularization release for dependency operations, adding predictive risk analysis, a richer doctor interface, MCP expansion, and a publishable repository health badge flow.

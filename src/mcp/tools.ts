@@ -164,6 +164,7 @@ export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
           packageName: args.packageName as string | undefined,
           fromPlanFile: args.fromPlanFile as string | undefined,
           includeChangelog: (args.includeChangelog as boolean | undefined) ?? true,
+          failOnRisk: false,
           format: "json",
           jsonFile: undefined,
           concurrency: 16,

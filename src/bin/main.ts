@@ -208,7 +208,7 @@ async function prepareSelfUpdateNotice(parsed: ParsedCliArgs): Promise<string | 
   }, { ttlHours });
 
   const status = await withTimeout(statusPromise, 500);
-  if (!status || status.errors.length > 0) return null;
+  if (!status) return null;
   return formatSelfUpdateNotice(status);
 }
 

@@ -320,12 +320,14 @@ test("parseCliArgs supports predict command", async () => {
   if (packageParsed.command === "predict") {
     expect(packageParsed.options.packageName).toBe("react");
     expect(packageParsed.options.format).toBe("json");
+    expect(packageParsed.options.failOnRisk).toBe(false);
   }
 
-  const workspaceParsed = await parseCliArgs(["predict", "--workspace"]);
+  const workspaceParsed = await parseCliArgs(["predict", "--workspace", "--fail-on-risk"]);
   expect(workspaceParsed.command).toBe("predict");
   if (workspaceParsed.command === "predict") {
     expect(workspaceParsed.options.workspace).toBe(true);
+    expect(workspaceParsed.options.failOnRisk).toBe(true);
   }
 });
 

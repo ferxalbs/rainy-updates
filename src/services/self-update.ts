@@ -34,7 +34,7 @@ export async function runSelfUpdateService(
     : options.packageManager;
 
   const warnings = [...status.warnings];
-  const errors = [...status.errors];
+  const errors: string[] = [];
   const recommendedCommand = buildRecommendedCommand(channel, manager);
   let applied = false;
 
@@ -82,10 +82,8 @@ export async function resolveSelfUpdateStatus(
   latestVersion: string | null;
   outdated: boolean;
   warnings: string[];
-  errors: string[];
 }> {
   const warnings: string[] = [];
-  const errors: string[] = [];
   const useCache = deps.useCache !== false;
   const ttlHours = deps.ttlHours ?? 24;
   const now = deps.now ?? Date.now;
@@ -122,12 +120,12 @@ export async function resolveSelfUpdateStatus(
         );
       }
     } catch (error) {
-      errors.push(`Unable to check latest CLI version: ${String(error)}`);
+      warnings.push(`Unable to check latest CLI version: ${String(error)}`);
     }
   }
 
   const outdated = isOutdated(CLI_VERSION, latestVersion);
-  return { latestVersion, outdated, warnings, errors };
+  return { latestVersion, outdated, warnings };
 }
 
 export function formatSelfUpdateNotice(result: SelfUpdateResult): string | null {

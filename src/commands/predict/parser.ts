@@ -15,6 +15,7 @@ export function parsePredictArgs(args: string[]): PredictOptions {
     format: "table",
     jsonFile: undefined,
     includeChangelog: true,
+    failOnRisk: false,
     concurrency: 16,
     registryTimeoutMs: 8000,
     registryRetries: 3,
@@ -64,6 +65,10 @@ export function parsePredictArgs(args: string[]): PredictOptions {
       options.includeChangelog = false;
       continue;
     }
+    if (current === "--fail-on-risk") {
+      options.failOnRisk = true;
+      continue;
+    }
     if (current === "--help" || current === "-h") {
       writeStdout(PREDICT_HELP);
       exitProcess(0);
@@ -105,5 +110,6 @@ Options:
   --format table|json|minimal
   --json-file <path>     Write JSON predict report to file
   --no-changelog         Skip changelog/release note enrichment
+  --fail-on-risk         Exit code 1 when predicted risk is Moderate or higher
   --cwd <path>
 `.trimStart();
