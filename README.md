@@ -1,4 +1,4 @@
-# @rainy-updates/cli
+# @rainy-updates/cli codex resume 019ccbb5-3144-7212-b17a-b7a835c2daab
 
 Rainy Updates is a deterministic dependency review and upgrade operator for Node monorepos and CI.
 
@@ -312,6 +312,14 @@ Example prompts:
 - **Auth:** `rup-mcp --transport http --port 3741 --auth-token local-dev-token`
 - **Reliability controls:** `--max-inflight 4 --max-queue 64 --tool-timeout-ms 30000 --initialize-timeout-ms 10000`
 - **Diagnostics:** `--diag-json` emits structured MCP diagnostics to `stderr`
+
+### MCP engine mode
+
+Rainy includes a phased SDK migration path:
+
+- `RAINY_MCP_ENGINE=legacy` (default): current production MCP engine
+- `RAINY_MCP_ENGINE=sdk`: official `@modelcontextprotocol/sdk` engine path
+- `RAINY_MCP_ENGINE_FALLBACK=0`: disable automatic fallback when `sdk` engine fails
 
 Docs: [MCP overview](./docs/mcp.md) · [Tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [Security model](./docs/mcp-security-model.md)
 

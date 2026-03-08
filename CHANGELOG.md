@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.13] - 2026-03-08
+
+MCP stability and SDK migration release focused on zero-break rollout hardening.
+
+### Added
+
+- **Official MCP SDK integration path**:
+  - pinned `@modelcontextprotocol/sdk` to `1.27.1`,
+  - added SDK MCP engine implementation with stdio and web-standard streamable HTTP transports,
+  - added engine selection controls: `RAINY_MCP_ENGINE=legacy|sdk`,
+  - added strict SDK mode guard: `RAINY_MCP_ENGINE_FALLBACK=0`.
+- **SDK engine integration test**:
+  - added stdio test coverage to validate initialize + `tools/list` flow when `RAINY_MCP_ENGINE=sdk`.
+
+### Changed
+
+- **Dual-engine MCP runner rollout behavior**:
+  - legacy engine remains default to prevent client breakage during migration,
+  - SDK engine runs as opt-in path while preserving tool contracts and structured output shapes.
+- **MCP documentation refreshed**:
+  - README and MCP docs now describe phased SDK rollout controls and runtime mode selection.
+
+### Tests
+
+- `bun run typecheck`
+- `bun test`
+
 ## [0.6.12] - 2026-03-08
 
 Patch release focused on `audit_v2` follow-up correctness, risk semantics, and clearer verification reporting.
@@ -29,6 +56,11 @@ Patch release focused on `audit_v2` follow-up correctness, risk semantics, and c
   - improved stdio transport stability with serialized message processing to prevent request races,
   - improved HTTP transport request validation (`application/json` enforcement, notification `202`),
   - added optional structured MCP diagnostics (`--diag-json`) and expanded health runtime state.
+- **Official SDK migration path (phased, no-break)**:
+  - pinned `@modelcontextprotocol/sdk` to `1.27.1`,
+  - added dual-engine MCP runner with `RAINY_MCP_ENGINE=legacy|sdk`,
+  - kept legacy engine as default while SDK engine ships behind opt-in,
+  - added `RAINY_MCP_ENGINE_FALLBACK=0` for strict SDK-only runs.
 
 ### Tests
 

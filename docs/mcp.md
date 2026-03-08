@@ -59,6 +59,14 @@ rup-mcp \
   --diag-json
 ```
 
+## Engine selection (phased SDK migration)
+
+Rainy ships dual MCP engines during migration:
+
+- `RAINY_MCP_ENGINE=legacy` (default) uses the existing production implementation.
+- `RAINY_MCP_ENGINE=sdk` enables the official `@modelcontextprotocol/sdk` path.
+- `RAINY_MCP_ENGINE_FALLBACK=0` disables fallback to legacy when SDK mode errors.
+
 By default, Rainy does **not** expose an HTTP listener unless you opt in with `--transport http` or `--port`.
 
 ## Naming: baseline vs snapshot

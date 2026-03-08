@@ -34,6 +34,9 @@ For tool failures, `error.data` includes structured codes:
 - Server-side overload controls are configurable:
   - `--max-inflight <n>`
   - `--max-queue <n>`
+- Engine rollout controls:
+  - `RAINY_MCP_ENGINE=legacy|sdk`
+  - `RAINY_MCP_ENGINE_FALLBACK=0` to disable fallback in SDK mode
 
 ## Tool catalog (stable names)
 
