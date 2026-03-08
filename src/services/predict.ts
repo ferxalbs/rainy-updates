@@ -24,7 +24,7 @@ export async function runPredictService(
     : await readItemsFromReview(options, warnings, errors);
 
   const predictedBlocked = items.filter((item) => item.policyAction === "block").length;
-  const predictedRisky = items.filter((item) => isRiskyItem(item)).length;
+  const predictedRisky = items.filter((item) => item.policyAction !== "block" && isRiskyItem(item)).length;
   const predictedSafe = Math.max(0, items.length - predictedRisky - predictedBlocked);
   const riskLevel = derivePredictRiskLevel(items);
   const prediction = derivePrediction(items, riskLevel);
@@ -362,7 +362,6 @@ function buildNextCommands(
 
 function isRiskyItem(item: PredictItem): boolean {
   return (
-    item.policyAction === "block" ||
     item.advisories > 0 ||
     item.peerConflicts > 0 ||
     item.diffType === "major" ||

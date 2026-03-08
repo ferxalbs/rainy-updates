@@ -128,8 +128,11 @@ function enrichUpdate(
 }
 
 function derivePolicyAction(item: ReviewItem): PackageUpdate["policyAction"] {
-  if (item.update.peerConflictSeverity === "error" || item.update.licenseStatus === "denied") {
+  if (item.update.licenseStatus === "denied") {
     return "block";
+  }
+  if (item.update.peerConflictSeverity === "error") {
+    return "review";
   }
   if ((item.update.advisoryCount ?? 0) > 0 || item.update.riskLevel === "critical") {
     return "review";

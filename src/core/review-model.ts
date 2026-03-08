@@ -83,7 +83,14 @@ export function renderReviewResult(review: ReviewResult): string {
   lines.push(`Verdict: ${review.summary.verdict ?? "safe"}`);
   lines.push("");
   if (review.items.length === 0) {
-    lines.push("No reviewable updates found.");
+    if (review.analysis.items.length > 0) {
+      lines.push("No updates matched the active review filters.");
+      lines.push(
+        `FilterOutcome: ${review.analysis.items.length} update(s) exist but were excluded by current filters.`,
+      );
+    } else {
+      lines.push("No reviewable updates found.");
+    }
   } else {
     lines.push("Updates:");
     for (const item of review.items) {

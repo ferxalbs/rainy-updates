@@ -151,3 +151,80 @@ test("renderResult json preserves additive risk fields", () => {
   expect(output).toContain('"riskCategories": [');
   expect(output).toContain('"recommendedAction": "Keep this update in review until the risk reasons are cleared."');
 });
+
+test("renderResult table highlights verification failure status", () => {
+  const result: CheckResult = {
+    projectPath: "/tmp/project",
+    packagePaths: ["/tmp/project"],
+    packageManager: "npm",
+    target: "latest",
+    timestamp: new Date().toISOString(),
+    summary: {
+      contractVersion: "2",
+      scannedPackages: 1,
+      totalDependencies: 1,
+      checkedDependencies: 1,
+      updatesFound: 1,
+      upgraded: 1,
+      skipped: 0,
+      warmedPackages: 0,
+      failReason: "none",
+      errorCounts: {
+        total: 1,
+        offlineCacheMiss: 0,
+        registryFailure: 0,
+        registryAuthFailure: 0,
+        other: 1,
+      },
+      warningCounts: {
+        total: 0,
+        staleCache: 0,
+        other: 0,
+      },
+      durationMs: {
+        total: 0,
+        discovery: 0,
+        registry: 0,
+        cache: 0,
+        render: 0,
+      },
+      fixPrApplied: false,
+      fixBranchName: "",
+      fixCommitSha: "",
+      fixPrBranchesCreated: 0,
+      groupedUpdates: 0,
+      cooldownSkipped: 0,
+      ciProfile: "minimal",
+      prLimitHit: false,
+      streamedEvents: 0,
+      policyOverridesApplied: 0,
+      verdict: "review",
+      riskPackages: 1,
+      securityPackages: 0,
+      peerConflictPackages: 0,
+      licenseViolationPackages: 0,
+      privateRegistryPackages: 0,
+      verificationState: "failed",
+      verificationFailures: 1,
+    },
+    updates: [
+      {
+        packagePath: "/tmp/project",
+        name: "react",
+        kind: "dependencies",
+        fromRange: "^18.0.0",
+        toRange: "^19.0.0",
+        toVersionResolved: "19.0.0",
+        diffType: "major",
+        filtered: false,
+        autofix: true,
+      },
+    ],
+    errors: ["Verification failed for test: bun test"],
+    warnings: [],
+  };
+
+  const output = renderResult(result, "table");
+  expect(output).toContain("Result: Verification Failed");
+  expect(output).toContain("Verification Failures:");
+});

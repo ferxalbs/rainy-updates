@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.12] - 2026-03-08
+
+Patch release focused on `audit_v2` follow-up correctness, risk semantics, and clearer verification reporting.
+
+### Fixed
+
+- **Policy-action consistency for review flows**:
+  - peer conflict signals no longer force `block` policy action,
+  - only hard-deny policy conditions (for example license deny) map to `block`,
+  - review guidance now aligns with compatibility-action semantics.
+- **Predict risk aggregation edge case**:
+  - `predictedRisky` counting now excludes `block`-only items,
+  - risky summary metrics no longer double-count blocked-only outcomes.
+- **Review output contradiction with active filters**:
+  - when analysis finds updates but filters hide all items, output now states that active filters excluded candidates instead of implying no findings.
+- **Upgrade verification readability**:
+  - terminal output now explicitly highlights `Verification Failed` versus `Success`,
+  - verification failures are listed in a dedicated section for faster diagnosis.
+
+### Tests
+
+- `bun run typecheck`
+- `bun test`
+
 ## [0.6.11] - 2026-03-08
 
 Patch release focused on terminal exit-code correctness and clearer command semantics for local operators and CI users.

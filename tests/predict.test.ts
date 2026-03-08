@@ -75,6 +75,7 @@ test("predict analyzes decision plan scope", async () => {
   expect(result.scope).toBe("plan");
   expect(result.prediction).toBe("Blocked by Policy");
   expect(result.riskLevel).toBe("Severe");
+  expect(result.predictedRisky).toBe(1);
   expect(result.predictedBlocked).toBe(1);
   expect(renderPredictResult(result, "minimal")).toContain("Prediction:");
 });

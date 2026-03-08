@@ -97,6 +97,11 @@ export function renderResult(
   lines.push(`Scanned packages: ${result.summary.scannedPackages}`);
   lines.push(`Package manager: ${result.packageManager}`);
   lines.push(`Target: ${result.target}`);
+  if (result.summary.verificationState === "failed") {
+    lines.push("Result: Verification Failed");
+  } else if (result.summary.verificationState === "passed") {
+    lines.push("Result: Success");
+  }
   lines.push("");
 
   if (result.updates.length === 0) {
@@ -133,6 +138,15 @@ export function renderResult(
 
   if (result.errors.length > 0) {
     lines.push("");
+    if (result.summary.verificationState === "failed") {
+      lines.push("Verification Failures:");
+      for (const error of result.errors) {
+        if (error.startsWith("Verification failed for")) {
+          lines.push(`- ${error}`);
+        }
+      }
+      lines.push("");
+    }
     lines.push("Errors:");
     for (const error of result.errors) {
       lines.push(`- ${error}`);
