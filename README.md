@@ -4,32 +4,34 @@ Rainy Updates is a deterministic dependency review and upgrade operator for Node
 
 `@rainy-updates/cli` is built for teams that need fast dependency detection, trustworthy review, controlled upgrades, and automation-ready outputs for CI/CD.
 
-## What it is
+## Overview
 
 Rainy Updates gives teams one dependency lifecycle:
 
-- `check` detects candidate updates.
-- `doctor` summarizes the current situation.
-- `predict` estimates upgrade break risk before applying changes.
-- `review` decides what should happen.
-- `dashboard` is the primary interactive decision surface.
-- `upgrade` applies the approved change set.
+1. **`check`** — detects candidate updates
+2. **`doctor`** — summarizes the current situation
+3. **`predict`** — estimates upgrade break risk before applying changes
+4. **`review`** / **`dashboard`** — decides what should happen (interactive decision surface)
+5. **`upgrade`** — applies the approved change set
 
 Everything else supports that lifecycle: CI orchestration, advisory lookup, peer resolution, licenses, snapshots, baselines, and fix-PR automation.
 
-`baseline` and `snapshot` are intentionally different:
+### For whom
 
-- `baseline` saves and compares dependency manifests over time for drift detection.
-- `snapshot` saves, lists, restores, and diffs a fuller dependency state snapshot for recovery workflows.
-- In MCP, the baseline capability is exposed as `rup_baseline` to match the existing `baseline` command, not `snapshot`.
+- Node monorepo teams that want deterministic CI artifacts
+- Engineers who want to review dependency risk locally before applying changes
+- Teams that need fewer, better upgrade decisions instead of noisy automated PR churn
 
-## Who it is for
+### Why use it
 
-- Node monorepo teams that want deterministic CI artifacts.
-- Engineers who want to review dependency risk locally before applying changes.
-- Teams that need fewer, better upgrade decisions instead of noisy automated PR churn.
+- Detects updates quickly across single-package repos and workspaces
+- Centralizes security, peer, license, health, and behavioral risk review
+- Applies updates safely with configurable targets (`patch`, `minor`, `major`, `latest`)
+- Enforces policy rules per package
+- Supports offline and cache-warmed execution for deterministic CI runs
+- Produces machine-readable artifacts: JSON, SARIF, GitHub outputs, and PR reports
 
-## 60-second workflow
+## Quick start
 
 ```bash
 # 1) Detect what changed
@@ -48,253 +50,185 @@ bunx --bun @rainy-updates/cli predict --workspace
 bunx --bun @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json
 ```
 
-## Why teams use it
+## Installation
 
-- Detects updates quickly across single-package repos and workspaces.
-- Centralizes security, peer, license, health, and behavioral risk review.
-- Applies updates safely with configurable targets (`patch`, `minor`, `major`, `latest`).
-- Enforces policy rules per package.
-- Supports offline and cache-warmed execution for deterministic CI runs.
-- Produces machine-readable artifacts: JSON, SARIF, GitHub outputs, and PR reports.
-
-## Install
+### Option 1: Bun runtime (recommended, no install needed)
 
 ```bash
-# Preferred: run with Bun's runtime directly
-bunx --bun @rainy-updates/cli check
-
-# As a project dev dependency (recommended for teams)
-npm install --save-dev @rainy-updates/cli
-# or
-pnpm add -D @rainy-updates/cli
-# or
-bun add -d @rainy-updates/cli
-```
-
-### Standalone binaries from GitHub Releases
-
-If you do not want to depend on global npm or a project-local `node_modules`, use the standalone compiled binaries from GitHub Releases.
-
-Release assets are published for:
-
-- Linux x64
-- Linux arm64
-- macOS x64
-- macOS arm64
-- Windows x64
-
-Each release archive now includes both executable surfaces:
-
-- `rup` for the human CLI
-- `rup-mcp` for editor and agent integrations
-
-Once installed from npm, the following aliases are available in your `node_modules/.bin/`:
-
-| Alias           | Use case                                    |
-| --------------- | ------------------------------------------- |
-| `rup`           | Power-user shortcut — `rup ci`, `rup audit` |
-| `rainy-up`      | Human-friendly — `rainy-up check`           |
-| `rainy-updates` | Backwards-compatible (safe in CI scripts)   |
-
-```bash
-# All three are identical — use whichever you prefer:
-rup check
-rainy-up check
-rainy-updates check
-```
-
-### Bun-first runtime
-
-```bash
-# Preferred no-install path:
 bunx --bun @rainy-updates/cli check
 bunx --bun @rainy-updates/cli audit --severity high
 bunx --bun @rainy-updates/cli ci --workspace --mode strict
 ```
 
-### One-off usage with npx (compatibility path)
+### Option 2: Project dependency
 
 ```bash
-# Compatibility path when Bun is not available:
-npx @rainy-updates/cli check
-npx @rainy-updates/cli audit --severity high
-npx @rainy-updates/cli ci --workspace --mode strict
+npm install --save-dev @rainy-updates/cli
+pnpm add -D @rainy-updates/cli
+bun add -d @rainy-updates/cli
 ```
 
-> **Note:** Rainy is Bun-first at runtime. `bunx --bun @rainy-updates/cli ...` is the fastest no-install path. The npm package and `npx` remain supported compatibility paths.
+Then use via `rup`, `rainy-up`, or `rainy-updates`:
+
+```bash
+rup check
+rainy-up doctor --workspace
+rainy-updates upgrade --from-plan .artifacts/decision-plan.json
+```
+
+### Option 3: Standalone binaries
+
+Download pre-compiled binaries from [GitHub Releases](https://github.com/rainy-updates/cli/releases) for:
+
+- Linux x64 / arm64
+- macOS x64 / arm64
+- Windows x64
+
+Each release includes:
+- `rup` — human CLI
+- `rup-mcp` — editor and agent integrations
+
+### Option 4: npx (compatibility)
+
+```bash
+npx @rainy-updates/cli check
+npx @rainy-updates/cli audit --severity high
+```
+
+> **Note:** Bun runtime is fastest. npm/npx are supported compatibility paths.
 
 ## Commands
 
-### Primary workflow
+### Core workflow
 
-- `check` — detect candidate dependency updates
-- `doctor` — summarize the current dependency situation
-- `review` — decide what to do with security, risk, peer, and policy context
-- `predict` — estimate break risk and confidence before apply
-- `dashboard` — open the primary interactive decision console
-- `upgrade` — apply the approved change set
-- `ga` — audit GA and CI readiness for the current checkout
+| Command | Purpose |
+|---------|---------|
+| `check` | Detect candidate dependency updates |
+| `doctor` | Summarize current dependency health |
+| `review` | Decide what to do with security, risk, peer, and policy context |
+| `predict` | Estimate break risk and confidence before applying |
+| `dashboard` | Interactive decision console (primary UI) |
+| `upgrade` | Apply the approved change set |
 
-### Supporting workflow
+### Security & health
 
-- `ci` — run CI-focused dependency automation (warm cache, check/upgrade, policy gates)
-- `warm-cache` — prefetch package metadata for fast and offline checks
-- `self-update` — check/apply Rainy CLI global updates (`rup self-update --check`, `rup self-update --apply --yes`)
-- `baseline` — save and compare dependency baseline snapshots
-- `mcp` — run the local MCP server for AI agents
-- `explain` — summarize a package update with risk, changelog, and security context
-- `watch` — monitor dependency updates and advisories from the local checkout
+| Command | Purpose |
+|---------|---------|
+| `audit` | Scan for CVEs using OSV.dev + GitHub Advisory Database |
+| `health` | Detect stale, deprecated, and unmaintained packages |
+| `bisect` | Binary-search to find which version broke your tests |
 
-### Security & health (_new in v0.5.1_)
+### CI & automation
 
-- `audit` — scan dependencies for CVEs using [OSV.dev](https://osv.dev) plus GitHub Advisory Database, with lockfile-aware version inference
-- `health` — detect stale, deprecated, and unmaintained packages before they become liabilities
-- `bisect` — binary-search across semver versions to find the exact version that broke your tests
+| Command | Purpose |
+|---------|---------|
+| `ci` | Run CI-focused dependency automation with policy gates |
+| `warm-cache` | Prefetch package metadata for fast offline checks |
+| `baseline` | Save and compare dependency baseline snapshots |
+| `ga` | Audit GA and CI readiness for current checkout |
 
-## Quick usage
+### Utilities
 
-> Commands work with `bunx --bun`, with `npx` as a compatibility path, or with the `rup` / `rainy-up` shortcut if the package is installed.
+| Command | Purpose |
+|---------|---------|
+| `explain` | Summarize a package update with risk, changelog, and security context |
+| `watch` | Monitor dependency updates and advisories |
+| `self-update` | Check/apply Rainy CLI global updates |
+| `mcp` | Run local MCP server for AI agents |
+| `init-ci` | Generate GitHub Actions workflow |
+
+## Usage examples
+
+### Detection & review
 
 ```bash
-# 1) Detect updates
-bunx --bun @rainy-updates/cli check --format table
-npx @rainy-updates/cli check --format table
-rup check --format table                      # if installed
+# Detect updates with impact analysis
+rup check --format table
+rup check --workspace --show-impact
 
-# 2) Summarize the state
-bunx --bun @rainy-updates/cli doctor --workspace
+# Summarize dependency health
 rup doctor --workspace
+rup doctor --verdict-only
 
-# 3) Review and decide
-bunx --bun @rainy-updates/cli review --security-only
-rup dashboard --mode review --plan-file .artifacts/decision-plan.json
-rup review --show-changelog
-
-# 4) Apply an approved decision plan with verification
-bunx --bun @rainy-updates/cli upgrade --from-plan .artifacts/decision-plan.json --verify install,test --test-command "bun test"
-rup upgrade --from-plan .artifacts/decision-plan.json --verify install,test --test-command "npm test"
-
-# 5) CI orchestration with policy gates
-bunx --bun @rainy-updates/cli ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
-rup ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
-
-# 6) Replay an approved plan in CI
-rup ci --workspace --mode strict --gate upgrade --from-plan .artifacts/decision-plan.json --verify test --test-command "npm test"
-
-# 7) Batch fix branches by scope (enterprise)
-npx @rainy-updates/cli ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
-rup ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
-
-# 8) Warm cache -> deterministic offline CI check
-npx @rainy-updates/cli warm-cache --workspace --concurrency 32
-npx @rainy-updates/cli check --workspace --offline --ci
-
-# 9) Save and compare baseline drift
-npx @rainy-updates/cli baseline --save --file .artifacts/deps-baseline.json --workspace
-npx @rainy-updates/cli baseline --check --file .artifacts/deps-baseline.json --workspace --ci
-
-# 10) Scan for known CVEs
-npx @rainy-updates/cli audit
-npx @rainy-updates/cli audit --severity high
-npx @rainy-updates/cli audit --summary
-npx @rainy-updates/cli audit --source osv
-npx @rainy-updates/cli audit --fix          # prints the patching install command for the detected package manager
-rup audit --severity high                   # if installed
-
-`audit` resolves installed versions from lockfiles across npm, pnpm, and simple `bun.lock` workspace entries when available. It reports source-health warnings when OSV or GitHub returns only partial coverage.
-
-# 11) Check dependency maintenance health
-npx @rainy-updates/cli health
-npx @rainy-updates/cli health --stale 6m   # flag packages with no release in 6 months
-npx @rainy-updates/cli health --stale 180d # same but in days
-rup health --stale 6m                       # if installed
-
-# 12) Find which version introduced a breaking change
-npx @rainy-updates/cli bisect axios --cmd "bun test"
-npx @rainy-updates/cli bisect react --range "18.0.0..19.0.0" --cmd "npm test"
-npx @rainy-updates/cli bisect lodash --cmd "npm run test:unit" --dry-run
-rup bisect axios --cmd "bun test"           # if installed
-
-# 13) Focus review on high-risk changes
+# Review with risk context
+rup review --security-only
 rup review --risk high --diff major
-
-# 14) Audit GA / CI readiness
-rup ga --workspace
-
-# 15) Start the local MCP server over stdio
-rup mcp
-
-# 16) Start the local MCP server over HTTP
-rup mcp --transport http --port 3741 --http-path /mcp
-
-# 17) Explain a package update
-rup explain react
-
-# 18) Run a watch cycle
-rup watch --workspace --severity high
+rup dashboard --mode review --plan-file .artifacts/decision-plan.json
 ```
 
-## Decision Plans And Verification
-
-Rainy can persist an approved update set as a deterministic decision plan and replay it later:
+### Security & health
 
 ```bash
-# Create a reviewed plan
-rup dashboard --mode review --plan-file .artifacts/decision-plan.json
+# Scan for CVEs
+rup audit
+rup audit --severity high
+rup audit --summary
+rup audit --fix          # prints install command for detected package manager
 
-# Apply only that approved plan later
+# Check maintenance health
+rup health
+rup health --stale 6m   # flag packages with no release in 6 months
+rup health --stale 180d # same but in days
+
+# Find breaking version
+rup bisect axios --cmd "bun test"
+rup bisect react --range "18.0.0..19.0.0" --cmd "npm test"
+rup bisect lodash --cmd "npm run test:unit" --dry-run
+```
+
+### Upgrade & verification
+
+```bash
+# Apply approved plan with verification
 rup upgrade --from-plan .artifacts/decision-plan.json
-
-# Apply and verify install + tests
 rup upgrade \
   --from-plan .artifacts/decision-plan.json \
   --verify install,test \
   --test-command "bun test" \
   --verification-report-file .artifacts/verification.json
+
+# Explain a package update
+rup explain react
 ```
 
-This is the intended local review -> CI replay workflow.
+### CI & automation
 
-Verification follows the target repository's package manager when one is detected.
-That means Bun repositories can verify with `bun install` / `bun test`, while npm and pnpm projects keep their native install/test flows.
+```bash
+# Warm cache for deterministic offline CI
+rup warm-cache --workspace --concurrency 32
+rup check --workspace --offline --ci
 
-## CI Gates
+# Save and compare baseline drift
+rup baseline --save --file .artifacts/deps-baseline.json --workspace
+rup baseline --check --file .artifacts/deps-baseline.json --workspace --ci
 
-`ci` supports explicit execution gates:
+# CI orchestration with policy gates
+rup ci --workspace --mode strict --gate review --plan-file .artifacts/decision-plan.json --format github
+rup ci --workspace --mode strict --gate upgrade --from-plan .artifacts/decision-plan.json --verify test --test-command "npm test"
 
-- `--gate check` runs detection only.
-- `--gate doctor` computes the high-level verdict and doctor metadata.
-- `--gate review` emits a decision plan artifact without mutating the repo.
-- `--gate upgrade` replays an existing plan and can run verification.
+# Batch fix branches by scope (enterprise)
+rup ci --workspace --mode enterprise --group-by scope --fix-pr --fix-pr-batch-size 2
 
-## What it does in production
+# Audit CI readiness
+rup ga --workspace
 
-### Update detection engine
+# Generate GitHub Actions workflow
+rup init-ci --mode enterprise --schedule weekly
+rup init-ci --mode minimal --schedule daily
+```
 
-- Scans dependency groups: `dependencies`, `devDependencies`, `optionalDependencies`, `peerDependencies`.
-- Resolves versions per unique package to reduce duplicate network requests.
-- Uses network concurrency controls and resilient retries.
-- Supports explicit registry retry/timeout tuning (`--registry-retries`, `--registry-timeout-ms`).
-- Supports stale-cache fallback when registry calls fail.
-- Supports streamed progress output for long CI runs (`--stream`).
-- Exposes impact/risk metadata and homepage context in update output (`--show-impact`, `--show-homepage`).
+### Monitoring
 
-### Workspace support
+```bash
+# Watch for updates and advisories
+rup watch --workspace --severity high
+```
 
-- Detects package workspaces from:
-  - `package.json` workspaces
-  - `pnpm-workspace.yaml`
-- Handles multi-manifest upgrade flows.
-- Graph-aware sync mode (`--sync`) avoids breaking `workspace:*` references.
+## Configuration
 
-### Policy-aware control
+### Policy file
 
-- Apply global ignore patterns.
-- Apply package-specific rules.
-- Enforce max upgrade target per package (for safer rollout).
-- Support per-package target override and fix-pr inclusion (`target`, `autofix`).
-
-Example policy file:
+Control upgrade behavior with `.rainyupdates-policy.json`:
 
 ```json
 {
@@ -309,131 +243,10 @@ Example policy file:
 Use it with:
 
 ```bash
-npx @rainy-updates/cli check --policy-file .rainyupdates-policy.json
+rup check --policy-file .rainyupdates-policy.json
 ```
 
-## Output and reporting
-
-### Human output
-
-- `--format table`
-- `--format minimal`
-
-Review-centered outputs:
-
-- `check` is optimized for detection.
-- `doctor` is optimized for summary.
-- `review` is optimized for decision-making.
-- `upgrade` is optimized for safe application.
-
-### Automation output
-
-- `--format json`
-- `--json-file <path>`
-- `--sarif-file <path>`
-- `--github-output <path>`
-- `--pr-report-file <path>`
-
-These outputs are designed for CI pipelines, security tooling, and PR review automation.
-
-## Automatic CI bootstrap
-
-Generate a workflow in the target project automatically:
-
-```bash
-# enterprise mode (recommended)
-rup init-ci --mode enterprise --schedule weekly
-
-# lightweight mode
-rup init-ci --mode minimal --schedule daily
-```
-
-Generated file:
-
-- `.github/workflows/rainy-updates.yml`
-
-Modes:
-
-- `strict`: warm-cache + review gate + artifacts + SARIF upload.
-- `enterprise`: strict checks + runtime matrix + review/upgrade gates + retention policy.
-- `minimal`: fast check-only workflow for quick adoption.
-
-Schedule:
-
-- `weekly`, `daily`, or `off` (manual dispatch only).
-
-## Command options
-
-### Global
-
-- `--cwd <path>`
-- `--workspace`
-- `--target patch|minor|major|latest`
-- `--filter <pattern>`
-- `--reject <pattern>`
-- `--dep-kinds deps,dev,optional,peer`
-- `--concurrency <n>`
-- `--cache-ttl <seconds>`
-- `--registry-timeout-ms <n>`
-- `--registry-retries <n>`
-- `--offline`
-- `--stream`
-- `--fail-on none|patch|minor|major|any`
-- `--max-updates <n>`
-- `--group-by none|name|scope|kind|risk`
-- `--group-max <n>`
-- `--cooldown-days <n>`
-- `--pr-limit <n>`
-- `--only-changed`
-- `--interactive`
-- `--plan-file <path>`
-- `--from-plan <path>`
-- `--verify none|install|test|install,test`
-- `--test-command <cmd>`
-- `--verification-report-file <path>`
-- `--show-impact`
-- `--show-homepage`
-- `--mode minimal|strict|enterprise` (for `ci`)
-- `--gate check|doctor|review|upgrade` (for `ci`)
-- `--fix-pr-batch-size <n>` (for batched fix branches in `ci`)
-- `--policy-file <path>`
-- `--format table|json|minimal|github`
-- `--json-file <path>`
-- `--github-output <path>`
-- `--sarif-file <path>`
-- `--pr-report-file <path>`
-- `--fix-pr`
-- `--fix-branch <name>`
-- `--fix-commit-message <text>`
-- `--fix-dry-run`
-- `--lockfile-mode preserve|update|error`
-- `--no-pr-report`
-- `--ci`
-
-### Upgrade-only
-
-- `--install`
-- `--pm auto|bun|npm|pnpm|yarn`
-- `--sync`
-
-### Review-only
-
-- `--security-only`
-- `--risk critical|high|medium|low`
-- `--diff patch|minor|major|latest`
-- `--apply-selected`
-
-### Doctor-only
-
-- `--verdict-only`
-
-### Baseline-only
-
-- `--save`
-- `--check`
-- `--file <path>`
-
-## Config support
+### Config file
 
 Configuration can be loaded from:
 
@@ -441,49 +254,19 @@ Configuration can be loaded from:
 - `.rainyupdatesrc.json`
 - `package.json` field: `rainyUpdates`
 
-## CLI help
+### Environment
 
-```bash
-rup --help
-rup <command> --help
-rup --version
+- `.env` files are auto-loaded by Bun
+- `.npmrc` is read for private package registries
+- `FORCE_COLOR=0` disables colored output (useful for CI)
 
-# or with the full name:
-rainy-updates --help
-npx @rainy-updates/cli --help
-```
+## AI Agents (MCP)
 
-## Reliability characteristics
+Rainy Updates runs as a **local MCP server** for Claude Desktop, Cursor, and other MCP-capable agents to inspect dependency health.
 
-- Node.js 20+ runtime.
-- Works with npm and pnpm workflows.
-- Uses optional `undici` pool path for high-throughput HTTP.
-- Reads `.npmrc` default and scoped registries for private package environments.
-- Cache-first architecture for speed and resilience.
+### Setup
 
-## CI/CD included
-
-This package ships with production CI/CD pipelines in the repository:
-
-- Continuous integration pipeline for typecheck, tests, build, and production smoke checks.
-- Performance smoke gate (`perf:smoke`) to catch startup/runtime regressions in CI.
-- Tag-driven release pipeline for npm publishing with provenance.
-- Release preflight validation for npm auth/scope checks before publishing.
-
-## Use with AI Agents (MCP)
-
-Rainy Updates can run as a **local MCP server** so Claude Desktop, Cursor, and other MCP-capable agents can inspect dependency health without adding any AI logic to the CLI itself.
-
-Recommended production entrypoint:
-
-- `rup-mcp` for editors and agent clients
-- `rup mcp` remains available as a compatibility alias
-
-- Default transport: `stdio` via `rup-mcp`
-- Optional transport: `HTTP` via `rup-mcp --transport http --port 3741 --http-path /mcp`
-- Default safety posture: local process, no cloud relay, no HTTP listener unless you opt in
-
-Quick start:
+Claude Desktop:
 
 ```json
 {
@@ -512,7 +295,9 @@ Cursor:
 }
 ```
 
-If your IDE does not inherit shell `PATH`, set an absolute command path (for example `/Users/<you>/.bun/bin/rup-mcp`) instead of `rup`/`rup-mcp`.
+> If your IDE doesn't inherit shell `PATH`, use absolute path: `/Users/<you>/.bun/bin/rup-mcp`
+
+### Usage
 
 Example prompts:
 
@@ -520,52 +305,39 @@ Example prompts:
 - `Explain whether updating react is safe right now.`
 - `Create a dependency decision plan for the packages changed in this branch.`
 
-Docs:
-[MCP overview](./docs/mcp.md) · [MCP tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [MCP security model](./docs/mcp-security-model.md)
+### Transport options
 
-## Repo Health Badge
+- **Default:** `stdio` via `rup-mcp`
+- **HTTP:** `rup-mcp --transport http --port 3741 --http-path /mcp`
+- **Auth:** `rup-mcp --transport http --port 3741 --auth-token local-dev-token`
 
-Publish doctor health to a Shields endpoint badge using GitHub Pages:
+Docs: [MCP overview](./docs/mcp.md) · [Tools reference](./docs/mcp-tools.md) · [Claude Desktop](./docs/mcp-claude-desktop.md) · [Cursor](./docs/mcp-cursor.md) · [Security model](./docs/mcp-security-model.md)
+
+## Documentation
+
+- [Command model](./docs/command-model.md) — Check → Doctor → Review → Upgrade
+- [Review workflow](./docs/review-workflow.md) — Decision-making guide
+- [TUI guide](./docs/tui-guide.md) — Dashboard usage
+- [Risk engine](./docs/risk-engine.md) — Risk assessment methodology
+- [Benchmarks](./docs/benchmarks.md) — Performance methodology
+- [Comparison](./docs/why-rainy-vs-dependabot-renovate.md) — vs Dependabot & Renovate
+- [Roadmap](./ROADMAP.md) — Long-term vision
+
+## Health badge
+
+Publish dependency health to a Shields badge:
 
 ```md
 ![Repo Health](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ferxalbs/rainy-updates/gh-pages/badges/health.json)
 ```
 
-The JSON endpoint is generated from `rup doctor --badge-file .public/badges/health.json` and published to the `gh-pages` branch.
-
-Comparison:
-[Why Rainy vs Dependabot and Renovate](./docs/why-rainy-vs-dependabot-renovate.md)
-
-Command model:
-[Check → Doctor → Review → Upgrade](./docs/command-model.md)
-
-Review workflow:
-[Review workflow guide](./docs/review-workflow.md)
-
-TUI usage:
-[TUI guide](./docs/tui-guide.md)
-
-Risk engine:
-[Risk engine guide](./docs/risk-engine.md)
-
-Benchmarks:
-[Benchmark methodology](./docs/benchmarks.md)
-
-## Product roadmap
-
-The long-term roadmap is maintained in [`ROADMAP.md`](./ROADMAP.md).
-
-# Dedicated MCP binary
-
-For editor integrations, prefer the dedicated MCP binary instead of shelling through the general CLI subcommand:
+Generate with:
 
 ```bash
-rup-mcp
-rup-mcp --transport http --port 3741 --http-path /mcp --auth-token local-dev-token
+rup doctor --badge-file .public/badges/health.json
 ```
 
-`rup mcp` remains supported, but `rup-mcp` is the stable integration surface for editors, IDEs, and agent hosts.
+Then publish to `gh-pages` branch.
 
 ## License
-
 MIT
