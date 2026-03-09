@@ -23,6 +23,13 @@ test("renderHelp includes self-update command help", () => {
   expect(output).toContain("--pm auto|bun|npm|pnpm");
 });
 
+test("renderHelp includes badge command help", () => {
+  const output = renderHelp("badge");
+  expect(output).toContain("rainy-updates badge [url|init] [options]");
+  expect(output).toContain("--owner <owner>");
+  expect(output).toContain("--readme");
+});
+
 test("renderHelp returns global help for unknown command context", () => {
   const output = renderHelp(undefined);
   expect(output).toContain("rainy-updates (rup / rainy-up) <command> [options]");
@@ -30,5 +37,6 @@ test("renderHelp returns global help for unknown command context", () => {
   expect(output).toContain("predict     Predict upgrade break risk with confidence");
   expect(output).toContain("self-update Check or apply Rainy CLI updates");
   expect(output).toContain("reachability Estimate exploitability reachability for advisories");
+  expect(output).toContain("badge       Scaffold and print repo health badge setup");
   expect(output).toContain("--version, -v");
 });

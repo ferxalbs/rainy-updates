@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.52] - 2026-03-09
+
+Badge automation and MCP extension release focused on making repository quality badges portable for all users.
+
+### Added
+
+- **New `badge` command**:
+  - added `rup badge init` to scaffold `.github/workflows/health-badge.yml`,
+  - generates `.artifacts/badges/README-badge-snippet.md` with universal markdown snippet,
+  - optional `--readme` appends a managed badge block into `README.md`.
+- **New `rup badge url` flow**:
+  - prints final badge endpoint URL and Shields markdown snippet without writing workflow files.
+- **New MCP tool `rup_badge`**:
+  - exposes badge URL/scaffold operations to MCP clients,
+  - requires `confirm=true` for mutating `action=init`.
+- **New badge documentation**:
+  - added `docs/badges.md` with setup, URL model, and command matrix for multi-repo adoption.
+
+### Changed
+
+- **README badge section upgraded**:
+  - now documents the 3-step badge rollout (`init`, `url`, universal snippet),
+  - includes docs link for full user-facing setup.
+
+### Tests
+
+- `bun test tests/badge.test.ts tests/help.test.ts tests/options.test.ts tests/mcp.test.ts`
+
 ## [0.6.51] - 2026-03-09
 
 MCP integration hardening release focused on reliable workspace context resolution across editor clients.

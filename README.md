@@ -398,17 +398,38 @@ Docs: [MCP quickstart](./docs/mcp-install.md) · [Compatibility guide](./docs/mc
 - [Risk engine](./docs/risk-engine.md) — Risk assessment methodology
 - [Benchmarks](./docs/benchmarks.md) — Performance methodology
 - [Comparison](./docs/why-rainy-vs-dependabot-renovate.md) — vs Dependabot & Renovate
+- [Badges](./docs/badges.md) — Health badge setup for any repository
 - [Roadmap](./ROADMAP.md) — Long-term vision
 
 ## Health badge
 
-Publish dependency health to a Shields badge:
+Use `rup badge` to standardize a publishable quality badge for any repository.
+
+1. Scaffold workflow + README snippet:
+
+```bash
+rup badge init --owner <github-owner> --repo <repo-name> --readme
+```
+
+2. Print only the final URL/snippet:
+
+```bash
+rup badge url --owner <github-owner> --repo <repo-name>
+```
+
+3. Use the generated universal snippet:
+
+```bash
+cat .artifacts/badges/README-badge-snippet.md
+```
+
+Manual badge format:
 
 ```md
 ![Repo Health](https://img.shields.io/endpoint?url=https://ferxalbs.github.io/rainy-updates/badges/health.json)
 ```
 
-Generate with:
+Raw badge JSON generation (inside CI):
 
 ```bash
 rup doctor --badge-file .public/badges/health.json

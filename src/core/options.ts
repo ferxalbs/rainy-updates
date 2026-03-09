@@ -35,6 +35,7 @@ import type {
   WatchOptions,
   ReachabilityOptions,
   ExceptionsOptions,
+  BadgeOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 import type { InitCiTarget } from "./init-ci.js";
@@ -71,6 +72,7 @@ const KNOWN_COMMANDS = [
   "watch",
   "reachability",
   "exceptions",
+  "badge",
 ] as const;
 
 export type ParsedCliArgs =
@@ -110,7 +112,8 @@ export type ParsedCliArgs =
   | { command: "self-update"; options: SelfUpdateOptions }
   | { command: "watch"; options: WatchOptions }
   | { command: "reachability"; options: ReachabilityOptions }
-  | { command: "exceptions"; options: ExceptionsOptions };
+  | { command: "exceptions"; options: ExceptionsOptions }
+  | { command: "badge"; options: BadgeOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -222,6 +225,10 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       "../commands/exceptions/parser.js"
     );
     return { command, options: parseExceptionsArgs(args) };
+  }
+  if (command === "badge") {
+    const { parseBadgeArgs } = await import("../commands/badge/parser.js");
+    return { command, options: parseBadgeArgs(args) };
   }
 
   const base: CheckOptions = {

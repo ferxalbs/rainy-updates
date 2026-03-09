@@ -3,6 +3,7 @@ import { CLI_VERSION } from "../generated/version.js";
 import { stableStringify } from "../utils/stable-json.js";
 import type {
   AuditOptions,
+  BadgeOptions,
   BaselineOptions,
   BisectOptions,
   CheckOptions,
@@ -30,6 +31,7 @@ import { runResolveService } from "../services/resolve.js";
 import { diffBaselineService, saveBaselineService } from "../services/baseline.js";
 import { runExplainService } from "../services/explain.js";
 import { runPredictService } from "../services/predict.js";
+import { runBadgeService } from "../services/badge.js";
 import { McpToolError } from "./errors.js";
 import { detectPackageManagerDetails } from "../pm/detect.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
@@ -490,6 +492,65 @@ export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
         return wrapResult(result);
       },
     },
+    {
+      name: "rup_badge",
+      description: "Generate repository health badge URL/snippet and scaffold GitHub Pages workflow.",
+      inputSchema: z.object({
+        cwd: z.string().optional(),
+        action: z.enum(["url", "init"]).optional(),
+        owner: z.string().optional(),
+        repo: z.string().optional(),
+        branch: z.string().optional(),
+        badgePath: z.string().optional(),
+        workflowFile: z.string().optional(),
+        snippetFile: z.string().optional(),
+        updateReadme: z.boolean().optional(),
+        force: z.boolean().optional(),
+        confirm: z.boolean().optional(),
+      }),
+      jsonSchema: {
+        type: "object",
+        properties: {
+          action: { enum: ["url", "init"] },
+          owner: { type: "string" },
+          repo: { type: "string" },
+          branch: { type: "string" },
+          badgePath: { type: "string" },
+          updateReadme: { type: "boolean" },
+          force: { type: "boolean" },
+          confirm: { type: "boolean" },
+        },
+      },
+      call: async (args) => {
+        const action = (args.action as BadgeOptions["action"] | undefined) ?? "url";
+        if (action === "init" && args.confirm !== true) {
+          throw new McpToolError({
+            code: "CONFIRMATION_REQUIRED",
+            message: "Mutating tool rup_badge with action=init requires confirm=true.",
+            retryable: false,
+          });
+        }
+        const options: BadgeOptions = {
+          cwd: resolveString(args.cwd, serverOptions.cwd),
+          action,
+          owner: args.owner as string | undefined,
+          repo: args.repo as string | undefined,
+          branch: (args.branch as string | undefined) ?? "main",
+          badgePath: (args.badgePath as string | undefined) ?? "badges/health.json",
+          workflowFile:
+            (args.workflowFile as string | undefined) ?? ".github/workflows/health-badge.yml",
+          snippetFile:
+            (args.snippetFile as string | undefined) ??
+            ".artifacts/badges/README-badge-snippet.md",
+          updateReadme: (args.updateReadme as boolean | undefined) ?? false,
+          force: (args.force as boolean | undefined) ?? false,
+          format: "json",
+          jsonFile: undefined,
+        };
+        const result = await runBadgeService(options);
+        return wrapResult(result);
+      },
+    },
   ];
 
   return definitions;
@@ -509,6 +570,7 @@ function definitionsCatalog(): string[] {
     "rup_resolve",
     "rup_baseline",
     "rup_explain",
+    "rup_badge",
   ];
 }
 

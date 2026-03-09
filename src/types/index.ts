@@ -1131,7 +1131,8 @@ export type McpToolName =
   | "rup_bisect"
   | "rup_resolve"
   | "rup_baseline"
-  | "rup_explain";
+  | "rup_explain"
+  | "rup_badge";
 
 export interface McpToolCallResult<T> {
   content: Array<{
@@ -1193,6 +1194,44 @@ export interface GaResult {
   workspacePackages: number;
   cacheBackend: "sqlite" | "file";
   checks: GaCheck[];
+  warnings: string[];
+  errors: string[];
+}
+
+export type BadgeAction = "url" | "init";
+export type BadgeOutputFormat = "text" | "json";
+
+export interface BadgeOptions {
+  cwd: string;
+  action: BadgeAction;
+  owner?: string;
+  repo?: string;
+  branch: string;
+  badgePath: string;
+  workflowFile: string;
+  snippetFile: string;
+  updateReadme: boolean;
+  force: boolean;
+  format: BadgeOutputFormat;
+  jsonFile?: string;
+}
+
+export interface BadgeResult {
+  action: BadgeAction;
+  cwd: string;
+  owner: string;
+  repo: string;
+  branch: string;
+  badgePath: string;
+  badgeEndpointUrl: string;
+  shieldsUrl: string;
+  markdownSnippet: string;
+  workflowPath: string;
+  workflowCreated: boolean;
+  snippetPath: string;
+  snippetCreated: boolean;
+  readmeUpdated: boolean;
+  format?: BadgeOutputFormat;
   warnings: string[];
   errors: string[];
 }

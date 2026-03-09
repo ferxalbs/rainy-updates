@@ -319,6 +319,31 @@ test("parseCliArgs supports explain command", async () => {
   }
 });
 
+test("parseCliArgs supports badge command", async () => {
+  const parsed = await parseCliArgs([
+    "badge",
+    "init",
+    "--owner",
+    "acme",
+    "--repo",
+    "platform",
+    "--branch",
+    "main",
+    "--readme",
+    "--format",
+    "json",
+  ]);
+  expect(parsed.command).toBe("badge");
+  if (parsed.command === "badge") {
+    expect(parsed.options.action).toBe("init");
+    expect(parsed.options.owner).toBe("acme");
+    expect(parsed.options.repo).toBe("platform");
+    expect(parsed.options.branch).toBe("main");
+    expect(parsed.options.updateReadme).toBe(true);
+    expect(parsed.options.format).toBe("json");
+  }
+});
+
 test("parseCliArgs supports predict command", async () => {
   const packageParsed = await parseCliArgs([
     "predict",

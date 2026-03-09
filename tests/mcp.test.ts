@@ -93,6 +93,7 @@ test("mcp lists tools", async () => {
   expect(tools.some((tool) => tool.name === "rup_check")).toBe(true);
   expect(tools.some((tool) => tool.name === "rup_upgrade")).toBe(true);
   expect(tools.some((tool) => tool.name === "rup_explain")).toBe(true);
+  expect(tools.some((tool) => tool.name === "rup_badge")).toBe(true);
 });
 
 test("mcp tool catalog remains stable", async () => {
@@ -118,6 +119,7 @@ test("mcp tool catalog remains stable", async () => {
     "rup_resolve",
     "rup_baseline",
     "rup_explain",
+    "rup_badge",
   ]);
 });
 

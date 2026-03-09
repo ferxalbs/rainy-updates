@@ -129,6 +129,13 @@ For tool failures, `error.data` includes structured codes:
 - Optional input: `fromVersion`, `toVersion`.
 - Key output: explanation summary with risk/security/release context.
 
+### `rup_badge`
+
+- Mutating: `action=init` only (requires `confirm=true`)
+- Purpose: generate stable badge URL/snippet and optionally scaffold badge workflow files.
+- Key input: `action` (`url|init`), `owner`, `repo`, `branch`, `badgePath`, `updateReadme`, `force`.
+- Key output: `badgeEndpointUrl`, `shieldsUrl`, `markdownSnippet`, workflow/snippet file status.
+
 ## Model usage guidance
 
 - Prefer `structuredContent` over parsing text.

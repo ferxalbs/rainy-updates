@@ -207,6 +207,13 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
     return true;
   }
 
+  if (parsed.command === "badge") {
+    const { runBadge } = await import("../commands/badge/runner.js");
+    const result = await runBadge(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 2 : 0);
+    return true;
+  }
+
   if (
     parsed.options.interactive &&
     (parsed.command === "check" ||

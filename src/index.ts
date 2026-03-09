@@ -9,6 +9,7 @@ export { runExplain } from "./commands/explain/runner.js";
 export { runWatch } from "./commands/watch/runner.js";
 export { runReachability } from "./commands/reachability/runner.js";
 export { runExceptions } from "./commands/exceptions/runner.js";
+export { runBadge } from "./commands/badge/runner.js";
 export { runMcp } from "./commands/mcp/runner.js";
 export { createSarifReport } from "./output/sarif.js";
 export { writeGitHubOutput, renderGitHubAnnotations } from "./output/github.js";
@@ -49,6 +50,10 @@ export type {
   WebhookEvent,
   HookOptions,
   HookResult,
+  BadgeOptions,
+  BadgeResult,
+  BadgeAction,
+  BadgeOutputFormat,
   Verdict,
   RiskLevel,
   RiskCategory,

@@ -432,6 +432,25 @@ Options:
   --cwd <path>`;
   }
 
+  if (isCommand && command === "badge") {
+    return `rainy-updates badge [url|init] [options]
+
+Generate badge URLs and scaffold health badge publishing setup.
+
+Options:
+  --owner <owner>
+  --repo <repo>
+  --branch <name>
+  --badge-path <path>
+  --workflow-file <path>
+  --snippet-file <path>
+  --readme
+  --force
+  --format text|json
+  --json-file <path>
+  --cwd <path>`;
+  }
+
   return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
@@ -460,6 +479,7 @@ Commands:
   watch       Monitor dependency updates and advisories locally
   reachability Estimate exploitability reachability for advisories
   exceptions  Manage VEX-like advisory exceptions
+  badge       Scaffold and print repo health badge setup
 
 Global options:
   --cwd <path>
