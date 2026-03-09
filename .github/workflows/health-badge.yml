@@ -38,6 +38,24 @@ jobs:
         run: |
           mkdir -p .public/badges .artifacts
           bun ./src/bin/cli.ts doctor --workspace --badge-file .public/badges/health.json --json-file .artifacts/doctor.json
+          cat > .public/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>Rainy Updates Badge</title>
+            </head>
+            <body>
+              <h1>Rainy Updates Badge</h1>
+              <p>
+                Badge JSON:
+                <a href="./badges/health.json">./badges/health.json</a>
+              </p>
+            </body>
+          </html>
+          HTML
+          touch .public/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
