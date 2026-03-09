@@ -2,6 +2,41 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.50] - 2026-03-09
+
+Major release focused on exploitability context, auditable exceptions, and local CI automation targets.
+
+### Added
+
+- **New `reachability` command**:
+  - added `rup reachability` with `table|json|summary` formats,
+  - reports `reachable|not-reachable|unknown` status with confidence, evidence, and entrypoints.
+- **New `exceptions` command**:
+  - added `rup exceptions add|list|remove|expire|validate`,
+  - stores VEX-like exception records (`reason`, `owner`, `evidence`, `status`, `expiresAt`) in `.rainy/exceptions.json`.
+- **Review/CI decision enrichment**:
+  - review item model now includes reachability and exception signals,
+  - `review`, `doctor`, and `ci --gate review` account for active exceptions and reachability context.
+- **Local automation targets in `init-ci`**:
+  - added `--target github|cron|systemd`,
+  - generates `.artifacts/automation/rainy-updates-runner.sh`,
+  - generates local scheduler templates for cron (`rainy-updates.cron`) and systemd (`rainy-updates.service`, `rainy-updates.timer`).
+- **Documentation and tests for new surfaces**:
+  - added docs for reachability/exceptions and local automation workflows,
+  - added focused tests for parser, help, init-ci target generation, exceptions service, and reachability enrichment.
+
+### Changed
+
+- **Help and command catalog updates**:
+  - command help now includes `reachability` and `exceptions`,
+  - global help and README examples updated with local scheduler target usage.
+- **Bun cron strategy clarified**:
+  - local scheduled execution uses OS schedulers (cron/systemd) instead of Bun-native cron APIs.
+
+### Tests
+
+- `bun run check`
+
 ## [0.6.14] - 2026-03-08
 
 MCP usability and compatibility release focused on simpler setup and broader client/environment support.

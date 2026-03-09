@@ -33,8 +33,11 @@ import type {
   PredictOptions,
   SelfUpdateOptions,
   WatchOptions,
+  ReachabilityOptions,
+  ExceptionsOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
+import type { InitCiTarget } from "./init-ci.js";
 
 const DEFAULT_INCLUDE_KINDS: DependencyKind[] = [
   "dependencies",
@@ -66,6 +69,8 @@ const KNOWN_COMMANDS = [
   "predict",
   "self-update",
   "watch",
+  "reachability",
+  "exceptions",
 ] as const;
 
 export type ParsedCliArgs =
@@ -73,13 +78,14 @@ export type ParsedCliArgs =
   | { command: "upgrade"; options: UpgradeOptions }
   | { command: "warm-cache"; options: CheckOptions }
   | { command: "ci"; options: CheckOptions }
-  | {
+    | {
       command: "init-ci";
       options: {
         cwd: string;
         force: boolean;
         mode: InitCiMode;
         schedule: InitCiSchedule;
+        target: InitCiTarget;
       };
     }
   | {
@@ -102,7 +108,9 @@ export type ParsedCliArgs =
   | { command: "explain"; options: ExplainOptions }
   | { command: "predict"; options: PredictOptions }
   | { command: "self-update"; options: SelfUpdateOptions }
-  | { command: "watch"; options: WatchOptions };
+  | { command: "watch"; options: WatchOptions }
+  | { command: "reachability"; options: ReachabilityOptions }
+  | { command: "exceptions"; options: ExceptionsOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -190,6 +198,18 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     const { parseWatchArgs } = await import("../commands/watch/parser.js");
     return { command, options: parseWatchArgs(args) };
   }
+  if (command === "reachability") {
+    const { parseReachabilityArgs } = await import(
+      "../commands/reachability/parser.js"
+    );
+    return { command, options: parseReachabilityArgs(args) };
+  }
+  if (command === "exceptions") {
+    const { parseExceptionsArgs } = await import(
+      "../commands/exceptions/parser.js"
+    );
+    return { command, options: parseExceptionsArgs(args) };
+  }
 
   const base: CheckOptions = {
     cwd: getRuntimeCwd(),
@@ -246,6 +266,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   let force = false;
   let initCiMode: InitCiMode = "enterprise";
   let initCiSchedule: InitCiSchedule = "weekly";
+  let initCiTarget: InitCiTarget = "github";
   let baselineAction: "save" | "check" = "check";
   let baselineFilePath = path.resolve(base.cwd, ".rainy-updates-baseline.json");
   let jsonFileRaw: string | undefined;
@@ -262,7 +283,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     const next = args[index + 1];
 
     if (current === "--target" && next) {
-      base.target = ensureTarget(next);
+      if (command === "init-ci") {
+        initCiTarget = ensureInitCiTarget(next);
+      } else {
+        base.target = ensureTarget(next);
+      }
       index += 1;
       continue;
     }
@@ -812,6 +837,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
         force,
         mode: initCiMode,
         schedule: initCiSchedule,
+        target: initCiTarget,
       },
     };
   }
@@ -1099,6 +1125,13 @@ function ensureInitCiSchedule(value: string): InitCiSchedule {
     return value;
   }
   throw new Error("--schedule must be weekly, daily or off");
+}
+
+function ensureInitCiTarget(value: string): InitCiTarget {
+  if (value === "github" || value === "cron" || value === "systemd") {
+    return value;
+  }
+  throw new Error("--target must be github, cron or systemd");
 }
 
 function ensureFailOn(value: string): FailOnLevel {

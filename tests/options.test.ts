@@ -69,12 +69,22 @@ test("parseCliArgs supports warm-cache and init-ci", async () => {
     expect(warm.options.policyFile?.endsWith("policy.json")).toBe(true);
   }
 
-  const init = await parseCliArgs(["init-ci", "--force", "--mode", "minimal", "--schedule", "daily"]);
+  const init = await parseCliArgs([
+    "init-ci",
+    "--force",
+    "--mode",
+    "minimal",
+    "--schedule",
+    "daily",
+    "--target",
+    "cron",
+  ]);
   expect(init.command).toBe("init-ci");
   if (init.command === "init-ci") {
     expect(init.options.force).toBe(true);
     expect(init.options.mode).toBe("minimal");
     expect(init.options.schedule).toBe("daily");
+    expect(init.options.target).toBe("cron");
   }
 });
 
@@ -378,5 +388,47 @@ test("parseCliArgs supports ga command", async () => {
   if (parsed.command === "ga") {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.jsonFile?.endsWith("ga.json")).toBe(true);
+  }
+});
+
+test("parseCliArgs supports reachability command", async () => {
+  const parsed = await parseCliArgs([
+    "reachability",
+    "--workspace",
+    "--severity",
+    "high",
+    "--format",
+    "json",
+  ]);
+  expect(parsed.command).toBe("reachability");
+  if (parsed.command === "reachability") {
+    expect(parsed.options.workspace).toBe(true);
+    expect(parsed.options.severity).toBe("high");
+    expect(parsed.options.format).toBe("json");
+  }
+});
+
+test("parseCliArgs supports exceptions command", async () => {
+  const parsed = await parseCliArgs([
+    "exceptions",
+    "add",
+    "--package",
+    "lodash",
+    "--reason",
+    "not reachable in production",
+    "--owner",
+    "platform-security",
+    "--evidence",
+    "import graph",
+    "--status",
+    "accepted_risk",
+    "--expires-at",
+    "2026-06-01T00:00:00.000Z",
+  ]);
+  expect(parsed.command).toBe("exceptions");
+  if (parsed.command === "exceptions") {
+    expect(parsed.options.action).toBe("add");
+    expect(parsed.options.packageName).toBe("lodash");
+    expect(parsed.options.status).toBe("accepted_risk");
   }
 });

@@ -169,12 +169,15 @@ Options:
     return `rainy-updates init-ci [options]
 
 Create a GitHub Actions workflow template at:
-  .github/workflows/rainy-updates.yml
+  - github target: .github/workflows/rainy-updates.yml
+  - cron target: .artifacts/automation/rainy-updates.cron
+  - systemd target: .artifacts/automation/rainy-updates.{service,timer}
 
 Options:
   --force
   --mode minimal|strict|enterprise
-  --schedule weekly|daily|off`;
+  --schedule weekly|daily|off
+  --target github|cron|systemd`;
   }
 
   if (isCommand && command === "baseline") {
@@ -390,6 +393,44 @@ Options:
   --cwd <path>`;
   }
 
+  if (isCommand && command === "reachability") {
+    return `rainy-updates reachability [options]
+
+Estimate reachability/exploitability context for advisory findings.
+
+Options:
+  --workspace
+  --severity critical|high|medium|low
+  --exceptions-file <path>
+  --format table|json|summary
+  --json-file <path>
+  --concurrency <n>
+  --registry-timeout-ms <n>
+  --cwd <path>`;
+  }
+
+  if (isCommand && command === "exceptions") {
+    return `rainy-updates exceptions [list|add|remove|expire|validate] [options]
+
+Manage VEX-like exception records for advisories.
+
+Options:
+  --id <id>
+  --package <name>
+  --cve <cveId>
+  --reason <text>
+  --owner <team>
+  --evidence <text>
+  --status not_affected|affected|fixed|mitigated|accepted_risk
+  --expires-at <iso-date>
+  --active-only
+  --strict
+  --file <path>
+  --format table|json
+  --json-file <path>
+  --cwd <path>`;
+  }
+
   return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
@@ -416,6 +457,8 @@ Commands:
   predict     Predict upgrade break risk with confidence
   self-update Check or apply Rainy CLI updates
   watch       Monitor dependency updates and advisories locally
+  reachability Estimate exploitability reachability for advisories
+  exceptions  Manage VEX-like advisory exceptions
 
 Global options:
   --cwd <path>

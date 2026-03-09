@@ -10,36 +10,41 @@ import {
 
 export type InitCiMode = "minimal" | "strict" | "enterprise";
 export type InitCiSchedule = "weekly" | "daily" | "off";
+export type InitCiTarget = "github" | "cron" | "systemd";
 
 export interface InitCiOptions {
   mode: InitCiMode;
   schedule: InitCiSchedule;
+  target: InitCiTarget;
 }
 
 export async function initCiWorkflow(
   cwd: string,
   force: boolean,
   options: InitCiOptions,
-): Promise<{ path: string; created: boolean }> {
-  const workflowPath = path.join(
-    cwd,
-    ".github",
-    "workflows",
-    "rainy-updates.yml",
-  );
-
-  try {
-    if (!force) {
-      if (await Bun.file(workflowPath).exists()) {
-        return { path: workflowPath, created: false };
-      }
-    }
-  } catch {
-    // missing file, continue create
-  }
-
+): Promise<{ path: string; created: boolean; writtenFiles: string[] }> {
   const detected = await detectPackageManagerDetails(cwd);
   const packageManager = createPackageManagerProfile("auto", detected);
+
+  if (options.target === "github") {
+    return initGitHubWorkflow(cwd, force, options, packageManager);
+  }
+
+  return initLocalAutomation(cwd, force, options);
+}
+
+async function initGitHubWorkflow(
+  cwd: string,
+  force: boolean,
+  options: InitCiOptions,
+  packageManager: PackageManagerProfile,
+): Promise<{ path: string; created: boolean; writtenFiles: string[] }> {
+  const workflowPath = path.join(cwd, ".github", "workflows", "rainy-updates.yml");
+
+  if (!force && (await Bun.file(workflowPath).exists())) {
+    return { path: workflowPath, created: false, writtenFiles: [] };
+  }
+
   const scheduleBlock = renderScheduleBlock(options.schedule);
   const workflow =
     options.mode === "minimal"
@@ -51,7 +56,42 @@ export async function initCiWorkflow(
   await mkdir(path.dirname(workflowPath), { recursive: true });
   await Bun.write(workflowPath, workflow);
 
-  return { path: workflowPath, created: true };
+  return { path: workflowPath, created: true, writtenFiles: [workflowPath] };
+}
+
+async function initLocalAutomation(
+  cwd: string,
+  force: boolean,
+  options: InitCiOptions,
+): Promise<{ path: string; created: boolean; writtenFiles: string[] }> {
+  const outDir = path.join(cwd, ".artifacts", "automation");
+  const runnerPath = path.join(outDir, "rainy-updates-runner.sh");
+  const cronPath = path.join(outDir, "rainy-updates.cron");
+  const servicePath = path.join(outDir, "rainy-updates.service");
+  const timerPath = path.join(outDir, "rainy-updates.timer");
+
+  const primaryPath = options.target === "cron" ? cronPath : timerPath;
+  if (!force && (await Bun.file(primaryPath).exists())) {
+    return { path: primaryPath, created: false, writtenFiles: [] };
+  }
+
+  await mkdir(outDir, { recursive: true });
+  const writtenFiles: string[] = [];
+
+  await Bun.write(runnerPath, localRunnerScript(cwd, options.mode));
+  writtenFiles.push(runnerPath);
+
+  if (options.target === "cron") {
+    await Bun.write(cronPath, renderLocalCron(options.schedule, cwd, runnerPath));
+    writtenFiles.push(cronPath);
+    return { path: cronPath, created: true, writtenFiles };
+  }
+
+  await Bun.write(servicePath, renderSystemdService(cwd, runnerPath));
+  await Bun.write(timerPath, renderSystemdTimer(options.schedule));
+  writtenFiles.push(servicePath, timerPath);
+
+  return { path: timerPath, created: true, writtenFiles };
 }
 
 function renderScheduleBlock(schedule: InitCiSchedule): string {
@@ -61,6 +101,75 @@ function renderScheduleBlock(schedule: InitCiSchedule): string {
 
   const cron = schedule === "daily" ? "0 8 * * *" : "0 8 * * 1";
   return `  schedule:\n    - cron: '${cron}'\n  workflow_dispatch:`;
+}
+
+function localRunnerScript(cwd: string, mode: InitCiMode): string {
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+cd ${quoteSh(cwd)}
+mkdir -p .artifacts
+bunx --bun @rainy-updates/cli ci \\
+  --workspace \\
+  --mode ${mode} \\
+  --gate review \\
+  --plan-file .artifacts/decision-plan.json \\
+  --stream \\
+  --format json \\
+  --json-file .artifacts/deps-report.json
+`;
+}
+
+function renderLocalCron(
+  schedule: InitCiSchedule,
+  cwd: string,
+  runnerPath: string,
+): string {
+  const logPath = path.join(cwd, ".artifacts", "automation", "rainy-updates.log");
+  const runner = quoteSh(runnerPath);
+  const runLine = schedule === "off"
+    ? `# Disabled schedule. Run manually with: bash ${runner}`
+    : `${schedule === "daily" ? "0 8 * * *" : "0 8 * * 1"} cd ${quoteSh(cwd)} && bash ${runner} >> ${quoteSh(logPath)} 2>&1`;
+
+  return `# Rainy Updates local cron (${schedule})
+# Install with: crontab .artifacts/automation/rainy-updates.cron
+${runLine}
+`;
+}
+
+function renderSystemdService(cwd: string, runnerPath: string): string {
+  return `[Unit]
+Description=Rainy Updates local dependency CI run
+
+[Service]
+Type=oneshot
+WorkingDirectory=${cwd}
+ExecStart=/bin/bash ${runnerPath}
+`;
+}
+
+function renderSystemdTimer(schedule: InitCiSchedule): string {
+  const onCalendar =
+    schedule === "off"
+      ? ""
+      : schedule === "daily"
+        ? "OnCalendar=*-*-* 08:00:00"
+        : "OnCalendar=Mon *-*-* 08:00:00";
+
+  return `[Unit]
+Description=Schedule Rainy Updates local dependency CI run
+
+[Timer]
+${onCalendar || "# Disabled schedule; set OnCalendar manually"}
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+`;
+}
+
+function quoteSh(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
 function installStep(profile: PackageManagerProfile): string {

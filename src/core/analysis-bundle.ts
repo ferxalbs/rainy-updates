@@ -17,6 +17,7 @@ import { runSilenced } from "./analysis/run-silenced.js";
 import { runAuditService } from "../services/audit.js";
 import { runResolveService } from "../services/resolve.js";
 import { runHealthService } from "../services/health.js";
+import { applyReachabilitySignalsToReviewItems } from "../services/reachability.js";
 
 export async function buildAnalysisBundle(
   options: ReviewOptions | DoctorOptions | CheckOptions,
@@ -45,7 +46,7 @@ export async function buildAnalysisBundle(
       ]),
     );
 
-  const items = await buildReviewItems(
+  const reviewItems = await buildReviewItems(
     checkResult.updates,
     auditResult,
     resolveResult,
@@ -53,6 +54,11 @@ export async function buildAnalysisBundle(
     licenseResult,
     unusedResult,
     config,
+  );
+  const items = await applyReachabilitySignalsToReviewItems(
+    reviewItems,
+    options.cwd,
+    options.workspace,
   );
 
   return {

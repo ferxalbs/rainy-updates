@@ -159,6 +159,8 @@ npx @rainy-updates/cli audit --severity high
 | `self-update` | Check/apply Rainy CLI global updates |
 | `mcp` | Run local MCP server for AI agents |
 | `init-ci` | Generate GitHub Actions workflow |
+| `reachability` | Estimate advisory exploitability reachability |
+| `exceptions` | Manage VEX-like advisory exceptions |
 
 ## Usage examples
 
@@ -238,6 +240,8 @@ rup ga --workspace
 # Generate GitHub Actions workflow
 rup init-ci --mode enterprise --schedule weekly
 rup init-ci --mode minimal --schedule daily
+rup init-ci --target cron --mode strict --schedule daily
+rup init-ci --target systemd --mode strict --schedule weekly
 ```
 
 ### Monitoring
@@ -245,6 +249,10 @@ rup init-ci --mode minimal --schedule daily
 ```bash
 # Watch for updates and advisories
 rup watch --workspace --severity high
+
+# Reachability and exceptions
+rup reachability --workspace --format summary
+rup exceptions list --active-only
 ```
 
 ## Configuration

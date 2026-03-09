@@ -49,6 +49,13 @@ export type RiskCategory =
 export type MaintainerChurnStatus = "unknown" | "stable" | "elevated-change";
 export type PolicyAction = "allow" | "review" | "block" | "monitor";
 export type DecisionState = "safe" | "review" | "blocked" | "actionable";
+export type ReachabilityStatus = "reachable" | "not-reachable" | "unknown";
+export type ExceptionStatus =
+  | "not_affected"
+  | "affected"
+  | "fixed"
+  | "mitigated"
+  | "accepted_risk";
 
 export type OutputFormat = "table" | "json" | "minimal" | "github" | "metrics";
 export type FailOnLevel = "none" | "patch" | "minor" | "major" | "any";
@@ -183,6 +190,15 @@ export interface PackageUpdate {
   selectedByDefault?: boolean;
   blockedReason?: string;
   monitorReason?: string;
+  reachability?: ReachabilityStatus;
+  reachabilityConfidence?: number;
+  reachabilityEvidence?: string[];
+  exceptionId?: string;
+  exceptionStatus?: ExceptionStatus;
+  exceptionExpiresAt?: string;
+  exceptionReason?: string;
+  exceptionOwner?: string;
+  exceptionActive?: boolean;
 }
 
 export interface ReleaseNotesSummary {
@@ -970,6 +986,86 @@ export interface WatchResult {
   updatesDetected: number;
   advisoriesDetected: number;
   notifications: WatchNotification[];
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ExceptionEntry {
+  id: string;
+  packageName: string;
+  cveId?: string;
+  reason: string;
+  owner: string;
+  evidence: string;
+  status: ExceptionStatus;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ExceptionsAction = "add" | "list" | "remove" | "expire" | "validate";
+export type ExceptionsFormat = "table" | "json";
+
+export interface ExceptionsOptions {
+  cwd: string;
+  action: ExceptionsAction;
+  id?: string;
+  packageName?: string;
+  cveId?: string;
+  reason?: string;
+  owner?: string;
+  evidence?: string;
+  status?: ExceptionStatus;
+  expiresAt?: string;
+  filePath?: string;
+  format: ExceptionsFormat;
+  jsonFile?: string;
+  activeOnly: boolean;
+  strict: boolean;
+}
+
+export interface ExceptionsResult {
+  action: ExceptionsAction;
+  filePath: string;
+  entries: ExceptionEntry[];
+  active: number;
+  expired: number;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ReachabilityFinding {
+  packageName: string;
+  cveId: string;
+  severity: AuditSeverity;
+  status: ReachabilityStatus;
+  confidence: number;
+  entrypoints: string[];
+  evidence: string[];
+  exceptionId?: string;
+  exceptionStatus?: ExceptionStatus;
+  suppressed: boolean;
+}
+
+export interface ReachabilityOptions {
+  cwd: string;
+  workspace: boolean;
+  severity?: AuditSeverity;
+  format: "table" | "json" | "summary";
+  jsonFile?: string;
+  exceptionsFile?: string;
+  concurrency: number;
+  registryTimeoutMs: number;
+}
+
+export interface ReachabilityResult {
+  findings: ReachabilityFinding[];
+  summary: {
+    reachable: number;
+    notReachable: number;
+    unknown: number;
+    suppressedByExceptions: number;
+  };
   errors: string[];
   warnings: string[];
 }

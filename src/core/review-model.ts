@@ -108,6 +108,8 @@ export function renderReviewResult(review: ReviewResult): string {
           ? `license=${item.update.licenseStatus}`
           : undefined,
         item.update.policyAction ? `policy=${item.update.policyAction}` : undefined,
+        item.update.reachability ? `reachability=${item.update.reachability}` : undefined,
+        item.update.exceptionId ? `exception=${item.update.exceptionId}` : undefined,
       ].filter(Boolean);
       lines.push(
         `- ${path.basename(item.update.packagePath)} :: ${item.update.name} ${item.update.fromRange} -> ${item.update.toRange} (${notes.join(", ")})`,

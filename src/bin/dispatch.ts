@@ -23,11 +23,12 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
       {
         mode: parsed.options.mode,
         schedule: parsed.options.schedule,
+        target: parsed.options.target,
       },
     );
     writeStdout(
       workflow.created
-        ? `Created CI workflow at ${workflow.path}\n`
+        ? `Created CI automation files:\n${workflow.writtenFiles.map((file) => `- ${file}`).join("\n")}\n`
         : `CI workflow already exists at ${workflow.path}. Use --force to overwrite.\n`,
     );
     return true;
@@ -189,6 +190,20 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
     const { runWatch } = await import("../commands/watch/runner.js");
     const result = await runWatch(parsed.options);
     setRuntimeExitCode(result.errors.length > 0 ? 2 : result.updatesDetected > 0 ? 1 : 0);
+    return true;
+  }
+
+  if (parsed.command === "reachability") {
+    const { runReachability } = await import("../commands/reachability/runner.js");
+    const result = await runReachability(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 2 : result.summary.reachable > 0 ? 1 : 0);
+    return true;
+  }
+
+  if (parsed.command === "exceptions") {
+    const { runExceptions } = await import("../commands/exceptions/runner.js");
+    const result = await runExceptions(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 2 : 0);
     return true;
   }
 

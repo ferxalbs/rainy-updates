@@ -131,10 +131,19 @@ function derivePolicyAction(item: ReviewItem): PackageUpdate["policyAction"] {
   if (item.update.licenseStatus === "denied") {
     return "block";
   }
+  if (item.update.exceptionActive === true) {
+    return "monitor";
+  }
   if (item.update.peerConflictSeverity === "error") {
     return "review";
   }
-  if ((item.update.advisoryCount ?? 0) > 0 || item.update.riskLevel === "critical") {
+  if (
+    (item.update.advisoryCount ?? 0) > 0 &&
+    item.update.reachability !== "not-reachable"
+  ) {
+    return "review";
+  }
+  if (item.update.riskLevel === "critical") {
     return "review";
   }
   if (item.update.healthStatus === "stale" || item.update.healthStatus === "archived") {
@@ -147,7 +156,16 @@ function deriveDecisionState(item: ReviewItem): PackageUpdate["decisionState"] {
   if (item.update.peerConflictSeverity === "error" || item.update.licenseStatus === "denied") {
     return "blocked";
   }
-  if ((item.update.advisoryCount ?? 0) > 0 || item.update.riskLevel === "critical") {
+  if (item.update.exceptionActive === true) {
+    return "safe";
+  }
+  if (
+    (item.update.advisoryCount ?? 0) > 0 &&
+    item.update.reachability !== "not-reachable"
+  ) {
+    return "actionable";
+  }
+  if (item.update.riskLevel === "critical") {
     return "actionable";
   }
   if (item.update.riskLevel === "high" || item.update.diffType === "major") {

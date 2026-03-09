@@ -29,5 +29,6 @@ test("renderHelp returns global help for unknown command context", () => {
   expect(output).toContain("check       Detect candidate updates");
   expect(output).toContain("predict     Predict upgrade break risk with confidence");
   expect(output).toContain("self-update Check or apply Rainy CLI updates");
+  expect(output).toContain("reachability Estimate exploitability reachability for advisories");
   expect(output).toContain("--version, -v");
 });
