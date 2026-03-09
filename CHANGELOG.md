@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.51] - 2026-03-09
+
+MCP integration hardening release focused on reliable workspace context resolution across editor clients.
+
+### Added
+
+- **New `rup_context` MCP tool**:
+  - added a dedicated context/bootstrap tool for integrations,
+  - returns effective `cwd`, workspace mode, package manager detection, workspace package count, and stable MCP tool catalog,
+  - designed as the first-call tool so models can establish project scope before other actions.
+- **MCP default workspace context support**:
+  - added `RUP_DEFAULT_CWD` environment variable support for `rup mcp`,
+  - added `mcp.cwd` config support in `.rainyupdatesrc(.json)` and package config.
+
+### Changed
+
+- **MCP cwd precedence clarified and enforced**:
+  - resolution order is now `--cwd` → `mcp.cwd` → `RUP_DEFAULT_CWD` → process cwd,
+  - improves compatibility with clients that do not pass `cwd` on each tool call (for example Antigravity-like integrations).
+- **MCP docs and quickstart examples updated**:
+  - docs now recommend setting default cwd explicitly in env/config,
+  - docs now recommend running `rup_context` first in agent sessions.
+
+### Tests
+
+- `bun test tests/mcp.test.ts tests/mcp-parser.test.ts tests/config.test.ts tests/mcp-http-transport.test.ts tests/mcp-stdio-integration.test.ts`
+
 ## [0.6.50] - 2026-03-09
 
 Major release focused on exploitability context, auditable exceptions, and local CI automation targets.
@@ -36,33 +63,6 @@ Major release focused on exploitability context, auditable exceptions, and local
 ### Tests
 
 - `bun run check`
-
-## [0.6.51] - 2026-03-09
-
-MCP integration hardening release focused on reliable workspace context resolution across editor clients.
-
-### Added
-
-- **New `rup_context` MCP tool**:
-  - added a dedicated context/bootstrap tool for integrations,
-  - returns effective `cwd`, workspace mode, package manager detection, workspace package count, and stable MCP tool catalog,
-  - designed as the first-call tool so models can establish project scope before other actions.
-- **MCP default workspace context support**:
-  - added `RUP_DEFAULT_CWD` environment variable support for `rup mcp`,
-  - added `mcp.cwd` config support in `.rainyupdatesrc(.json)` and package config.
-
-### Changed
-
-- **MCP cwd precedence clarified and enforced**:
-  - resolution order is now `--cwd` → `mcp.cwd` → `RUP_DEFAULT_CWD` → process cwd,
-  - improves compatibility with clients that do not pass `cwd` on each tool call (for example Antigravity-like integrations).
-- **MCP docs and quickstart examples updated**:
-  - docs now recommend setting default cwd explicitly in env/config,
-  - docs now recommend running `rup_context` first in agent sessions.
-
-### Tests
-
-- `bun test tests/mcp.test.ts tests/mcp-parser.test.ts tests/config.test.ts tests/mcp-http-transport.test.ts tests/mcp-stdio-integration.test.ts`
 
 ## [0.6.14] - 2026-03-08
 
