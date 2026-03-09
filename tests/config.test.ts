@@ -18,13 +18,14 @@ test("loadConfig validates MCP and webhook config", async () => {
   await writeFile(
     path.join(root, ".rainyupdatesrc.json"),
     JSON.stringify({
-      mcp: { transport: "stdio", toolTimeoutMs: 5000 },
+      mcp: { cwd: "./workspace", transport: "stdio", toolTimeoutMs: 5000 },
       webhooks: [{ event: "check.complete", url: "https://example.com/hook" }],
     }),
     "utf8",
   );
 
   const config = await loadConfig(root);
+  expect(config.mcp?.cwd).toBe("./workspace");
   expect(config.mcp?.transport).toBe("stdio");
   expect(config.webhooks?.[0]?.event).toBe("check.complete");
 });

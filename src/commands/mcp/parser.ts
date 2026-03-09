@@ -4,8 +4,11 @@ import { getRuntimeCwd } from "../../utils/runtime.js";
 import { normalizeMcpConfigClient } from "./config-template.js";
 
 export function parseMcpArgs(args: string[]): McpOptions {
+  const envDefaultCwd = process.env.RUP_DEFAULT_CWD
+    ? path.resolve(process.env.RUP_DEFAULT_CWD)
+    : undefined;
   const options: McpOptions = {
-    cwd: getRuntimeCwd(),
+    cwd: envDefaultCwd ?? getRuntimeCwd(),
     workspace: false,
     logLevel: "info",
     transport: "stdio",

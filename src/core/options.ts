@@ -180,7 +180,18 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   }
   if (command === "mcp") {
     const { parseMcpArgs } = await import("../commands/mcp/parser.js");
-    return { command, options: parseMcpArgs(args) };
+    const parsedMcp = parseMcpArgs(args);
+    const hasCliCwd = args.includes("--cwd");
+    if (!hasCliCwd) {
+      const config = await loadConfig(parsedMcp.cwd).catch(() => ({}));
+      const configCwd = config.mcp?.cwd
+        ? path.resolve(parsedMcp.cwd, config.mcp.cwd)
+        : undefined;
+      if (configCwd) {
+        parsedMcp.cwd = configCwd;
+      }
+    }
+    return { command, options: parsedMcp };
   }
   if (command === "explain") {
     const { parseExplainArgs } = await import("../commands/explain/parser.js");

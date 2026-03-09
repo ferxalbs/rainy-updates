@@ -57,6 +57,7 @@ export interface FileConfig {
   packageManager?: SelectedPackageManager;
   sync?: boolean;
   mcp?: {
+    cwd?: string;
     transport?: "stdio" | "http";
     toolTimeoutMs?: number;
     initializeTimeoutMs?: number;

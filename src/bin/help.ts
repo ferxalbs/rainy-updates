@@ -317,6 +317,7 @@ Run the local MCP server for AI agents.
 
 Options:
   --cwd <path>
+  env: RUP_DEFAULT_CWD=<path>
   --workspace
   --log-level error|warn|info|debug
   --transport stdio|http

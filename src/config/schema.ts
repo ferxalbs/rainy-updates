@@ -38,6 +38,7 @@ export const WatchConfigSchema = z.object({
 });
 
 export const McpConfigSchema = z.object({
+  cwd: z.string().min(1).optional(),
   transport: z.enum(["stdio", "http"]).optional(),
   toolTimeoutMs: z.number().int().positive().optional(),
   initializeTimeoutMs: z.number().int().positive().optional(),

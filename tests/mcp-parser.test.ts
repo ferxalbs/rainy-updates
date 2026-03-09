@@ -45,3 +45,18 @@ test("parseMcpArgs supports print-config with client profile", () => {
   expect(parsed.printConfig).toBe(true);
   expect(parsed.configClient).toBe("claude");
 });
+
+test("parseMcpArgs uses RUP_DEFAULT_CWD when provided", () => {
+  const previous = process.env.RUP_DEFAULT_CWD;
+  process.env.RUP_DEFAULT_CWD = "/tmp/rainy-mcp-default";
+  try {
+    const parsed = parseMcpArgs([]);
+    expect(parsed.cwd).toBe("/tmp/rainy-mcp-default");
+  } finally {
+    if (previous === undefined) {
+      delete process.env.RUP_DEFAULT_CWD;
+    } else {
+      process.env.RUP_DEFAULT_CWD = previous;
+    }
+  }
+});

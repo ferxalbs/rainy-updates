@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { parseCliArgs } from "../src/core/options.js";
@@ -388,6 +388,32 @@ test("parseCliArgs supports ga command", async () => {
   if (parsed.command === "ga") {
     expect(parsed.options.workspace).toBe(true);
     expect(parsed.options.jsonFile?.endsWith("ga.json")).toBe(true);
+  }
+});
+
+test("parseCliArgs resolves MCP cwd from config when client does not pass --cwd", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "rainy-mcp-cwd-config-"));
+  await mkdir(path.join(root, "workspace"), { recursive: true });
+  await writeFile(
+    path.join(root, ".rainyupdatesrc.json"),
+    JSON.stringify({ mcp: { cwd: "./workspace" } }, null, 2),
+    "utf8",
+  );
+
+  const previous = process.env.RUP_DEFAULT_CWD;
+  process.env.RUP_DEFAULT_CWD = root;
+  try {
+    const parsed = await parseCliArgs(["mcp"]);
+    expect(parsed.command).toBe("mcp");
+    if (parsed.command === "mcp") {
+      expect(parsed.options.cwd).toBe(path.join(root, "workspace"));
+    }
+  } finally {
+    if (previous === undefined) {
+      delete process.env.RUP_DEFAULT_CWD;
+    } else {
+      process.env.RUP_DEFAULT_CWD = previous;
+    }
   }
 });
 

@@ -308,7 +308,8 @@ Rainy Updates runs as a **local MCP server** for Claude Desktop, Cursor, and oth
       "command": "rup",
       "args": ["mcp"],
       "env": {
-        "FORCE_COLOR": "0"
+        "FORCE_COLOR": "0",
+        "RUP_DEFAULT_CWD": "/Users/<you>/your-repo"
       }
     }
   }
@@ -353,6 +354,16 @@ Cursor example:
       "command": "rup",
       "args": ["mcp"]
     }
+  }
+}
+```
+
+If your MCP client does not send `cwd` per tool call, you can also define a persistent default path in config:
+
+```json
+{
+  "mcp": {
+    "cwd": "/Users/<you>/your-repo"
   }
 }
 ```
