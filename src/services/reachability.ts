@@ -1,6 +1,5 @@
 import path from "node:path";
 import { discoverPackageDirs } from "../workspace/discover.js";
-import { scanDirectory } from "../commands/unused/scanner.js";
 import { runAuditService } from "./audit.js";
 import { findMatchingException } from "./exceptions.js";
 import type {
@@ -186,9 +185,17 @@ async function scanWorkspaceImports(cwd: string, workspace: boolean): Promise<Im
 
   const importedPackages = new Set<string>();
   const packageEntrypoints = new Map<string, Set<string>>();
+  const scanner = await loadScanDirectory();
+
+  if (!scanner) {
+    return {
+      importedPackages,
+      packageEntrypoints,
+    };
+  }
 
   for (const packageDir of packageDirs) {
-    const imports = await scanDirectory(packageDir);
+    const imports = await scanner(packageDir);
     for (const packageName of imports) {
       importedPackages.add(packageName);
       const set = packageEntrypoints.get(packageName) ?? new Set<string>();
@@ -201,4 +208,15 @@ async function scanWorkspaceImports(cwd: string, workspace: boolean): Promise<Im
     importedPackages,
     packageEntrypoints,
   };
+}
+
+async function loadScanDirectory(): Promise<
+  ((dir: string) => Promise<Set<string>>) | null
+> {
+  try {
+    const mod = await import("../commands/unused/scanner.js");
+    return mod.scanDirectory;
+  } catch {
+    return null;
+  }
 }
