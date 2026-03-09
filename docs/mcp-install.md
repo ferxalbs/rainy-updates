@@ -36,7 +36,8 @@ Use this default entry:
       "command": "rup",
       "args": ["mcp"],
       "env": {
-        "FORCE_COLOR": "0"
+        "FORCE_COLOR": "0",
+        "RUP_DEFAULT_CWD": "/Users/<you>/your-repo"
       }
     }
   }
@@ -90,6 +91,7 @@ rup mcp --transport http --host 127.0.0.1 --port 3741 --http-path /mcp --auth-to
 
 ## 4) Smoke test prompts
 
+- `Run rup_context first and show effective cwd`
 - `Run rup_doctor for this workspace`
 - `List risky updates with rup_review`
 - `Check critical vulnerabilities with rup_audit`

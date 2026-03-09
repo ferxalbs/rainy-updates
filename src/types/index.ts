@@ -1120,6 +1120,7 @@ export interface McpOptions {
 }
 
 export type McpToolName =
+  | "rup_context"
   | "rup_check"
   | "rup_doctor"
   | "rup_predict"

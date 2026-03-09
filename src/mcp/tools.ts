@@ -31,6 +31,9 @@ import { diffBaselineService, saveBaselineService } from "../services/baseline.j
 import { runExplainService } from "../services/explain.js";
 import { runPredictService } from "../services/predict.js";
 import { McpToolError } from "./errors.js";
+import { detectPackageManagerDetails } from "../pm/detect.js";
+import { discoverPackageDirs } from "../workspace/discover.js";
+import { loadConfig } from "../config/loader.js";
 
 const gitScopeSchema = {
   affected: z.boolean().optional(),
@@ -63,6 +66,59 @@ export interface McpToolRegistry {
 
 export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
   const definitions: ToolDefinition[] = [
+    {
+      name: "rup_context",
+      description:
+        "Return runtime/integration context so clients can reason about cwd, workspace scope, and available MCP tools.",
+      inputSchema: baseInputSchema.extend({
+        includeConfig: z.boolean().optional(),
+      }),
+      jsonSchema: {
+        type: "object",
+        properties: {
+          cwd: { type: "string" },
+          workspace: { type: "boolean" },
+          includeConfig: { type: "boolean" },
+        },
+      },
+      call: async (args) => {
+        const effectiveCwd = resolveString(args.cwd, serverOptions.cwd);
+        const workspace = resolveBoolean(args.workspace, serverOptions.workspace);
+        const [packageManager, packageDirs] = await Promise.all([
+          detectPackageManagerDetails(effectiveCwd),
+          discoverPackageDirs(effectiveCwd, workspace),
+        ]);
+        const includeConfig = (args.includeConfig as boolean | undefined) !== false;
+        const loadedConfig = includeConfig
+          ? await loadConfig(effectiveCwd).catch(() => ({}))
+          : {};
+
+        return wrapResult({
+          context: {
+            cwd: effectiveCwd,
+            workspace,
+            packageManager,
+            workspacePackages: packageDirs.length,
+          },
+          integration: {
+            serverDefaultCwd: serverOptions.cwd,
+            requestProvidedCwd: typeof args.cwd === "string" && args.cwd.length > 0,
+            startupHints: [
+              "Call rup_context first to lock workspace assumptions.",
+              "Then run rup_check/rup_doctor/rup_predict before mutating tools.",
+            ],
+          },
+          config: includeConfig
+            ? {
+                mcp: (loadedConfig as { mcp?: unknown }).mcp ?? {},
+                hasSelfUpdateConfig:
+                  Boolean((loadedConfig as { selfUpdate?: unknown }).selfUpdate),
+              }
+            : undefined,
+          toolCatalog: definitionsCatalog(),
+        });
+      },
+    },
     {
       name: "rup_check",
       description: "Detect candidate dependency updates with risk metadata.",
@@ -437,6 +493,23 @@ export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
   ];
 
   return definitions;
+}
+
+function definitionsCatalog(): string[] {
+  return [
+    "rup_context",
+    "rup_check",
+    "rup_doctor",
+    "rup_predict",
+    "rup_review",
+    "rup_audit",
+    "rup_upgrade",
+    "rup_health",
+    "rup_bisect",
+    "rup_resolve",
+    "rup_baseline",
+    "rup_explain",
+  ];
 }
 
 export function createMcpServiceContext(options: McpOptions): ServiceContext {

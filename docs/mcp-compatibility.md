@@ -13,7 +13,8 @@ Most MCP clients support command-based servers.
       "command": "rup",
       "args": ["mcp"],
       "env": {
-        "FORCE_COLOR": "0"
+        "FORCE_COLOR": "0",
+        "RUP_DEFAULT_CWD": "/Users/<you>/your-repo"
       }
     }
   }
@@ -89,7 +90,7 @@ rup mcp \
 ## Troubleshooting
 
 - `command not found`: use absolute command path.
+- wrong project analyzed: set `RUP_DEFAULT_CWD` or `mcp.cwd` in `.rainyupdatesrc.json`.
 - handshake errors: ensure your client sends `initialize` before tool calls.
 - slow responses: reduce scope (`workspace`, filters, severity).
 - repeated timeout: increase `--tool-timeout-ms` or retry with narrower input.
-

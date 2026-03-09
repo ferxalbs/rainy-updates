@@ -331,6 +331,7 @@ Rainy Updates runs as a **local MCP server** for Claude Desktop, Cursor, and oth
 
 4) Start asking:
 
+- `Run rup_context and confirm the effective cwd`
 - `Run rup_doctor for this workspace`
 - `Show high-risk updates with rup_review`
 - `Check critical CVEs with rup_audit`

@@ -40,6 +40,13 @@ For tool failures, `error.data` includes structured codes:
 
 ## Tool catalog (stable names)
 
+### `rup_context`
+
+- Mutating: no
+- Purpose: expose MCP runtime context so clients can resolve workspace assumptions before running other tools.
+- Key input: optional `cwd`, `workspace`, `includeConfig`.
+- Key output: effective `cwd`, package manager detection, workspace package count, server default cwd, and stable tool catalog.
+
 ### `rup_check`
 
 - Mutating: no
@@ -125,6 +132,7 @@ For tool failures, `error.data` includes structured codes:
 ## Model usage guidance
 
 - Prefer `structuredContent` over parsing text.
+- Start sessions with `rup_context` to confirm effective `cwd` and workspace scope.
 - Use read-only tools first (`check` → `doctor` → `predict` → `review`) before mutating operations.
 - Only call `rup_upgrade` when:
   - a decision plan exists and

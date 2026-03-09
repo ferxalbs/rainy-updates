@@ -183,7 +183,9 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     const parsedMcp = parseMcpArgs(args);
     const hasCliCwd = args.includes("--cwd");
     if (!hasCliCwd) {
-      const config = await loadConfig(parsedMcp.cwd).catch(() => ({}));
+      const config = await loadConfig(parsedMcp.cwd).catch(
+        () => ({}) as Awaited<ReturnType<typeof loadConfig>>,
+      );
       const configCwd = config.mcp?.cwd
         ? path.resolve(parsedMcp.cwd, config.mcp.cwd)
         : undefined;

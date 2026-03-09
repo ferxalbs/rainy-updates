@@ -89,6 +89,7 @@ test("mcp lists tools", async () => {
   });
 
   const tools = (response?.result as { tools: Array<{ name: string }> }).tools;
+  expect(tools.some((tool) => tool.name === "rup_context")).toBe(true);
   expect(tools.some((tool) => tool.name === "rup_check")).toBe(true);
   expect(tools.some((tool) => tool.name === "rup_upgrade")).toBe(true);
   expect(tools.some((tool) => tool.name === "rup_explain")).toBe(true);
@@ -105,6 +106,7 @@ test("mcp tool catalog remains stable", async () => {
   const tools = (response?.result as { tools: Array<{ name: string }> }).tools;
   const names = tools.map((tool) => tool.name);
   expect(names).toEqual([
+    "rup_context",
     "rup_check",
     "rup_doctor",
     "rup_predict",
