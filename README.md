@@ -405,7 +405,7 @@ Docs: [MCP quickstart](./docs/mcp-install.md) · [Compatibility guide](./docs/mc
 Publish dependency health to a Shields badge:
 
 ```md
-![Repo Health](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ferxalbs/rainy-updates/gh-pages/badges/health.json)
+![Repo Health](https://img.shields.io/endpoint?url=https://ferxalbs.github.io/rainy-updates/badges/health.json)
 ```
 
 Generate with:
@@ -414,7 +414,7 @@ Generate with:
 rup doctor --badge-file .public/badges/health.json
 ```
 
-Then publish to `gh-pages` branch.
+The workflow `.github/workflows/health-badge.yml` publishes this file via GitHub Pages.
 
 ## License
 MIT
