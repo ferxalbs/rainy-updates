@@ -50,3 +50,10 @@ Use `upgrade` after review.
 
 - It applies the approved change set.
 - Interactive upgrade should still feel like review first, apply second.
+
+## Cross-stack extension (`v0.7.0`)
+
+Use these commands to extend beyond package-manager-only review:
+
+- `supply-chain`: scans Docker, GitHub Actions, Terraform, and Helm risk posture using the same policy semantics (`riskLevel`, `policyAction`, `recommendedAction`).
+- `attest`: verifies provenance/signing/SBOM posture and returns a release policy verdict (`allow|review|block`).

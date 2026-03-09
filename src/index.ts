@@ -10,6 +10,8 @@ export { runWatch } from "./commands/watch/runner.js";
 export { runReachability } from "./commands/reachability/runner.js";
 export { runExceptions } from "./commands/exceptions/runner.js";
 export { runBadge } from "./commands/badge/runner.js";
+export { runSupplyChain } from "./commands/supply-chain/runner.js";
+export { runAttest } from "./commands/attest/runner.js";
 export { runMcp } from "./commands/mcp/runner.js";
 export { createSarifReport } from "./output/sarif.js";
 export { writeGitHubOutput, renderGitHubAnnotations } from "./output/github.js";
@@ -39,6 +41,14 @@ export type {
   WatchResult,
   ReachabilityOptions,
   ReachabilityResult,
+  SupplyChainOptions,
+  SupplyChainResult,
+  SupplyChainFinding,
+  SupplyChainScope,
+  AttestOptions,
+  AttestResult,
+  AttestCheck,
+  AttestAction,
   ExceptionsOptions,
   ExceptionsResult,
   ExceptionEntry,

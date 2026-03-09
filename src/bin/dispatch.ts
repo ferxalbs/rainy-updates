@@ -24,6 +24,7 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
         mode: parsed.options.mode,
         schedule: parsed.options.schedule,
         target: parsed.options.target,
+        withBadge: parsed.options.withBadge,
       },
     );
     writeStdout(
@@ -211,6 +212,20 @@ export async function handleDirectCommand(parsed: ParsedCliArgs): Promise<boolea
     const { runBadge } = await import("../commands/badge/runner.js");
     const result = await runBadge(parsed.options);
     setRuntimeExitCode(result.errors.length > 0 ? 2 : 0);
+    return true;
+  }
+
+  if (parsed.command === "supply-chain") {
+    const { runSupplyChain } = await import("../commands/supply-chain/runner.js");
+    const result = await runSupplyChain(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 2 : result.summary.totalFindings > 0 ? 1 : 0);
+    return true;
+  }
+
+  if (parsed.command === "attest") {
+    const { runAttest } = await import("../commands/attest/runner.js");
+    const result = await runAttest(parsed.options);
+    setRuntimeExitCode(result.errors.length > 0 ? 2 : result.passed ? 0 : 1);
     return true;
   }
 

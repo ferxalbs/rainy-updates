@@ -17,6 +17,9 @@ Agents can call local tools such as:
 - `rup_resolve`
 - `rup_baseline`
 - `rup_explain`
+- `rup_badge`
+- `rup_supply_chain`
+- `rup_attest`
 
 These tools map to the same dependency analysis used by the CLI. The model does the reasoning; Rainy provides deterministic local data.
 

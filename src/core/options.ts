@@ -36,6 +36,8 @@ import type {
   ReachabilityOptions,
   ExceptionsOptions,
   BadgeOptions,
+  SupplyChainOptions,
+  AttestOptions,
 } from "../types/index.js";
 import type { InitCiMode, InitCiSchedule } from "./init-ci.js";
 import type { InitCiTarget } from "./init-ci.js";
@@ -73,6 +75,8 @@ const KNOWN_COMMANDS = [
   "reachability",
   "exceptions",
   "badge",
+  "supply-chain",
+  "attest",
 ] as const;
 
 export type ParsedCliArgs =
@@ -88,6 +92,7 @@ export type ParsedCliArgs =
         mode: InitCiMode;
         schedule: InitCiSchedule;
         target: InitCiTarget;
+        withBadge: boolean;
       };
     }
   | {
@@ -113,7 +118,9 @@ export type ParsedCliArgs =
   | { command: "watch"; options: WatchOptions }
   | { command: "reachability"; options: ReachabilityOptions }
   | { command: "exceptions"; options: ExceptionsOptions }
-  | { command: "badge"; options: BadgeOptions };
+  | { command: "badge"; options: BadgeOptions }
+  | { command: "supply-chain"; options: SupplyChainOptions }
+  | { command: "attest"; options: AttestOptions };
 
 export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   const firstArg = argv[0];
@@ -230,6 +237,14 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
     const { parseBadgeArgs } = await import("../commands/badge/parser.js");
     return { command, options: parseBadgeArgs(args) };
   }
+  if (command === "supply-chain") {
+    const { parseSupplyChainArgs } = await import("../commands/supply-chain/parser.js");
+    return { command, options: parseSupplyChainArgs(args) };
+  }
+  if (command === "attest") {
+    const { parseAttestArgs } = await import("../commands/attest/parser.js");
+    return { command, options: parseAttestArgs(args) };
+  }
 
   const base: CheckOptions = {
     cwd: getRuntimeCwd(),
@@ -287,6 +302,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
   let initCiMode: InitCiMode = "enterprise";
   let initCiSchedule: InitCiSchedule = "weekly";
   let initCiTarget: InitCiTarget = "github";
+  let initCiWithBadge = false;
   let baselineAction: "save" | "check" = "check";
   let baselineFilePath = path.resolve(base.cwd, ".rainy-updates-baseline.json");
   let jsonFileRaw: string | undefined;
@@ -575,6 +591,11 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
       throw new Error("Missing value for --schedule");
     }
 
+    if (current === "--with-badge" && command === "init-ci") {
+      initCiWithBadge = true;
+      continue;
+    }
+
     if (current === "--dep-kinds" && next) {
       base.includeKinds = parseDependencyKinds(next);
       index += 1;
@@ -858,6 +879,7 @@ export async function parseCliArgs(argv: string[]): Promise<ParsedCliArgs> {
         mode: initCiMode,
         schedule: initCiSchedule,
         target: initCiTarget,
+        withBadge: initCiWithBadge,
       },
     };
   }

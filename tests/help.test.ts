@@ -30,6 +30,16 @@ test("renderHelp includes badge command help", () => {
   expect(output).toContain("--readme");
 });
 
+test("renderHelp includes supply-chain and attest command help", () => {
+  const supplyChain = renderHelp("supply-chain");
+  expect(supplyChain).toContain("rainy-updates supply-chain [options]");
+  expect(supplyChain).toContain("--scope all|docker|actions|terraform|helm");
+
+  const attest = renderHelp("attest");
+  expect(attest).toContain("rainy-updates attest [options]");
+  expect(attest).toContain("--action verify|report");
+});
+
 test("renderHelp returns global help for unknown command context", () => {
   const output = renderHelp(undefined);
   expect(output).toContain("rainy-updates (rup / rainy-up) <command> [options]");
@@ -38,5 +48,7 @@ test("renderHelp returns global help for unknown command context", () => {
   expect(output).toContain("self-update Check or apply Rainy CLI updates");
   expect(output).toContain("reachability Estimate exploitability reachability for advisories");
   expect(output).toContain("badge       Scaffold and print repo health badge setup");
+  expect(output).toContain("supply-chain Scan Docker/GitHub Actions/Terraform/Helm supply-chain risk");
+  expect(output).toContain("attest      Verify provenance/signing/SBOM release posture");
   expect(output).toContain("--version, -v");
 });

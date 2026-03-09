@@ -1070,6 +1070,74 @@ export interface ReachabilityResult {
   warnings: string[];
 }
 
+export type SupplyChainScope = "docker" | "actions" | "terraform" | "helm";
+
+export interface SupplyChainOptions {
+  cwd: string;
+  workspace: boolean;
+  scopes: SupplyChainScope[];
+  format: "table" | "json" | "summary";
+  jsonFile?: string;
+}
+
+export interface SupplyChainFinding {
+  targetType: "docker-image" | "github-action" | "terraform-provider" | "helm-dependency";
+  name: string;
+  reference: string;
+  sourceFile: string;
+  riskLevel: RiskLevel;
+  policyAction: PolicyAction;
+  recommendedAction: string;
+  reasons: string[];
+}
+
+export interface SupplyChainResult {
+  findings: SupplyChainFinding[];
+  summary: {
+    scannedFiles: number;
+    totalFindings: number;
+    byTargetType: Record<SupplyChainFinding["targetType"], number>;
+    byPolicyAction: Record<PolicyAction, number>;
+  };
+  errors: string[];
+  warnings: string[];
+}
+
+export type AttestAction = "verify" | "report";
+
+export interface AttestOptions {
+  cwd: string;
+  workspace: boolean;
+  action: AttestAction;
+  requireProvenance: boolean;
+  requireSbom: boolean;
+  requireSigning: boolean;
+  format: "table" | "json";
+  jsonFile?: string;
+}
+
+export interface AttestCheck {
+  id:
+    | "publish-provenance"
+    | "sbom-present"
+    | "workflow-signing"
+    | "checksums-present"
+    | "decision-artifact";
+  status: "pass" | "warn" | "fail";
+  message: string;
+  evidence?: string;
+}
+
+export interface AttestResult {
+  action: AttestAction;
+  passed: boolean;
+  policyAction: PolicyAction;
+  recommendedAction: string;
+  checks: AttestCheck[];
+  errors: string[];
+  warnings: string[];
+}
+
 export type SelfUpdateCheckMode = "auto" | "off";
 export type SelfUpdateChannel =
   | "global-bun"
@@ -1132,7 +1200,9 @@ export type McpToolName =
   | "rup_resolve"
   | "rup_baseline"
   | "rup_explain"
-  | "rup_badge";
+  | "rup_badge"
+  | "rup_supply_chain"
+  | "rup_attest";
 
 export interface McpToolCallResult<T> {
   content: Array<{

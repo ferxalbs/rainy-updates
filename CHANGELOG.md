@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.0] - 2026-03-09
+
+Major release focused on cross-stack supply-chain scanning, attestation policy checks, and end-to-end local/CI bootstrap hardening.
+
+### Added
+
+- **New `supply-chain` command**:
+  - added `rup supply-chain` with scope-aware scanners for Docker, GitHub Actions, Terraform, and Helm,
+  - normalized cross-stack findings to `riskLevel`, `policyAction`, and `recommendedAction`,
+  - supports `table|json|summary` formats for local and CI automation.
+- **New `attest` command**:
+  - added `rup attest` (`verify|report`) to evaluate provenance/signing release posture,
+  - checks publish provenance config, SBOM/report presence, workflow signing markers, checksums, and decision artifacts,
+  - returns deterministic policy verdict (`allow|review|block`) for CI gate usage.
+- **MCP toolset expansion**:
+  - added `rup_supply_chain` and `rup_attest` non-mutating tools for agent workflows.
+- **New documentation**:
+  - added `docs/supply-chain-attest.md`,
+  - expanded README command catalog and examples for cross-stack scans and attestation verification.
+
+### Changed
+
+- **`init-ci` bootstrap integration**:
+  - added `--with-badge` to scaffold badge publishing assets alongside workflow/scheduler generation.
+- **Risk scoring runtime context enrichment**:
+  - runtime dependencies now receive additional production-exposure weighting,
+  - advisory impact on runtime dependencies receives stronger prioritization.
+- **NEXT_STEPS progress state**:
+  - milestone checklist moved to completed state for `v0.7.0`.
+
+### Tests
+
+- `bun test tests/supply-chain.test.ts tests/attest.test.ts tests/options.test.ts tests/help.test.ts tests/init-ci.test.ts tests/mcp.test.ts`
+
 ## [0.6.52] - 2026-03-09
 
 Badge automation and MCP extension release focused on making repository quality badges portable for all users.

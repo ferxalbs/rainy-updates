@@ -159,6 +159,28 @@ jobs:
         run: |
           mkdir -p .public/badges .artifacts
           bunx @rainy-updates/cli doctor --workspace --badge-file .public/badges/health.json --json-file .artifacts/doctor.json
+          bunx @rainy-updates/cli reachability --workspace --format json --json-file .artifacts/reachability.json
+          bunx @rainy-updates/cli attest --action report --format json --json-file .artifacts/attest.json
+          bun -e '
+            const reachability = await Bun.file(\".artifacts/reachability.json\").json();
+            const attest = await Bun.file(\".artifacts/attest.json\").json();
+            const reachable = Number(reachability?.summary?.reachable ?? 0);
+            const policy = String(attest?.policyAction ?? \"review\");
+            const reachabilityBadge = {
+              schemaVersion: 1,
+              label: \"reachability\",
+              message: reachable > 0 ? String(reachable) + \" reachable\" : \"none reachable\",
+              color: reachable > 0 ? \"orange\" : \"brightgreen\",
+            };
+            const policyBadge = {
+              schemaVersion: 1,
+              label: \"policy\",
+              message: policy,
+              color: policy === \"allow\" ? \"brightgreen\" : policy === \"block\" ? \"red\" : \"yellow\",
+            };
+            await Bun.write(\".public/badges/reachability.json\", JSON.stringify(reachabilityBadge, null, 2));
+            await Bun.write(\".public/badges/policy.json\", JSON.stringify(policyBadge, null, 2));
+          '
           cat > .public/index.html <<'HTML'
           <!doctype html>
           <html lang="en">
@@ -170,8 +192,16 @@ jobs:
             <body>
               <h1>Rainy Updates Badge</h1>
               <p>
-                Badge JSON:
+                Health:
                 <a href="./badges/health.json">./badges/health.json</a>
+              </p>
+              <p>
+                Reachability:
+                <a href="./badges/reachability.json">./badges/reachability.json</a>
+              </p>
+              <p>
+                Policy:
+                <a href="./badges/policy.json">./badges/policy.json</a>
               </p>
             </body>
           </html>

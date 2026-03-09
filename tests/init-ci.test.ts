@@ -103,3 +103,16 @@ test("initCiWorkflow can generate local cron automation template", async () => {
   expect(content.includes("crontab")).toBe(true);
   expect(content.includes("0 8 * * *")).toBe(true);
 });
+
+test("initCiWorkflow can bootstrap badge assets when withBadge is enabled", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-badge-"));
+  const result = await initCiWorkflow(dir, true, {
+    mode: "minimal",
+    schedule: "off",
+    target: "github",
+    withBadge: true,
+  });
+
+  expect(result.writtenFiles.some((file) => file.endsWith("health-badge.yml"))).toBe(true);
+  expect(result.writtenFiles.some((file) => file.endsWith("README-badge-snippet.md"))).toBe(true);
+});

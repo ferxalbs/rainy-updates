@@ -177,7 +177,8 @@ Options:
   --force
   --mode minimal|strict|enterprise
   --schedule weekly|daily|off
-  --target github|cron|systemd`;
+  --target github|cron|systemd
+  --with-badge`;
   }
 
   if (isCommand && command === "baseline") {
@@ -451,6 +452,35 @@ Options:
   --cwd <path>`;
   }
 
+  if (isCommand && command === "supply-chain") {
+    return `rainy-updates supply-chain [options]
+
+Scan cross-stack supply-chain surfaces (Docker, GitHub Actions, Terraform, Helm).
+
+Options:
+  --workspace
+  --scope all|docker|actions|terraform|helm
+  --format table|json|summary
+  --json-file <path>
+  --cwd <path>`;
+  }
+
+  if (isCommand && command === "attest") {
+    return `rainy-updates attest [options]
+
+Verify release provenance/signing posture and produce auditable policy verdicts.
+
+Options:
+  --workspace
+  --action verify|report
+  --require-provenance
+  --require-sbom
+  --require-signing
+  --format table|json
+  --json-file <path>
+  --cwd <path>`;
+  }
+
   return `rainy-updates (rup / rainy-up) <command> [options]
 
 Commands:
@@ -480,6 +510,8 @@ Commands:
   reachability Estimate exploitability reachability for advisories
   exceptions  Manage VEX-like advisory exceptions
   badge       Scaffold and print repo health badge setup
+  supply-chain Scan Docker/GitHub Actions/Terraform/Helm supply-chain risk
+  attest      Verify provenance/signing/SBOM release posture
 
 Global options:
   --cwd <path>

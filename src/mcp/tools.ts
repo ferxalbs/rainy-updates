@@ -10,6 +10,8 @@ import type {
   DoctorOptions,
   ExplainOptions,
   PredictOptions,
+  SupplyChainOptions,
+  AttestOptions,
   HealthOptions,
   McpOptions,
   McpToolCallResult,
@@ -32,6 +34,8 @@ import { diffBaselineService, saveBaselineService } from "../services/baseline.j
 import { runExplainService } from "../services/explain.js";
 import { runPredictService } from "../services/predict.js";
 import { runBadgeService } from "../services/badge.js";
+import { runSupplyChainService } from "../services/supply-chain.js";
+import { runAttestService } from "../services/attest.js";
 import { McpToolError } from "./errors.js";
 import { detectPackageManagerDetails } from "../pm/detect.js";
 import { discoverPackageDirs } from "../workspace/discover.js";
@@ -551,6 +555,81 @@ export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
         return wrapResult(result);
       },
     },
+    {
+      name: "rup_supply_chain",
+      description: "Scan Docker, GitHub Actions, Terraform, and Helm files for supply-chain risk posture.",
+      inputSchema: z.object({
+        cwd: z.string().optional(),
+        workspace: z.boolean().optional(),
+        scopes: z.array(z.enum(["docker", "actions", "terraform", "helm"])).optional(),
+        format: z.enum(["table", "json", "summary"]).optional(),
+      }),
+      jsonSchema: {
+        type: "object",
+        properties: {
+          cwd: { type: "string" },
+          workspace: { type: "boolean" },
+          scopes: { type: "array", items: { type: "string" } },
+          format: { enum: ["table", "json", "summary"] },
+        },
+      },
+      call: async (args) => {
+        const options: SupplyChainOptions = {
+          cwd: resolveString(args.cwd, serverOptions.cwd),
+          workspace: resolveBoolean(args.workspace, serverOptions.workspace),
+          scopes:
+            (args.scopes as SupplyChainOptions["scopes"] | undefined) ?? [
+              "docker",
+              "actions",
+              "terraform",
+              "helm",
+            ],
+          format: (args.format as SupplyChainOptions["format"] | undefined) ?? "json",
+          jsonFile: undefined,
+        };
+        const result = await runSupplyChainService(options);
+        return wrapResult(result);
+      },
+    },
+    {
+      name: "rup_attest",
+      description: "Verify release provenance, signing workflow posture, and attestation readiness.",
+      inputSchema: z.object({
+        cwd: z.string().optional(),
+        workspace: z.boolean().optional(),
+        action: z.enum(["verify", "report"]).optional(),
+        requireProvenance: z.boolean().optional(),
+        requireSbom: z.boolean().optional(),
+        requireSigning: z.boolean().optional(),
+        format: z.enum(["table", "json"]).optional(),
+      }),
+      jsonSchema: {
+        type: "object",
+        properties: {
+          cwd: { type: "string" },
+          workspace: { type: "boolean" },
+          action: { enum: ["verify", "report"] },
+          requireProvenance: { type: "boolean" },
+          requireSbom: { type: "boolean" },
+          requireSigning: { type: "boolean" },
+          format: { enum: ["table", "json"] },
+        },
+      },
+      call: async (args) => {
+        const options: AttestOptions = {
+          cwd: resolveString(args.cwd, serverOptions.cwd),
+          workspace: resolveBoolean(args.workspace, serverOptions.workspace),
+          action: (args.action as AttestOptions["action"] | undefined) ?? "verify",
+          requireProvenance: (args.requireProvenance as boolean | undefined) ?? true,
+          requireSbom: (args.requireSbom as boolean | undefined) ?? true,
+          requireSigning: (args.requireSigning as boolean | undefined) ?? true,
+          format: (args.format as AttestOptions["format"] | undefined) ?? "json",
+          jsonFile: undefined,
+        };
+        const result = await runAttestService(options);
+        return wrapResult(result);
+      },
+    },
   ];
 
   return definitions;
@@ -571,6 +650,8 @@ function definitionsCatalog(): string[] {
     "rup_baseline",
     "rup_explain",
     "rup_badge",
+    "rup_supply_chain",
+    "rup_attest",
   ];
 }
 

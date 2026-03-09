@@ -78,6 +78,7 @@ test("parseCliArgs supports warm-cache and init-ci", async () => {
     "daily",
     "--target",
     "cron",
+    "--with-badge",
   ]);
   expect(init.command).toBe("init-ci");
   if (init.command === "init-ci") {
@@ -85,6 +86,7 @@ test("parseCliArgs supports warm-cache and init-ci", async () => {
     expect(init.options.mode).toBe("minimal");
     expect(init.options.schedule).toBe("daily");
     expect(init.options.target).toBe("cron");
+    expect(init.options.withBadge).toBe(true);
   }
 });
 
@@ -481,5 +483,37 @@ test("parseCliArgs supports exceptions command", async () => {
     expect(parsed.options.action).toBe("add");
     expect(parsed.options.packageName).toBe("lodash");
     expect(parsed.options.status).toBe("accepted_risk");
+  }
+});
+
+test("parseCliArgs supports supply-chain command", async () => {
+  const parsed = await parseCliArgs([
+    "supply-chain",
+    "--scope",
+    "docker,actions",
+    "--format",
+    "json",
+  ]);
+  expect(parsed.command).toBe("supply-chain");
+  if (parsed.command === "supply-chain") {
+    expect(parsed.options.scopes).toEqual(["docker", "actions"]);
+    expect(parsed.options.format).toBe("json");
+  }
+});
+
+test("parseCliArgs supports attest command", async () => {
+  const parsed = await parseCliArgs([
+    "attest",
+    "--action",
+    "report",
+    "--no-require-signing",
+    "--format",
+    "json",
+  ]);
+  expect(parsed.command).toBe("attest");
+  if (parsed.command === "attest") {
+    expect(parsed.options.action).toBe("report");
+    expect(parsed.options.requireSigning).toBe(false);
+    expect(parsed.options.format).toBe("json");
   }
 });

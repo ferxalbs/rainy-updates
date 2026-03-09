@@ -136,6 +136,20 @@ For tool failures, `error.data` includes structured codes:
 - Key input: `action` (`url|init`), `owner`, `repo`, `branch`, `badgePath`, `updateReadme`, `force`.
 - Key output: `badgeEndpointUrl`, `shieldsUrl`, `markdownSnippet`, workflow/snippet file status.
 
+### `rup_supply_chain`
+
+- Mutating: no
+- Purpose: scan Docker, GitHub Actions, Terraform, and Helm supply-chain surfaces.
+- Key input: `scopes` (`docker|actions|terraform|helm`) and `format`.
+- Key output: normalized findings with `riskLevel`, `policyAction`, `recommendedAction`.
+
+### `rup_attest`
+
+- Mutating: no
+- Purpose: verify release provenance/signing/SBOM posture and produce auditable policy verdict.
+- Key input: `action` (`verify|report`), `requireProvenance`, `requireSbom`, `requireSigning`.
+- Key output: check matrix with final `policyAction` and `passed` status.
+
 ## Model usage guidance
 
 - Prefer `structuredContent` over parsing text.

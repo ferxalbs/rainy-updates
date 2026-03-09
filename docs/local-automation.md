@@ -5,6 +5,7 @@
 - `--target github` (default)
 - `--target cron`
 - `--target systemd`
+- `--with-badge` to scaffold badge publishing assets in the same bootstrap flow
 
 ## Cron
 

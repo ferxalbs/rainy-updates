@@ -7,6 +7,7 @@ import {
   detectPackageManagerDetails,
   type PackageManagerProfile,
 } from "../pm/detect.js";
+import { runBadgeService } from "../services/badge.js";
 
 export type InitCiMode = "minimal" | "strict" | "enterprise";
 export type InitCiSchedule = "weekly" | "daily" | "off";
@@ -16,6 +17,7 @@ export interface InitCiOptions {
   mode: InitCiMode;
   schedule: InitCiSchedule;
   target: InitCiTarget;
+  withBadge?: boolean;
 }
 
 export async function initCiWorkflow(
@@ -26,11 +28,42 @@ export async function initCiWorkflow(
   const detected = await detectPackageManagerDetails(cwd);
   const packageManager = createPackageManagerProfile("auto", detected);
 
-  if (options.target === "github") {
-    return initGitHubWorkflow(cwd, force, options, packageManager);
+  const primary = options.target === "github"
+    ? await initGitHubWorkflow(cwd, force, options, packageManager)
+    : await initLocalAutomation(cwd, force, options);
+
+  if (!options.withBadge) {
+    return primary;
   }
 
-  return initLocalAutomation(cwd, force, options);
+  const badge = await runBadgeService({
+    cwd,
+    action: "init",
+    owner: undefined,
+    repo: undefined,
+    branch: "main",
+    badgePath: "badges/health.json",
+    workflowFile: ".github/workflows/health-badge.yml",
+    snippetFile: ".artifacts/badges/README-badge-snippet.md",
+    updateReadme: false,
+    force,
+    format: "json",
+    jsonFile: undefined,
+  });
+
+  const writtenFiles = [...primary.writtenFiles];
+  if (badge.workflowCreated) {
+    writtenFiles.push(badge.workflowPath);
+  }
+  if (badge.snippetCreated) {
+    writtenFiles.push(badge.snippetPath);
+  }
+
+  return {
+    path: primary.path,
+    created: primary.created || badge.workflowCreated || badge.snippetCreated,
+    writtenFiles,
+  };
 }
 
 async function initGitHubWorkflow(

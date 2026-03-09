@@ -161,6 +161,8 @@ npx @rainy-updates/cli audit --severity high
 | `init-ci` | Generate GitHub Actions workflow |
 | `reachability` | Estimate advisory exploitability reachability |
 | `exceptions` | Manage VEX-like advisory exceptions |
+| `supply-chain` | Scan Docker, GitHub Actions, Terraform, and Helm supply-chain risks |
+| `attest` | Verify provenance/signing/SBOM posture with policy verdicts |
 
 ## Usage examples
 
@@ -242,6 +244,7 @@ rup init-ci --mode enterprise --schedule weekly
 rup init-ci --mode minimal --schedule daily
 rup init-ci --target cron --mode strict --schedule daily
 rup init-ci --target systemd --mode strict --schedule weekly
+rup init-ci --mode strict --schedule weekly --with-badge
 ```
 
 ### Monitoring
@@ -253,6 +256,10 @@ rup watch --workspace --severity high
 # Reachability and exceptions
 rup reachability --workspace --format summary
 rup exceptions list --active-only
+
+# Cross-stack supply-chain + attestation
+rup supply-chain --scope all --format summary
+rup attest --action verify --format table
 ```
 
 ## Configuration
@@ -399,6 +406,7 @@ Docs: [MCP quickstart](./docs/mcp-install.md) · [Compatibility guide](./docs/mc
 - [Benchmarks](./docs/benchmarks.md) — Performance methodology
 - [Comparison](./docs/why-rainy-vs-dependabot-renovate.md) — vs Dependabot & Renovate
 - [Badges](./docs/badges.md) — Health badge setup for any repository
+- [Supply-chain & attest](./docs/supply-chain-attest.md) — Cross-stack scanner + provenance policy checks
 - [Roadmap](./ROADMAP.md) — Long-term vision
 
 ## Health badge

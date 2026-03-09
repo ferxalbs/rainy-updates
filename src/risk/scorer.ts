@@ -93,6 +93,24 @@ export function assessRisk(
     });
   }
 
+  if (input.update.kind === "dependencies") {
+    modifierFactors.push({
+      code: "runtime-exposure",
+      weight: 8,
+      category: "operational-health",
+      message: "Runtime dependency change increases production exposure compared to dev-only updates.",
+    });
+  }
+
+  if (input.update.kind === "dependencies" && input.advisories.length > 0) {
+    modifierFactors.push({
+      code: "runtime-vulnerability-exposure",
+      weight: 10,
+      category: "known-vulnerability",
+      message: "Advisory affects a runtime dependency and should be prioritized in production contexts.",
+    });
+  }
+
   const baseScore = baseFactors.reduce((sum, factor) => sum + factor.weight, 0);
   const modifierScore = modifierFactors.reduce(
     (sum, factor) => sum + factor.weight,

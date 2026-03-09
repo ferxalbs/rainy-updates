@@ -75,6 +75,8 @@ test("runBadgeService init writes workflow and snippet and updates README", asyn
 
   const workflow = await Bun.file(path.join(cwd, ".github/workflows/health-badge.yml")).text();
   expect(workflow).toContain("name: Publish Repo Health Badge");
+  expect(workflow).toContain(".public/badges/reachability.json");
+  expect(workflow).toContain(".public/badges/policy.json");
 
   const snippet = await Bun.file(path.join(cwd, ".artifacts/badges/README-badge-snippet.md")).text();
   expect(snippet).toContain("## Dependency Health Badge");
