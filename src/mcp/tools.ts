@@ -54,6 +54,13 @@ const baseInputSchema = z.object({
   workspace: z.boolean().optional(),
 });
 
+const auditSeveritySchema = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "moderate") return "medium";
+  return normalized;
+}, z.enum(["critical", "high", "medium", "low"]).optional());
+
 type ToolDefinition = {
   name: McpToolName;
   description: string;
@@ -286,7 +293,7 @@ export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
       name: "rup_audit",
       description: "Scan dependencies for CVEs using OSV.dev and GitHub advisories.",
       inputSchema: baseInputSchema.extend({
-        severity: z.enum(["critical", "high", "medium", "low"]).optional(),
+        severity: auditSeveritySchema,
         sourceMode: z.enum(["auto", "osv", "github", "all"]).optional(),
         ...gitScopeSchema,
       }),
@@ -443,25 +450,51 @@ export function createMcpTools(serverOptions: McpOptions): ToolDefinition[] {
       name: "rup_baseline",
       description: "Save or diff a dependency baseline snapshot.",
       inputSchema: baseInputSchema.extend({
-        action: z.enum(["save", "check"]),
-        filePath: z.string(),
+        action: z.enum(["save", "check"]).optional(),
+        filePath: z.string().optional(),
         includeKinds: z.array(
           z.enum(["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]),
         ).optional(),
       }),
-      jsonSchema: { type: "object", required: ["action", "filePath"] },
+      jsonSchema: {
+        type: "object",
+        properties: {
+          action: { enum: ["save", "check"] },
+          filePath: { type: "string" },
+        },
+      },
       call: async (args, context) => {
+        const cwd = resolveString(args.cwd, serverOptions.cwd);
+        const action = (args.action as "save" | "check" | undefined) ?? "check";
+        const filePath = resolveFromCwd(
+          cwd,
+          (args.filePath as string | undefined) ?? ".artifacts/deps-baseline.json",
+        );
+
         const options: BaselineOptions = {
-          cwd: resolveString(args.cwd, serverOptions.cwd),
+          cwd,
           workspace: resolveBoolean(args.workspace, serverOptions.workspace),
           includeKinds:
             (args.includeKinds as BaselineOptions["includeKinds"] | undefined) ??
             defaultCheckOptions(serverOptions).includeKinds,
-          filePath: args.filePath as string,
+          filePath,
           ci: false,
         };
+
+        if (action === "check" && !(await Bun.file(filePath).exists())) {
+          return wrapResult({
+            filePath,
+            added: [],
+            removed: [],
+            changed: [],
+            missingBaseline: true,
+            recommendedAction:
+              "Baseline file not found. Run rup_baseline with action=save to create it.",
+          });
+        }
+
         const result =
-          args.action === "save"
+          action === "save"
             ? await saveBaselineService(options, context)
             : await diffBaselineService(options, context);
         return wrapResult(result);
@@ -747,6 +780,18 @@ function resolveBoolean(value: unknown, fallback: boolean): boolean {
 
 function resolveString(value: unknown, fallback: string): string {
   return typeof value === "string" && value.length > 0 ? value : fallback;
+}
+
+function resolveFromCwd(cwd: string, value: string): string {
+  if (value.startsWith("/")) {
+    return value;
+  }
+  if (/^[A-Za-z]:[\\/]/.test(value)) {
+    return value;
+  }
+  const base = cwd.endsWith("/") ? cwd.slice(0, -1) : cwd;
+  const relative = value.startsWith("./") ? value.slice(2) : value;
+  return `${base}/${relative}`;
 }
 
 function wrapResult<T>(structuredContent: T): McpToolCallResult<T> {

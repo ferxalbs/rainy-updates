@@ -199,3 +199,41 @@ test("mcp handles batch payloads", async () => {
   expect(responses.some((item) => item.id === 51)).toBe(true);
   expect(responses.some((item) => item.id === 52)).toBe(true);
 });
+
+test("mcp baseline tool defaults are non-fatal when baseline file is missing", async () => {
+  await initializeServerSession();
+  const response = await server.handleMessage({
+    jsonrpc: "2.0",
+    id: 60,
+    method: "tools/call",
+    params: {
+      name: "rup_baseline",
+      arguments: {},
+    },
+  });
+
+  expect(response?.error).toBeUndefined();
+  const payload = response?.result as {
+    structuredContent?: { missingBaseline?: boolean; recommendedAction?: string };
+  };
+  expect(payload.structuredContent?.missingBaseline).toBe(true);
+  expect(payload.structuredContent?.recommendedAction).toContain("action=save");
+});
+
+test("mcp audit accepts case-insensitive severity values", async () => {
+  await initializeServerSession();
+  const response = await server.handleMessage({
+    jsonrpc: "2.0",
+    id: 61,
+    method: "tools/call",
+    params: {
+      name: "rup_audit",
+      arguments: {
+        severity: "HIGH",
+      },
+    },
+  });
+
+  const code = (response?.error?.data as { code?: string } | undefined)?.code;
+  expect(code).not.toBe("INVALID_PARAMS");
+});
