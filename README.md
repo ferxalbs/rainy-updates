@@ -1,5 +1,9 @@
 # @rainy-updates/cli
 
+[![npm version](https://img.shields.io/npm/v/@rainy-updates/cli.svg?style=flat-square)](https://www.npmjs.com/package/@rainy-updates/cli)
+![Repo Health](https://img.shields.io/endpoint?url=https%3A%2F%2Fferxalbs.github.io%2Frainy-updates%2Fbadges%2Fhealth.json)
+[![Bun](https://img.shields.io/badge/bun-%23000000.svg?style=flat-square&logo=bun&logoColor=white)](https://bun.sh)
+
 Rainy Updates is a deterministic dependency review and upgrade operator for Node monorepos and CI.
 
 `@rainy-updates/cli` is built for teams that need fast dependency detection, trustworthy review, controlled upgrades, and automation-ready outputs for CI/CD.
@@ -411,39 +415,68 @@ Docs: [MCP quickstart](./docs/mcp-install.md) · [Compatibility guide](./docs/mc
 
 ## Health badge
 
-Use `rup badge` to standardize a publishable quality badge for any repository.
+Use `rup badge` to add a live dependency health badge to any repository. This badge shows the current state of your dependencies and updates automatically.
 
-1. Scaffold workflow + README snippet:
+### How it works
+
+1. **Generates a GitHub Actions workflow** that runs weekly (or on push to main)
+2. **Executes `rup doctor`** to analyze your dependencies
+3. **Publishes the results** as a JSON file via GitHub Pages
+4. **Shields.io renders** the JSON as a dynamic badge in your README
+
+### For any user/repository
+
+This feature works for ANY repository, not just this one:
+
+```bash
+# In your project directory
+rup badge init --owner <your-github-username> --repo <your-repo-name> --readme
+```
+
+This will:
+- Create `.github/workflows/health-badge.yml` (runs weekly + on push)
+- Generate `.artifacts/badges/README-badge-snippet.md` with your badge markdown
+- Optionally update your README.md with the badge
+
+### Setup requirements
+
+1. Enable GitHub Pages in your repository settings:
+   - Go to Settings → Pages
+   - Source: **GitHub Actions** (not "Deploy from branch")
+
+2. Run the init command:
 
 ```bash
 rup badge init --owner <github-owner> --repo <repo-name> --readme
 ```
 
-2. Print only the final URL/snippet:
+3. Commit and push the workflow file
+4. The badge will update automatically on the schedule or when you push to main
+
+### Manual usage
+
+Print only the badge URL:
 
 ```bash
 rup badge url --owner <github-owner> --repo <repo-name>
 ```
 
-3. Use the generated universal snippet:
-
-```bash
-cat .artifacts/badges/README-badge-snippet.md
-```
-
-Manual badge format:
-
-```md
-![Repo Health](https://img.shields.io/endpoint?url=https://ferxalbs.github.io/rainy-updates/badges/health.json)
-```
-
-Raw badge JSON generation (inside CI):
+Generate badge JSON manually (for CI):
 
 ```bash
 rup doctor --badge-file .public/badges/health.json
 ```
 
-The workflow `.github/workflows/health-badge.yml` publishes this file via GitHub Pages.
+### Update frequency
+
+The badge updates:
+- **Weekly** (every Monday at 9 AM UTC) via cron schedule
+- **On every push** to main/master branch
+- **Manually** via workflow_dispatch in GitHub Actions UI
+
+### Example badge
+
+The badge at the top of this README is generated using this same system.
 
 ## License
 MIT
