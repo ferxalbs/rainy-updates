@@ -1,4 +1,20 @@
 # CHANGELOG
+## [0.8.1] - 2026-05-16
+
+### Added
+- **True Bun-Native Architecture**:
+  - Migrated all internal logic to use Bun-native globals (`Bun.env`, `Bun.argv`, `Bun.stdout`, `Bun.stderr`).
+  - Leveraged global `crypto.randomUUID()` and `Bun.fileURLToPath()` for maximum performance.
+  - Refactored all filesystem operations to use the ultra-fast Zig-based Bun Shell (`$`).
+
+### Changed
+- **Standardized Compatibility**:
+  - Explicitly using `node:` prefixed routes for standard module imports (e.g., `node:path`, `node:fs`) to maintain ecosystem alignment while executing on the optimized Bun runtime.
+  - Upgraded `unused` dependency scanner to intelligently handle both prefixed and non-prefixed built-in modules.
+
+### Fixed
+- Stabilized the test suite and build system for pure Bun environments, achieving 100% pass rate across 181 tests.
+
 
 All notable changes to this project are documented in this file.
 
