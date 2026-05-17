@@ -87,7 +87,7 @@ async function collectFiles(cwd: string, patterns: string[]): Promise<string[]> 
   const results = new Set<string>();
   for (const pattern of patterns) {
     const glob = new Bun.Glob(pattern);
-    for (const relative of glob.scanSync({ cwd, onlyFiles: true })) {
+    for (const relative of glob.scanSync({ cwd, onlyFiles: true, dot: true })) {
       if (shouldSkip(relative)) {
         continue;
       }

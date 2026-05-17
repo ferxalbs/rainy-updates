@@ -172,7 +172,7 @@ async function checkDecisionArtifact(options: AttestOptions): Promise<AttestChec
 async function findWorkflows(cwd: string): Promise<string[]> {
   const matched: string[] = [];
   const glob = new Bun.Glob(".github/workflows/*.{yml,yaml}");
-  for (const file of glob.scanSync({ cwd })) {
+  for (const file of glob.scanSync({ cwd, dot: true })) {
     matched.push(file);
   }
   return matched;

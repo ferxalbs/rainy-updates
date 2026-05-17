@@ -89,11 +89,7 @@ async function runShellCheck(
 
   try {
     const invocation = buildShellInvocation(command);
-    const { exitCode } = await Bun.$`${{
-      raw: `${invocation.shell} ${invocation.args
-        .map((a) => (a.includes(" ") ? `"${a}"` : a))
-        .join(" ")}`,
-    }}`
+    const { exitCode } = await Bun.$`${invocation.shell} ${invocation.args}`
       .cwd(cwd)
       .nothrow();
 

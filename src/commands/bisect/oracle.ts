@@ -52,7 +52,7 @@ export async function bisectOracle(
 async function runShell(command: string, cwd: string): Promise<number> {
   try {
     const invocation = buildShellInvocation(command);
-    const { exitCode } = await Bun.$`${{ raw: invocation.display }}`
+    const { exitCode } = await Bun.$`${invocation.shell} ${invocation.args}`
       .cwd(path.resolve(cwd))
       .nothrow()
       .quiet();
