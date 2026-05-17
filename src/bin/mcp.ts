@@ -1,6 +1,4 @@
-#!/usr/bin/env node
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+#!/usr/bin/env bun
 import { CLI_VERSION } from "../generated/version.js";
 import { parseMcpArgs } from "../commands/mcp/parser.js";
 import { runMcp } from "../commands/mcp/runner.js";
@@ -13,22 +11,6 @@ import {
 } from "../utils/runtime.js";
 
 async function main(): Promise<void> {
-  if (typeof Bun === "undefined") {
-    const currentFile = fileURLToPath(import.meta.url);
-    const result = spawnSync("bun", [currentFile, ...process.argv.slice(2)], {
-      stdio: "inherit",
-    });
-
-    if (result.error) {
-      process.stderr.write(
-        "rainy-updates (rup-mcp): Bun is required to run the published JavaScript MCP entrypoint. Install Bun or use the compiled binary release.\n",
-      );
-      process.exit(1);
-    }
-
-    process.exit(result.status ?? 1);
-  }
-
   try {
     const argv = getRuntimeArgv();
     if (argv.includes("--version") || argv.includes("-v")) {
@@ -48,4 +30,6 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+if (import.meta.main) {
+  void main();
+}
