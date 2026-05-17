@@ -1,16 +1,58 @@
-MIT License
+# Rainy Updates 2026
 
-Copyright (c) 2026 Rainy Updates
+## Grant of License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+of this software and associated documentation files (the "Software"), to use
+the Software for personal, educational, and internal business purposes, subject
+to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## Permitted Uses
+
+You may:
+
+- Use the Software for personal, educational, or internal business purposes
+- Modify the Software for your own internal use
+- Fork the Software on GitHub or similar platforms
+
+## Restrictions
+
+You may NOT:
+
+- Copy, extract, or reuse any portion of the source code in other projects
+- Use the Software or derivatives in commercial products or services without
+  obtaining a separate commercial license from Rainy MaTE
+- Remove, alter, or obscure any copyright notices, trademarks, or attributions
+- Create competing dependency management tools using this code
+
+## Attribution Requirement
+
+Any fork, modification, or distribution of this Software must include the
+following attribution in a prominent location (such as the README file):
+
+    Based on Rainy Updates by Enosis Labs, Inc.
+    https://github.com/ferxalbs/rainy-updates
+
+Failure to provide this attribution is a violation of this license.
+
+## Commercial Use
+
+For commercial use, including but not limited to integration into commercial
+products, SaaS offerings, or use in revenue-generating activities, you must
+obtain a commercial license.
+
+## Contributions
+
+By submitting contributions to this Software, you grant Rainy MaTE a perpetual,
+worldwide, non-exclusive, royalty-free license to use, modify, and distribute
+your contributions under this license or any other license.
+
+## Termination
+
+This license terminates automatically if you violate any of its terms. Upon
+termination, you must cease all use of the Software and destroy all copies.
+
+## Disclaimer of Warranty
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,3 +61,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+----
+
+Copyright (c) 2026 Enosis Labs, Inc.
+All rights reserved.
