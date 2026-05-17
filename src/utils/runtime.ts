@@ -6,14 +6,14 @@ export function getRuntimeArgv(): string[] {
   if (typeof Bun !== "undefined") {
     return Bun.argv.slice(2);
   }
-  return process.argv.slice(2);
+  return Bun.argv.slice(2);
 }
 
 export function readEnv(name: string): string | undefined {
   if (typeof Bun !== "undefined") {
     return Bun.env[name];
   }
-  return process.env[name];
+  return Bun.env[name];
 }
 
 export function writeStdout(message: string): void {

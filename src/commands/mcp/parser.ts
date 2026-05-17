@@ -1,11 +1,11 @@
-import path from "node:path";
+import path from "path";
 import type { McpOptions } from "../../types/index.js";
 import { getRuntimeCwd } from "../../utils/runtime.js";
 import { normalizeMcpConfigClient } from "./config-template.js";
 
 export function parseMcpArgs(args: string[]): McpOptions {
-  const envDefaultCwd = process.env.RUP_DEFAULT_CWD
-    ? path.resolve(process.env.RUP_DEFAULT_CWD)
+  const envDefaultCwd = Bun.env.RUP_DEFAULT_CWD
+    ? path.resolve(Bun.env.RUP_DEFAULT_CWD)
     : undefined;
   const options: McpOptions = {
     cwd: envDefaultCwd ?? getRuntimeCwd(),

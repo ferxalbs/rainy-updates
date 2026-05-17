@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import { parseSync } from "oxc-parser";
 
 /**
@@ -64,11 +64,21 @@ export function extractImportsFromSource(source: string): Set<string> {
   return names;
 }
 
+const BUILTIN_MODULES = new Set([
+  "assert", "async_hooks", "buffer", "child_process", "cluster", "console", "constants",
+  "crypto", "dgram", "diagnostics_channel", "dns", "domain", "events", "fs", "http",
+  "http2", "https", "inspector", "module", "net", "os", "path", "perf_hooks", "process",
+  "punycode", "querystring", "readline", "repl", "stream", "string_decoder", "timers",
+  "tls", "trace_events", "tty", "url", "util", "v8", "vm", "worker_threads", "zlib",
+]);
+
 function addPackageName(names: Set<string>, specifier: string): void {
   // Skip relative imports, node: builtins, and bare file paths
   if (specifier.startsWith(".") || specifier.startsWith("/")) return;
-  if (specifier.startsWith("node:")) return;
-  if (specifier.startsWith("bun:")) return;
+  if (specifier.startsWith("node:") || specifier.startsWith("bun:")) return;
+
+  // Handle non-prefixed builtins
+  if (BUILTIN_MODULES.has(specifier)) return;
 
   // Normalize package name (strip subpath): "lodash/merge" → "lodash"
   // "@scope/pkg/subpath" → "@scope/pkg"

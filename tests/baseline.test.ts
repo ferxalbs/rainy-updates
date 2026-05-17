@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // readFile, writeFile was here;
-import os from "node:os";
+import os from "os";
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 import { diffBaseline, saveBaseline } from "../src/core/baseline.js";
 
 test("baseline save and diff detects changed dependency ranges", async () => {

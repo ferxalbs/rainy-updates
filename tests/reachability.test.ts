@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // mkdir, writeFile was here;
-import os from "node:os";
+import os from "os";
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 import type { ReviewItem } from "../src/types/index.js";
 import { applyReachabilitySignalsToReviewItems } from "../src/services/reachability.js";
 

@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // mkdir, writeFile was here;
-import os from "node:os";
+import os from "os";
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 import { parseCliArgs } from "../src/core/options.js";
 
 test("parseCliArgs defaults to check command", async () => {
@@ -429,8 +429,8 @@ test("parseCliArgs resolves MCP cwd from config when client does not pass --cwd"
     "utf8",
   );
 
-  const previous = process.env.RUP_DEFAULT_CWD;
-  process.env.RUP_DEFAULT_CWD = root;
+  const previous = Bun.env.RUP_DEFAULT_CWD;
+  Bun.env.RUP_DEFAULT_CWD = root;
   try {
     const parsed = await parseCliArgs(["mcp"]);
     expect(parsed.command).toBe("mcp");
@@ -439,9 +439,9 @@ test("parseCliArgs resolves MCP cwd from config when client does not pass --cwd"
     }
   } finally {
     if (previous === undefined) {
-      delete process.env.RUP_DEFAULT_CWD;
+      delete Bun.env.RUP_DEFAULT_CWD;
     } else {
-      process.env.RUP_DEFAULT_CWD = previous;
+      Bun.env.RUP_DEFAULT_CWD = previous;
     }
   }
 });

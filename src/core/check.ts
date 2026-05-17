@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { CheckOptions, CheckResult, PackageDependency, PackageUpdate, Summary } from "../types/index.js";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { matchesPattern } from "../utils/pattern.js";

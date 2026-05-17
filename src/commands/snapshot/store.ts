@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import { writeFileAtomic } from "../../utils/io.js";
 import type { SnapshotEntry } from "../../types/index.js";
 

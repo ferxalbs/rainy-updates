@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { DependencyKind } from "../types/index.js";
 import { scopePackageDirsByGit, type GitScopeOptions } from "../git/scope.js";
 

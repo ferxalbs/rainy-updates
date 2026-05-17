@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { HealthOptions } from "../../types/index.js";
 import { getRuntimeCwd } from "../../utils/runtime.js";
 

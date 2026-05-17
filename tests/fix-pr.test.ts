@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import os from "node:os";
-import path from "node:path";
-import { spawn } from "node:child_process";
+import os from "os";
+import path from "path";
+import { spawn } from "child_process";
 import { applyFixPr } from "../src/core/fix-pr.js";
 import type { CheckResult, RunOptions } from "../src/types/index.js";
 

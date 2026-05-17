@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 
 export async function writeFileAtomic(
   filePath: string,

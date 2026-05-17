@@ -1,7 +1,7 @@
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 
-const [target, outputDirArg, entrypointArg, binaryBaseNameArg, preserveOutputArg] = process.argv.slice(2);
+const [target, outputDirArg, entrypointArg, binaryBaseNameArg, preserveOutputArg] = Bun.argv.slice(2);
 
 if (!target || !outputDirArg) {
   throw new Error(

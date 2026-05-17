@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { DashboardOptions } from "../../types/index.js";
 
 export function parseDashboardArgs(args: string[]): DashboardOptions {

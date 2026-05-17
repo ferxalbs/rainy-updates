@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // writeFile was here;
-import os from "node:os";
+import os from "os";
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 import { runGa } from "../src/commands/ga/runner.js";
 
 test("runGa reports readiness details for a basic npm project", async () => {

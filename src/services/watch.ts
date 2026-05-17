@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 import { loadConfig } from "../config/loader.js";
 import { createDecisionPlan, writeDecisionPlan } from "../core/decision-plan.js";
 import { runAuditService } from "./audit.js";
@@ -34,7 +34,7 @@ export async function runWatchService(
 
   if (options.action === "start" && options.daemon) {
     const child = Bun.spawn({
-      cmd: [process.execPath, process.argv[1]!, "watch", "run", "--cwd", options.cwd, ...(options.workspace ? ["--workspace"] : [])],
+      cmd: [process.execPath, Bun.argv[1]!, "watch", "run", "--cwd", options.cwd, ...(options.workspace ? ["--workspace"] : [])],
       cwd: options.cwd,
       stdout: "ignore",
       stderr: "ignore",

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 
 const projectRoot = path.resolve(import.meta.dir, "..");
 const binPath = path.join(projectRoot, "dist", "bin", "cli.js");

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 
-const args = process.argv.slice(2);
+const args = Bun.argv.slice(2);
 const getArg = (name) => {
   const idx = args.indexOf(name);
   return idx !== -1 ? args[idx + 1] : null;

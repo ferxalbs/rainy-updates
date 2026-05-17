@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { CachedVersion, TargetLevel } from "../types/index.js";
 import { writeFileAtomic } from "../utils/io.js";
 import { getCacheDir } from "../utils/runtime-paths.js";

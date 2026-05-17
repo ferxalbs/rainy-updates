@@ -198,7 +198,7 @@ function isRegistryDataStale(currentVersion: string, latestVersion: string): boo
 
 function detectSelfUpdateChannel(): SelfUpdateChannel {
   const execPath = process.execPath ?? "";
-  const scriptPath = process.argv[1] ?? "";
+  const scriptPath = Bun.argv[1] ?? "";
   const binaryName = /(?:^|\/)(rup|rainy-up|rainy-updates|rup-mcp)(?:\.exe)?$/i;
   if (
     binaryName.test(execPath) &&
@@ -214,7 +214,7 @@ function detectSelfUpdateChannel(): SelfUpdateChannel {
 }
 
 function detectPreferredManager(): "bun" | "npm" | "pnpm" {
-  const userAgent = process.env.npm_config_user_agent ?? "";
+  const userAgent = Bun.env.npm_config_user_agent ?? "";
   if (userAgent.startsWith("bun/")) return "bun";
   if (userAgent.startsWith("pnpm/")) return "pnpm";
   if (userAgent.startsWith("npm/")) return "npm";

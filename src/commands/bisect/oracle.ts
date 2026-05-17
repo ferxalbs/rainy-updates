@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { BisectOptions, BisectOutcome } from "../../types/index.js";
 import {
   buildAddInvocation,

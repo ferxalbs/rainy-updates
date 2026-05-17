@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import { readManifest } from "../parsers/package-json.js";
 import type { DependencyKind, PackageManifest } from "../types/index.js";
 import { buildWorkspaceGraph } from "../workspace/graph.js";

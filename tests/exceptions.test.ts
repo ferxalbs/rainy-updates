@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import os from "node:os";
-import path from "node:path";
+import os from "os";
+import path from "path";
 import { runExceptionsService } from "../src/services/exceptions.js";
 
 test("exceptions service can add and list active entries", async () => {

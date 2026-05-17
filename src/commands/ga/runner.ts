@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import { VersionCache } from "../../cache/cache.js";
 import { detectPackageManagerDetails } from "../../pm/detect.js";
 import { discoverPackageDirs } from "../../workspace/discover.js";

@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import { discoverPackageDirs } from "../workspace/discover.js";
 import { runAuditService } from "./audit.js";
 import { findMatchingException } from "./exceptions.js";

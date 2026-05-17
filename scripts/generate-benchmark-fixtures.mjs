@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 
 const root = path.resolve(import.meta.dir, "..");
 const fixturesRoot = path.join(root, "benchmarks", "fixtures");

@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import { createSummary, finalizeSummary } from "./summary.js";
 import type {
   CheckOptions,

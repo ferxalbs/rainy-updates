@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import os from "node:os";
-import path from "node:path";
+import os from "os";
+import path from "path";
 
 const projectRoot = path.resolve(import.meta.dir, "..");
 const cliPath = path.join(projectRoot, "dist", "bin", "cli.js");
 
-const fixture = process.argv[2] ?? "single-100";
-const command = process.argv[3] ?? "check";
-const cacheState = process.argv[4] ?? "cold";
-const runs = Number(process.argv[5] ?? "3");
+const fixture = Bun.argv[2] ?? "single-100";
+const command = Bun.argv[3] ?? "check";
+const cacheState = Bun.argv[4] ?? "cold";
+const runs = Number(Bun.argv[5] ?? "3");
 const fixtureCwd = path.join(projectRoot, "benchmarks", "fixtures", fixture);
 
 const workspace = fixture !== "single-100";
@@ -95,7 +95,7 @@ function commandArgs(commandName, cwd, useWorkspace) {
 async function runCli(args, homeDir) {
   const result = await $`bun ${cliPath} ${args}`
     .cwd(projectRoot)
-    .env({ ...process.env, HOME: homeDir })
+    .env({ ...Bun.env, HOME: homeDir })
     .nothrow()
     .quiet();
 

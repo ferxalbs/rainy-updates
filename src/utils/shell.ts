@@ -7,7 +7,7 @@ export interface ShellInvocation {
 export function buildShellInvocation(
   command: string,
   runtimePlatform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env,
+  env: NodeJS.ProcessEnv = Bun.env,
 ): ShellInvocation {
   if (runtimePlatform === "win32") {
     const shell = env.COMSPEC?.trim() || "cmd.exe";

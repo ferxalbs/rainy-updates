@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { TargetLevel } from "../types/index.js";
 
 export interface PolicyConfig {

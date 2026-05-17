@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import path from "node:path";
+import path from "path";
 import type {
   PackageLicense,
   SbomDocument,
@@ -22,7 +21,7 @@ export function generateSbom(
   const docId = `SPDXRef-DOCUMENT`;
   const rootId = `SPDXRef-Package-root`;
   const timestamp = new Date().toISOString();
-  const namespace = `https://spdx.org/spdxdocs/${encodeURIComponent(path.basename(projectName))}-${randomUUID()}`;
+  const namespace = `https://spdx.org/spdxdocs/${encodeURIComponent(path.basename(projectName))}-${crypto.randomUUID()}`;
 
   const spdxPackages: SbomPackage[] = [
     // Root package entry

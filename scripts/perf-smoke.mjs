@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import path from "node:path";
+import path from "path";
 
 const projectRoot = path.resolve(import.meta.dir, "..");
 const benchmarkScript = path.join(projectRoot, "scripts", "benchmark.mjs");
-const scenario = process.env.RAINY_UPDATES_PERF_SCENARIO ?? "check";
+const scenario = Bun.env.RAINY_UPDATES_PERF_SCENARIO ?? "check";
 
 console.log(`[perf-smoke] scenario: ${scenario}`);
 

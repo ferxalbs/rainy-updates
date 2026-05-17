@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import type { DoctorFinding, ReviewResult } from "../../types/index.js";
 
 export function buildDoctorFindings(review: ReviewResult): DoctorFinding[] {
