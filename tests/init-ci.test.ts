@@ -22,7 +22,7 @@ test("initCiWorkflow creates strict workflow file", async () => {
   expect(content.includes("--mode strict")).toBe(true);
   expect(content.includes("--gate review")).toBe(true);
   expect(content.includes("--plan-file .artifacts/decision-plan.json")).toBe(true);
-  expect(content.includes("Setup Node")).toBe(true);
+  expect(content.includes("Setup Bun")).toBe(true);
 });
 
 test("initCiWorkflow uses pnpm install when pnpm lockfile exists", async () => {
@@ -49,7 +49,6 @@ test("initCiWorkflow creates enterprise workflow matrix", async () => {
   const content = await readFile(result.path, "utf8");
 
   expect(content.includes("Rainy Updates Enterprise")).toBe(true);
-  expect(content.includes("matrix")).toBe(true);
   expect(content.includes("retention-days: 14")).toBe(true);
   expect(content.includes("--fail-on minor")).toBe(true);
   expect(content.includes("--max-updates 50")).toBe(true);
@@ -57,8 +56,8 @@ test("initCiWorkflow creates enterprise workflow matrix", async () => {
   expect(content.includes("--gate review")).toBe(true);
   expect(content.includes("--gate upgrade")).toBe(true);
   expect(content.includes("--from-plan .artifacts/decision-plan.json")).toBe(true);
-  expect(content.includes("--verification-report-file .artifacts/verification-node-${{ matrix.node }}.json")).toBe(true);
-  expect(content.includes("Setup Node")).toBe(true);
+  expect(content.includes("--verification-report-file .artifacts/verification.json")).toBe(true);
+  expect(content.includes("Setup Bun")).toBe(true);
 });
 
 test("initCiWorkflow supports Yarn Berry installs via Corepack", async () => {
@@ -86,7 +85,7 @@ test("initCiWorkflow supports Yarn Berry installs via Corepack", async () => {
 
   expect(content.includes("Enable Corepack")).toBe(true);
   expect(content.includes("yarn install --immutable")).toBe(true);
-  expect(content.includes("Setup Node")).toBe(true);
+  expect(content.includes("Setup Bun")).toBe(true);
 });
 
 test("initCiWorkflow can generate local cron automation template", async () => {

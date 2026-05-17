@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.8.0] - 2026-05-16
+
+### Breaking Changes
+- **Total Bun Migration**:
+  - Dropped support for Node.js. Bun v1.3.14+ is now the required runtime.
+  - Removed `node` from `engines` in `package.json`.
+  - Refactored all entry points (`rup`, `rup-mcp`) to be Bun-native (`#!/usr/bin/env bun`).
+  - Removed Node.js matrix and `setup-node` from generated GitHub Actions workflows in `init-ci`.
+  - Optimized for Bun-native high-performance binary compilation.
+
+### Added
+- **Bun-Native Power**:
+  - Enhanced all internal utilities to leverage Bun's global objects and high-performance APIs directly.
+  - Improved cold-start performance by removing Node.js compatibility layers.
+
+### Changed
+- Updated description and keywords to reflect Bun-first architecture.
+- Simplified CI templates to use `setup-bun@v2` exclusively.
+
+
 ## [0.7.1] - 2026-05-16
 
 ### Added
