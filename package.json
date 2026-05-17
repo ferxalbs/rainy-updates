@@ -1,6 +1,6 @@
 {
   "name": "@rainy-updates/cli",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "The fastest Bun-native DevOps-first dependency CLI. Checks, audits, upgrades, bisects, and automates dependencies in CI.",
   "type": "module",
   "private": false,
