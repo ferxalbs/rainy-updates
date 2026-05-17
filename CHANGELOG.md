@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.1] - 2026-05-16
+
+### Added
+
+- **Bun Native API Optimizations**:
+  - Leveraged `Bun.Glob` for high-performance file pattern matching in `src/utils/pattern.ts`, `src/services/attest.ts`, and `src/services/supply-chain.ts`.
+  - Refactored shell execution to use `Bun.$` across the codebase, providing cleaner argument handling and better performance in `src/core/verification.ts`, `src/commands/bisect/oracle.ts`, `src/pm/install.ts`, `src/services/audit.ts`, `src/git/scope.ts`, `src/services/badge.ts`, and `src/services/self-update.ts`.
+  - Optimized runtime utilities in `src/utils/runtime.ts` using `Bun` global objects.
+  - Updated CLI entry point in `src/bin/cli.ts` to use `import.meta.main` for idiomatic execution detection.
+
+### Changed
+
+- Improved `src/services/attest.ts` and `src/services/supply-chain.ts` to use `scanSync` for faster directory traversal.
+
 ## [0.7.0] - 2026-03-09
 
 Major release focused on cross-stack supply-chain scanning, attestation policy checks, and end-to-end local/CI bootstrap hardening.
