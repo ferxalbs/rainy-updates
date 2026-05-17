@@ -1,12 +1,9 @@
 #!/usr/bin/env bun
-import { mkdtemp, rm } from "node:fs/promises";
+import { $ } from "bun";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(here, "..");
+const projectRoot = path.resolve(import.meta.dir, "..");
 const cliPath = path.join(projectRoot, "dist", "bin", "cli.js");
 
 const fixture = process.argv[2] ?? "single-100";
@@ -22,10 +19,12 @@ let warmup = { status: "not-requested" };
 let execution = { status: "ready" };
 
 for (let index = 0; index < runs; index += 1) {
-  const tempHome = await mkdtemp(path.join(os.tmpdir(), "rainy-bench-home-"));
+  const tempHome = path.join(os.tmpdir(), `rainy-bench-home-${crypto.randomUUID()}`);
+  await $`mkdir -p ${tempHome}`;
+  
   try {
     if (cacheState === "warm") {
-      const warmupResult = runCli(
+      const warmupResult = await runCli(
         ["warm-cache", "--cwd", fixtureCwd, ...(workspace ? ["--workspace"] : [])],
         tempHome,
       );
@@ -36,14 +35,14 @@ for (let index = 0; index < runs; index += 1) {
       warmup = warmupResult;
     }
     const startedAt = Date.now();
-    const executionResult = runCli(args, tempHome);
+    const executionResult = await runCli(args, tempHome);
     if (executionResult.status === "skipped") {
       execution = executionResult;
       break;
     }
     timings.push(Date.now() - startedAt);
   } finally {
-    await rm(tempHome, { recursive: true, force: true });
+    await $`rm -rf ${tempHome}`;
   }
 }
 
@@ -93,25 +92,23 @@ function commandArgs(commandName, cwd, useWorkspace) {
   return [commandName, ...base, ...workspaceArgs, "--format", "minimal"];
 }
 
-function runCli(args, homeDir) {
-  const result = spawnSync("bun", [cliPath, ...args], {
-    cwd: projectRoot,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      HOME: homeDir,
-    },
-  });
-  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-  if (isRegistryUnavailable(result.status, output)) {
+async function runCli(args, homeDir) {
+  const result = await $`bun ${cliPath} ${args}`
+    .cwd(projectRoot)
+    .env({ ...process.env, HOME: homeDir })
+    .nothrow()
+    .quiet();
+
+  const output = `${result.stdout.toString()}\n${result.stderr.toString()}`;
+  if (isRegistryUnavailable(result.exitCode, output)) {
     return {
       status: "skipped",
       reason: "registry-unavailable",
     };
   }
-  if (!isExpectedExitCode(args[0], result.status ?? 1)) {
+  if (!isExpectedExitCode(args[0], result.exitCode)) {
     throw new Error(
-      `Benchmark command failed: bun ${[cliPath, ...args].join(" ")} (exit ${result.status ?? "null"})\n${output}`,
+      `Benchmark command failed: bun ${[cliPath, ...args].join(" ")} (exit ${result.exitCode})\n${output}`,
     );
   }
   return {

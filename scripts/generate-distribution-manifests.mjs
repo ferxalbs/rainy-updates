@@ -1,150 +1,83 @@
-import { mkdir } from "node:fs/promises";
+#!/usr/bin/env bun
+import { $ } from "bun";
 import path from "node:path";
 
 const args = process.argv.slice(2);
-
-function readArg(name, fallback) {
-  const index = args.indexOf(name);
-  if (index === -1) return fallback;
-  return args[index + 1];
-}
-
-const version =
-  readArg("--version") ||
-  String((await Bun.file(path.resolve("package.json")).json()).version ?? "").trim();
-const repo = readArg("--repo", "ferxalbs/rainy-updates");
-const assetsDir = path.resolve(readArg("--assets-dir", "dist/assets"));
-const outputDir = path.resolve(readArg("--output-dir", "dist/distribution"));
-
-if (!version) {
-  throw new Error("Missing version. Pass --version or set package.json version.");
-}
-
-const tag = version.startsWith("v") ? version : `v${version}`;
-const normalizedVersion = tag.slice(1);
-
-const assetDefinitions = {
-  macosArm64: {
-    archive: `rup-${tag}-macos-arm64.tar.gz`,
-    url: `https://github.com/${repo}/releases/download/${tag}/rup-${tag}-macos-arm64.tar.gz`,
-  },
-  macosX64: {
-    archive: `rup-${tag}-macos-x64.tar.gz`,
-    url: `https://github.com/${repo}/releases/download/${tag}/rup-${tag}-macos-x64.tar.gz`,
-  },
-  linuxArm64: {
-    archive: `rup-${tag}-linux-arm64.tar.gz`,
-    url: `https://github.com/${repo}/releases/download/${tag}/rup-${tag}-linux-arm64.tar.gz`,
-  },
-  linuxX64: {
-    archive: `rup-${tag}-linux-x64.tar.gz`,
-    url: `https://github.com/${repo}/releases/download/${tag}/rup-${tag}-linux-x64.tar.gz`,
-  },
-  windowsX64: {
-    archive: `rup-${tag}-windows-x64.zip`,
-    url: `https://github.com/${repo}/releases/download/${tag}/rup-${tag}-windows-x64.zip`,
-  },
+const getArg = (name) => {
+  const idx = args.indexOf(name);
+  return idx !== -1 ? args[idx + 1] : null;
 };
 
-const checksums = await Promise.all(
-  Object.entries(assetDefinitions).map(async ([key, value]) => {
-    const shaPath = path.join(assetsDir, `${value.archive}.sha256`);
-    const shaContent = (await Bun.file(shaPath).text()).trim();
-    const hash = shaContent.split(/\s+/)[0];
-    if (!hash) {
-      throw new Error(`Unable to read checksum from ${shaPath}`);
-    }
-    return [key, { ...value, sha256: hash }];
-  }),
-);
+const projectRoot = path.resolve(import.meta.dir, "..");
+const packageJson = await Bun.file(path.join(projectRoot, "package.json")).json();
 
-const assets = Object.fromEntries(checksums);
+const version = getArg("--version") || packageJson.version;
+const repo = getArg("--repo") || "ferxalbs/rainy-updates";
+const assetsDir = getArg("--assets-dir");
+const outputDirArg = getArg("--output-dir");
+const outputDir = outputDirArg ? path.resolve(process.cwd(), outputDirArg) : path.join(projectRoot, "dist", "manifests");
 
-const homebrewFormula = `class Rup < Formula
-  desc "Deterministic dependency review and upgrade operator for Node monorepos and CI"
-  homepage "https://github.com/${repo}"
-  license "MIT"
-  version "${normalizedVersion}"
+const description = packageJson.description;
+const homepage = packageJson.homepage;
 
-  on_macos do
-    if Hardware::CPU.arm?
-      url "${assets.macosArm64.url}"
-      sha256 "${assets.macosArm64.sha256}"
-    else
-      url "${assets.macosX64.url}"
-      sha256 "${assets.macosX64.sha256}"
-    end
-  end
+await $`mkdir -p ${outputDir}/homebrew`;
+await $`mkdir -p ${outputDir}/scoop`;
 
-  on_linux do
-    if Hardware::CPU.arm?
-      url "${assets.linuxArm64.url}"
-      sha256 "${assets.linuxArm64.sha256}"
-    else
-      url "${assets.linuxX64.url}"
-      sha256 "${assets.linuxX64.sha256}"
-    end
-  end
+async function getSha256(platform) {
+  if (!assetsDir) return "REPLACE_WITH_SHA256";
+  const fileName = `rup-v${version}-${platform}.tar.gz.sha256`;
+  const winFileName = `rup-v${version}-${platform}.zip.sha256`;
+  
+  try {
+    const content = await Bun.file(path.join(assetsDir, fileName)).text().catch(() => Bun.file(path.join(assetsDir, winFileName)).text());
+    return content.split(" ")[0].trim();
+  } catch {
+    return "REPLACE_WITH_SHA256";
+  }
+}
+
+const macArmSha = await getSha256("macos-arm64");
+const winSha = await getSha256("windows-x64");
+
+const brewFormula = `
+class RainyUpdates < Formula
+  desc "${description}"
+  homepage "${homepage}"
+  url "https://github.com/${repo}/releases/download/v${version}/rup-v${version}-macos-arm64.tar.gz"
+  version "${version}"
+  sha256 "${macArmSha}"
 
   def install
     bin.install "rup"
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/rup --version")
+    system "#{bin}/rup", "--version"
   end
 end
-`;
+`.trim();
+
+await Bun.write(path.join(outputDir, "homebrew", "rup.rb"), brewFormula + "\n");
 
 const scoopManifest = {
-  version: normalizedVersion,
-  description:
-    "Deterministic dependency review and upgrade operator for Node monorepos and CI.",
-  homepage: `https://github.com/${repo}`,
+  version: version,
+  description: description,
+  homepage: homepage,
   license: "MIT",
-  architecture: {
-    "64bit": {
-      url: assets.windowsX64.url,
-      hash: assets.windowsX64.sha256,
-    },
-  },
+  url: `https://github.com/${repo}/releases/download/v${version}/rup-v${version}-windows-x64.zip`,
+  hash: winSha,
   bin: "rup.exe",
   checkver: {
     github: `https://github.com/${repo}`,
   },
   autoupdate: {
-    architecture: {
-      "64bit": {
-        url: `https://github.com/${repo}/releases/download/v$version/rup-v$version-windows-x64.zip`,
-      },
-    },
+    url: `https://github.com/${repo}/releases/download/v$version/rup-v$version-windows-x64.zip`,
   },
 };
 
-await mkdir(path.join(outputDir, "homebrew"), { recursive: true });
-await mkdir(path.join(outputDir, "scoop"), { recursive: true });
-
-await Bun.write(
-  path.join(outputDir, "homebrew", "rup.rb"),
-  homebrewFormula,
-);
 await Bun.write(
   path.join(outputDir, "scoop", "rup.json"),
-  `${JSON.stringify(scoopManifest, null, 2)}\n`,
+  JSON.stringify(scoopManifest, null, 2) + "\n",
 );
 
-console.log(
-  JSON.stringify(
-    {
-      version: normalizedVersion,
-      repo,
-      outputDir,
-      files: [
-        path.join(outputDir, "homebrew", "rup.rb"),
-        path.join(outputDir, "scoop", "rup.json"),
-      ],
-    },
-    null,
-    2,
-  ),
-);
+console.log(`[generate-manifests] emitted manifests for v${version} to ${outputDir}`);

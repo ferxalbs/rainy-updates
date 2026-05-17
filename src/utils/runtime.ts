@@ -3,11 +3,17 @@ export function getRuntimeCwd(): string {
 }
 
 export function getRuntimeArgv(): string[] {
-  return Bun.argv.slice(2);
+  if (typeof Bun !== "undefined") {
+    return Bun.argv.slice(2);
+  }
+  return process.argv.slice(2);
 }
 
 export function readEnv(name: string): string | undefined {
-  return Bun.env[name];
+  if (typeof Bun !== "undefined") {
+    return Bun.env[name];
+  }
+  return process.env[name];
 }
 
 export function writeStdout(message: string): void {

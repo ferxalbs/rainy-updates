@@ -78,6 +78,7 @@
     "perf:resolve": "RAINY_UPDATES_PERF_SCENARIO=resolve bun run scripts/perf-smoke.mjs",
     "perf:ci": "RAINY_UPDATES_PERF_SCENARIO=ci bun run scripts/perf-smoke.mjs",
     "test:prod": "bun scripts/test-prod.mjs",
+    "release-preflight": "bun scripts/release-preflight.mjs",
     "prepublishOnly": "bun run check && bun run build && bun run build:exe && bun run test:prod"
   },
   "engines": {

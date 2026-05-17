@@ -1,7 +1,5 @@
-import { rm } from "node:fs/promises";
-import path from "node:path";
+import { $ } from "bun";
 
-const distDir = path.resolve(process.cwd(), "dist");
+const distDir = "dist";
 
-await rm(distDir, { recursive: true, force: true });
-
+await $`rm -rf ${distDir}`;

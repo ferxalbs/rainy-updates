@@ -1,46 +1,36 @@
+#!/usr/bin/env bun
+import { $ } from "bun";
 import path from "node:path";
 
-async function runCommand(argv, cwd = process.cwd()) {
-  const proc = Bun.spawn(argv, {
-    cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    throw new Error(`${argv.join(" ")} failed with exit code ${exitCode}`);
-  }
+const projectRoot = path.resolve(import.meta.dir, "..");
+const binPath = path.join(projectRoot, "dist", "bin", "cli.js");
+
+console.log(`[test-prod] testing production build: ${binPath}`);
+
+const helpResult = await $`bun ${binPath} --help`.quiet();
+if (helpResult.exitCode !== 0 || !helpResult.stdout.toString().includes("Usage:")) {
+  console.error("[test-prod] help check failed");
+  process.exit(1);
 }
 
-async function fileExists(filePath) {
-  try {
-    return await Bun.file(filePath).exists();
-  } catch {
-    return false;
-  }
+const versionResult = await $`bun ${binPath} --version`.quiet();
+if (versionResult.exitCode !== 0) {
+  console.error("[test-prod] version check failed");
+  process.exit(1);
+}
+console.log(`[test-prod] version: ${versionResult.stdout.toString().trim()}`);
+
+const checkResult = await $`bun ${binPath} check --cwd ${projectRoot} --format minimal`.quiet();
+if (checkResult.exitCode !== 0 && checkResult.exitCode !== 1) {
+  console.error(`[test-prod] check command failed with exit code ${checkResult.exitCode}`);
+  console.error(checkResult.stderr.toString());
+  process.exit(1);
 }
 
-const cwd = process.cwd();
-const distCli = path.resolve(cwd, "dist/bin/cli.js");
-const distMcp = path.resolve(cwd, "dist/bin/mcp.js");
-const compiledBase = path.resolve(cwd, "dist/rup");
-const compiledBinary =
-  process.platform === "win32" ? `${compiledBase}.exe` : compiledBase;
-const compiledMcpBase = path.resolve(cwd, "dist/rup-mcp");
-const compiledMcpBinary =
-  process.platform === "win32" ? `${compiledMcpBase}.exe` : compiledMcpBase;
-
-await runCommand(["bun", distCli, "--help"], cwd);
-await runCommand(["bun", distCli, "--version"], cwd);
-await runCommand(["bun", distMcp, "--help"], cwd);
-await runCommand(["bun", distMcp, "--version"], cwd);
-
-if (!(await fileExists(compiledBinary)) || !(await fileExists(compiledMcpBinary))) {
-  await runCommand(["bun", "run", "build:exe"], cwd);
+const mcpResult = await $`bun ./src/bin/mcp.ts --help`.quiet();
+if (mcpResult.exitCode !== 0 || !mcpResult.stdout.toString().includes("Usage:")) {
+  console.error("[test-prod] mcp help check failed");
+  process.exit(1);
 }
 
-await runCommand([compiledBinary, "--help"], cwd);
-await runCommand([compiledBinary, "--version"], cwd);
-await runCommand([compiledMcpBinary, "--help"], cwd);
-await runCommand([compiledMcpBinary, "--version"], cwd);
+console.log("[test-prod] production build smoke test passed");

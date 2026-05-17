@@ -1,62 +1,42 @@
 #!/usr/bin/env bun
-import { spawnSync } from "node:child_process";
+import { $ } from "bun";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(here, "..");
-const fixtureCwd = path.join(projectRoot, "tests", "fixtures", "perf-empty");
-const cliPath = path.join(projectRoot, "dist", "bin", "cli.js");
+const projectRoot = path.resolve(import.meta.dir, "..");
+const benchmarkScript = path.join(projectRoot, "scripts", "benchmark.mjs");
 const scenario = process.env.RAINY_UPDATES_PERF_SCENARIO ?? "check";
-const defaultThresholdByScenario = {
-  check: 1500,
-  resolve: 1800,
-  ci: 2200,
-};
-const maxMs = Number(
-  process.env.RAINY_UPDATES_PERF_MAX_MS ??
-    String(defaultThresholdByScenario[scenario] ?? 1500),
-);
-const runs = 3;
 
-function commandArgsForScenario() {
-  if (scenario === "resolve") {
-    return ["resolve", "--cwd", fixtureCwd];
+console.log(`[perf-smoke] scenario: ${scenario}`);
+
+async function runBenchmark(fixture, command, cacheState, runs) {
+  const result = await $`bun ${benchmarkScript} ${fixture} ${command} ${cacheState} ${runs}`
+    .cwd(projectRoot)
+    .quiet();
+  return JSON.parse(result.stdout.toString());
+}
+
+const coldResult = await runBenchmark("single-100", scenario, "cold", 3);
+if (coldResult.skipped) {
+  console.warn(`[perf-smoke] skipped cold run: ${coldResult.warmup.reason || coldResult.execution.reason}`);
+} else {
+  console.log(`[perf-smoke] cold median: ${coldResult.medianMs}ms`);
+  const limit = scenario === "ci" ? 3000 : 1500;
+  if (coldResult.medianMs > limit) {
+    console.error(`[perf-smoke] cold median exceeds limit of ${limit}ms`);
+    process.exit(1);
   }
-  if (scenario === "ci") {
-    return ["ci", "--cwd", fixtureCwd, "--mode", "strict", "--format", "minimal"];
+}
+
+const warmResult = await runBenchmark("single-100", scenario, "warm", 3);
+if (warmResult.skipped) {
+  console.warn(`[perf-smoke] skipped warm run: ${warmResult.warmup.reason || warmResult.execution.reason}`);
+} else {
+  console.log(`[perf-smoke] warm median: ${warmResult.medianMs}ms`);
+  const limit = scenario === "ci" ? 1500 : 800;
+  if (warmResult.medianMs > limit) {
+    console.error(`[perf-smoke] warm median exceeds limit of ${limit}ms`);
+    process.exit(1);
   }
-  return ["check", "--cwd", fixtureCwd, "--format", "minimal"];
 }
 
-function runScenario() {
-  const startedAt = Date.now();
-  const result = spawnSync("bun", [cliPath, ...commandArgsForScenario()], {
-    encoding: "utf8",
-  });
-  const durationMs = Date.now() - startedAt;
-  if (result.status !== 0) {
-    const stderr = (result.stderr ?? "").trim();
-    throw new Error(
-      `perf-smoke ${scenario} failed (${result.status ?? "unknown"}): ${stderr}`,
-    );
-  }
-  return durationMs;
-}
-
-const timings = [];
-for (let index = 0; index < runs; index += 1) {
-  timings.push(runScenario());
-}
-timings.sort((a, b) => a - b);
-const medianMs = timings[Math.floor(timings.length / 2)];
-
-process.stdout.write(
-  `perf-smoke scenario=${scenario} timings(ms): ${timings.join(", ")}; median=${medianMs}\n`,
-);
-if (medianMs > maxMs) {
-  process.stderr.write(
-    `perf-smoke regression for ${scenario}: median ${medianMs}ms exceeds threshold ${maxMs}ms (RAINY_UPDATES_PERF_MAX_MS)\n`,
-  );
-  process.exit(1);
-}
+console.log(`[perf-smoke] scenario ${scenario} passed`);

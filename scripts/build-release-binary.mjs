@@ -1,4 +1,4 @@
-import { mkdir, rm } from "node:fs/promises";
+import { $ } from "bun";
 import path from "node:path";
 
 const [target, outputDirArg, entrypointArg, binaryBaseNameArg, preserveOutputArg] = process.argv.slice(2);
@@ -18,37 +18,16 @@ const binaryName = target.includes("windows") ? `${binaryBaseName}.exe` : binary
 const binaryPath = path.join(outputDir, binaryName);
 
 if (!preserveOutput) {
-  await rm(outputDir, { recursive: true, force: true });
+  await $`rm -rf ${outputDir}`;
 }
-await mkdir(outputDir, { recursive: true });
+await $`mkdir -p ${outputDir}`;
 
-const build = Bun.spawn(
-  [
-    "bun",
-    "build",
-    entrypoint,
-    "--compile",
-    `--target=${target}`,
-    "--outfile",
-    binaryPath,
-  ],
-  {
-    cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  },
-);
-
-const exitCode = await build.exited;
-if (exitCode !== 0) {
-  throw new Error(`bun build failed for target ${target} with exit code ${exitCode}`);
-}
+await $`bun build ${entrypoint} --compile --target=${target} --outfile ${binaryPath}`;
 
 for (const fileName of ["README.md", "CHANGELOG.md", "LICENSE"]) {
   const sourcePath = path.resolve(cwd, fileName);
   const targetPath = path.join(outputDir, fileName);
-  await Bun.write(targetPath, Bun.file(sourcePath));
+  await $`cp ${sourcePath} ${targetPath}`;
 }
 
 console.log(outputDir);
