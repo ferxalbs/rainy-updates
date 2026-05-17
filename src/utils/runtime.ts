@@ -3,21 +3,11 @@ export function getRuntimeCwd(): string {
 }
 
 export function getRuntimeArgv(): string[] {
-  if (typeof process !== "undefined" && Array.isArray(process.argv)) {
-    return process.argv.slice(2);
-  }
-  if (typeof Bun !== "undefined" && Array.isArray(Bun.argv)) {
-    return Bun.argv.slice(2);
-  }
-  return [];
+  return Bun.argv.slice(2);
 }
 
 export function readEnv(name: string): string | undefined {
-  if (typeof Bun !== "undefined") {
-    const value = Bun.env[name];
-    if (value) return value;
-  }
-  return process.env[name];
+  return Bun.env[name];
 }
 
 export function writeStdout(message: string): void {

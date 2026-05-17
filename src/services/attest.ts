@@ -170,20 +170,10 @@ async function checkDecisionArtifact(options: AttestOptions): Promise<AttestChec
 }
 
 async function findWorkflows(cwd: string): Promise<string[]> {
-  const dir = path.join(cwd, ".github", "workflows");
-  try {
-    const entries = await readdir(dir, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isFile() && (entry.name.endsWith(".yml") || entry.name.endsWith(".yaml")))
-      .map((entry) => path.posix.join(".github/workflows", entry.name));
-  } catch {
-    const matched = new Set<string>();
-    for (const pattern of WORKFLOW_GLOBS) {
-      const glob = new Bun.Glob(pattern);
-      for await (const relative of glob.scan({ cwd, onlyFiles: true })) {
-        matched.add(relative);
-      }
-    }
-    return Array.from(matched);
+  const matched: string[] = [];
+  const glob = new Bun.Glob(".github/workflows/*.{yml,yaml}");
+  for (const file of glob.scanSync({ cwd })) {
+    matched.push(file);
   }
+  return matched;
 }

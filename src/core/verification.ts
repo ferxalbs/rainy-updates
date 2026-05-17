@@ -89,13 +89,14 @@ async function runShellCheck(
 
   try {
     const invocation = buildShellInvocation(command);
-    const proc = Bun.spawn([invocation.shell, ...invocation.args], {
-      cwd,
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-    const exitCode = await proc.exited;
+    const { exitCode } = await Bun.$`${{
+      raw: `${invocation.shell} ${invocation.args
+        .map((a) => (a.includes(" ") ? `"${a}"` : a))
+        .join(" ")}`,
+    }}`
+      .cwd(cwd)
+      .nothrow();
+
     return {
       name: "test",
       command,

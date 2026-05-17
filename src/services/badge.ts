@@ -291,19 +291,14 @@ async function detectRepositoryFromGit(
   cwd: string,
 ): Promise<{ owner?: string; repo?: string }> {
   try {
-    const proc = Bun.spawn(["git", "config", "--get", "remote.origin.url"], {
-      cwd,
-      stdout: "pipe",
-      stderr: "ignore",
-    });
-    const [stdout, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      proc.exited,
-    ]);
+    const { stdout, exitCode } = await Bun.$`git config --get remote.origin.url`
+      .cwd(cwd)
+      .nothrow()
+      .quiet();
     if (exitCode !== 0) {
       return {};
     }
-    return parseRepositoryFromUrl(stdout.trim());
+    return parseRepositoryFromUrl(stdout.toString().trim());
   } catch {
     return {};
   }

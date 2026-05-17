@@ -87,7 +87,7 @@ async function collectFiles(cwd: string, patterns: string[]): Promise<string[]> 
   const results = new Set<string>();
   for (const pattern of patterns) {
     const glob = new Bun.Glob(pattern);
-    for await (const relative of glob.scan({ cwd, onlyFiles: true })) {
+    for (const relative of glob.scanSync({ cwd, onlyFiles: true })) {
       if (shouldSkip(relative)) {
         continue;
       }
@@ -98,15 +98,7 @@ async function collectFiles(cwd: string, patterns: string[]): Promise<string[]> 
 }
 
 async function collectWorkflowFiles(cwd: string): Promise<string[]> {
-  const dir = path.join(cwd, ".github", "workflows");
-  try {
-    const entries = await readdir(dir, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isFile() && (entry.name.endsWith(".yml") || entry.name.endsWith(".yaml")))
-      .map((entry) => path.posix.join(".github/workflows", entry.name));
-  } catch {
-    return collectFiles(cwd, [".github/workflows/*.yml", ".github/workflows/*.yaml"]);
-  }
+  return collectFiles(cwd, [".github/workflows/*.yml", ".github/workflows/*.yaml"]);
 }
 
 function shouldSkip(filePath: string): boolean {

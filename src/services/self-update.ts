@@ -241,11 +241,8 @@ async function executeCommand(
   args: string[],
   cwd: string,
 ): Promise<number> {
-  const proc = Bun.spawn([command, ...args], {
-    cwd,
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  return proc.exited;
+  const { exitCode } = await Bun.$`${command} ${args}`
+    .cwd(cwd)
+    .nothrow();
+  return exitCode;
 }

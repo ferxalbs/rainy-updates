@@ -144,13 +144,11 @@ async function applyAuditFix(
 
   if (options.dryRun) return;
 
-  const proc = Bun.spawn({
-    cmd: [install.command, ...install.args],
-    cwd: options.cwd,
-    stdout: "ignore",
-    stderr: "ignore",
-  });
-  const exitCode = await proc.exited;
+  const { exitCode } = await Bun.$`${install.command} ${install.args}`
+    .cwd(options.cwd)
+    .quiet()
+    .nothrow();
+
   if (exitCode !== 0) {
     throw new Error(`Audit fix install failed with exit code ${exitCode}`);
   }

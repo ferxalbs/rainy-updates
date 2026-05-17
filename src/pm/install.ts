@@ -19,18 +19,12 @@ export async function installDependencies(
   );
 
   try {
-    const proc = Bun.spawn([invocation.command, ...invocation.args], {
-      cwd,
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
-    });
+    const { exitCode } = await Bun.$`${invocation.command} ${invocation.args}`
+      .cwd(cwd)
+      .nothrow();
 
-    const code = await proc.exited;
-    if (code !== 0) {
-      throw new Error(
-        `${invocation.display} failed with exit code ${code}`,
-      );
+    if (exitCode !== 0) {
+      throw new Error(`${invocation.display} failed with exit code ${exitCode}`);
     }
   } catch (err) {
     throw err instanceof Error ? err : new Error(String(err));

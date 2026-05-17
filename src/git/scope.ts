@@ -138,25 +138,21 @@ async function runGit(
   args: string[],
 ): Promise<{ ok: true; lines: string[] } | { ok: false; error: string }> {
   try {
-    const proc = Bun.spawn(["git", ...args], {
-      cwd,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
+    const { stdout, stderr, exitCode } = await Bun.$`git ${args}`
+      .cwd(cwd)
+      .nothrow()
+      .quiet();
 
     if (exitCode !== 0) {
-      const message = stderr.trim() || `git ${args.join(" ")} exited with code ${exitCode}`;
+      const message =
+        stderr.toString().trim() ||
+        `git ${args.join(" ")} exited with code ${exitCode}`;
       return { ok: false, error: message };
     }
 
     return {
       ok: true,
-      lines: stdout.split(/\r?\n/).filter(Boolean),
+      lines: stdout.toString().split(/\r?\n/).filter(Boolean),
     };
   } catch (error) {
     return { ok: false, error: String(error) };

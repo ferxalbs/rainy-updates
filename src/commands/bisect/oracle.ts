@@ -52,12 +52,11 @@ export async function bisectOracle(
 async function runShell(command: string, cwd: string): Promise<number> {
   try {
     const invocation = buildShellInvocation(command);
-    const proc = Bun.spawn([invocation.shell, ...invocation.args], {
-      cwd: path.resolve(cwd),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    return await proc.exited;
+    const { exitCode } = await Bun.$`${{ raw: invocation.display }}`
+      .cwd(path.resolve(cwd))
+      .nothrow()
+      .quiet();
+    return exitCode;
   } catch {
     return 1;
   }
@@ -68,12 +67,11 @@ async function runCommand(
   cwd: string,
 ): Promise<number> {
   try {
-    const proc = Bun.spawn([command.command, ...command.args], {
-      cwd: path.resolve(cwd),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    return await proc.exited;
+    const { exitCode } = await Bun.$`${command.command} ${command.args}`
+      .cwd(path.resolve(cwd))
+      .nothrow()
+      .quiet();
+    return exitCode;
   } catch {
     return 1;
   }

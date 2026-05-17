@@ -23,4 +23,6 @@ async function main(): Promise<void> {
   await runCli();
 }
 
-void main();
+if (import.meta.main) {
+  void main();
+}
