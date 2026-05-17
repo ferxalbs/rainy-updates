@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import os from "os";
-import path from "path";
+import os from "node:os";
+import path from "node:path";
 
 test("generate-distribution-manifests emits Homebrew and Scoop metadata", async () => {
   const tempDir = await (async () => { const d = path.join(os.tmpdir(), "rainy-distribution-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();

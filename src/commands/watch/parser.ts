@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { WatchOptions } from "../../types/index.js";
 import { getRuntimeCwd } from "../../utils/runtime.js";
 

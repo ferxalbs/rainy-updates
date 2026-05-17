@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 
 const args = Bun.argv.slice(2);
 const getArg = (name) => {

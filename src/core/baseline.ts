@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { BaselineOptions, DependencyKind } from "../types/index.js";
 import { collectDependencies, readManifest } from "../parsers/package-json.js";
 import { writeFileAtomic } from "../utils/io.js";

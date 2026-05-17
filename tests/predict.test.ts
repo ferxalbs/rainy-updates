@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // mkdir, mkdtemp was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { renderPredictResult, runPredictService } from "../src/services/predict.js";
 
 test("predict analyzes decision plan scope", async () => {

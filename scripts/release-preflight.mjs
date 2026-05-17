@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 
 const projectRoot = path.resolve(import.meta.dir, "..");
 

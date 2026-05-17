@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test";
 import { $ } from "bun";
 // mkdir, mkdtemp, writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 
 describe("audit parser", () => {
   it("returns defaults with no args", async () => {

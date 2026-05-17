@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { LockfileMode } from "../types/index.js";
 
 const LOCKFILE_NAMES = [

@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { AttestCheck, AttestOptions, AttestResult } from "../types/index.js";
 
 const WORKFLOW_GLOBS = [".github/workflows/*.yml", ".github/workflows/*.yaml"];

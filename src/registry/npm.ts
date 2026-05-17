@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { asyncPool } from "../utils/async-pool.js";
 import { getHomeDir } from "../utils/runtime-paths.js";
 import { getRuntimeCwd, readEnv } from "../utils/runtime.js";

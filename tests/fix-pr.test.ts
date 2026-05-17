@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import os from "os";
-import path from "path";
-import { spawn } from "child_process";
+import os from "node:os";
+import path from "node:path";
 import { applyFixPr } from "../src/core/fix-pr.js";
 import type { CheckResult, RunOptions } from "../src/types/index.js";
 
@@ -184,15 +183,9 @@ test("applyFixPr skips updates marked as autofix false", async () => {
 });
 
 async function run(command: string, args: string[], cwd: string): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(command, args, { cwd, stdio: "ignore" });
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`${command} ${args.join(" ")} failed with code ${code ?? "unknown"}`));
-    });
-  });
+  const proc = Bun.spawn([command, ...args], { cwd, stdout: "ignore", stderr: "ignore" });
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    throw new Error(`${command} ${args.join(" ")} failed with code ${exitCode}`);
+  }
 }

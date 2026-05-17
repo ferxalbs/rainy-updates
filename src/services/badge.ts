@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import type { BadgeOptions, BadgeResult } from "../types/index.js";
 import { writeFileAtomic } from "../utils/io.js";
 import { stableStringify } from "../utils/stable-json.js";

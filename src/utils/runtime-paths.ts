@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { getRuntimeCwd, readEnv } from "./runtime.js";
 
 function resolveHomeDir(): string {

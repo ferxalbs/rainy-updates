@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { warmCache } from "../src/core/warm-cache.js";
 
 test("warmCache reports misses in offline mode", async () => {

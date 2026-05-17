@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // readFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { createRunId, writeArtifactManifest } from "../src/core/artifacts.js";
 import type { CheckResult, CheckOptions } from "../src/types/index.js";
 

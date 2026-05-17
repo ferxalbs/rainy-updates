@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { PackageDependency } from "../../types/index.js";
 
 const LOCKFILE_PRIORITY = [

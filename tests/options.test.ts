@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // mkdir, writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { parseCliArgs } from "../src/core/options.js";
 
 test("parseCliArgs defaults to check command", async () => {

@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { DoctorOptions } from "../../types/index.js";
 import {
   exitProcess,

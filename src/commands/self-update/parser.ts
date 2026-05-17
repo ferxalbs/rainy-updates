@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { SelfUpdateOptions } from "../../types/index.js";
 import { exitProcess, getRuntimeCwd, writeStdout } from "../../utils/runtime.js";
 

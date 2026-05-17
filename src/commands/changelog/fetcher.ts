@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { getCacheDir } from "../../utils/runtime-paths.js";
 
 export interface ChangelogEntry {

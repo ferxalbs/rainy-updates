@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { loadConfig } from "../config/loader.js";
 import { getRuntimeCwd } from "../utils/runtime.js";
 import type {

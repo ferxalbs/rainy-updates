@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { writeStdout } from "../../utils/runtime.js";
 import type { HookOptions, HookResult } from "../../types/index.js";
 

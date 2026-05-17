@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // mkdir was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { parseBadgeArgs } from "../src/commands/badge/parser.js";
 import { runBadgeService } from "../src/services/badge.js";
 

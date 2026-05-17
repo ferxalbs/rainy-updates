@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { loadConfig } from "../src/config/loader.js";
 
 test("loadConfig reads .rainyupdatesrc", async () => {

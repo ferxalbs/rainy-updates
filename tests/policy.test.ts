@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { loadPolicy } from "../src/config/policy.js";
 
 test("loadPolicy reads package rules and ignore patterns", async () => {

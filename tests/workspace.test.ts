@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // mkdir, mkdtemp, writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { discoverPackageDirs } from "../src/workspace/discover.js";
 
 test("discoverPackageDirs resolves package.json workspaces", async () => {

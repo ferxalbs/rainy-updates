@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { PredictOptions } from "../../types/index.js";
 import {
   exitProcess,

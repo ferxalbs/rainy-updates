@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { loadConfig } from "../config/loader.js";
 import { createDecisionPlan, writeDecisionPlan } from "../core/decision-plan.js";
 import { runAuditService } from "./audit.js";

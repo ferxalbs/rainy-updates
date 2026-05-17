@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import os from "os";
-import path from "path";
+import os from "node:os";
+import path from "node:path";
 import { VersionCache } from "../src/cache/cache.js";
 
 test("VersionCache reports forced file backend fallback reason", async () => {

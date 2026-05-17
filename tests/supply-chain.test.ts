@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // mkdir, writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { runSupplyChainService } from "../src/services/supply-chain.js";
 
 test("supply-chain service scans Docker, Actions, Terraform, and Helm", async () => {

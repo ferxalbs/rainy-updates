@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { HookOptions } from "../../types/index.js";
 
 export function parseHookArgs(args: string[]): HookOptions {

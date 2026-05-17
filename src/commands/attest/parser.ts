@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { AttestAction, AttestOptions } from "../../types/index.js";
 import { getRuntimeCwd, writeStdout } from "../../utils/runtime.js";
 

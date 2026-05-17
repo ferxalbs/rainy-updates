@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
 // readFile, writeFile was here;
-import os from "os";
+import os from "node:os";
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 import { runVerification } from "../src/core/verification.js";
 import { runCi } from "../src/core/ci.js";
 import { writeDecisionPlan } from "../src/core/decision-plan.js";

@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import path from "path";
+import path from "node:path";
 
 const [target, outputDirArg, entrypointArg, binaryBaseNameArg, preserveOutputArg] = Bun.argv.slice(2);
 
