@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// mkdir, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { discoverPackageDirs } from "../src/workspace/discover.js";
 
 test("discoverPackageDirs limits to changed workspace packages with --only-changed semantics", async () => {
   const root = await createWorkspaceRepo("rainy-workspace-scope-");
-  await writeFile(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 2;\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 2;\n");
 
   const dirs = await discoverPackageDirs(root, true, {
     git: { onlyChanged: true },
@@ -18,7 +20,7 @@ test("discoverPackageDirs limits to changed workspace packages with --only-chang
 
 test("discoverPackageDirs expands to dependents with --affected semantics", async () => {
   const root = await createWorkspaceRepo("rainy-workspace-affected-");
-  await writeFile(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 2;\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 2;\n");
 
   const dirs = await discoverPackageDirs(root, true, {
     git: { affected: true },
@@ -34,7 +36,7 @@ test("discoverPackageDirs expands to dependents with --affected semantics", asyn
 
 test("discoverPackageDirs respects staged scoping", async () => {
   const root = await createWorkspaceRepo("rainy-workspace-staged-");
-  await writeFile(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 2;\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 2;\n");
   runGit(root, ["add", "packages/core/src/index.ts"]);
 
   const dirs = await discoverPackageDirs(root, true, {
@@ -46,11 +48,11 @@ test("discoverPackageDirs respects staged scoping", async () => {
 });
 
 async function createWorkspaceRepo(prefix: string): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), prefix));
-  await mkdir(path.join(root, "packages", "core", "src"), { recursive: true });
-  await mkdir(path.join(root, "packages", "app", "src"), { recursive: true });
+  const root = await (async () => { const d = path.join(os.tmpdir(), prefix + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await $`mkdir -p ${path.join(root, "packages", "core", "src")}`;
+  await $`mkdir -p ${path.join(root, "packages", "app", "src")}`;
 
-  await writeFile(
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(root, "package.json"),
     JSON.stringify(
       {
@@ -64,7 +66,7 @@ async function createWorkspaceRepo(prefix: string): Promise<string> {
     ) + "\n",
     "utf8",
   );
-  await writeFile(
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(root, "packages", "core", "package.json"),
     JSON.stringify(
       {
@@ -76,7 +78,7 @@ async function createWorkspaceRepo(prefix: string): Promise<string> {
     ) + "\n",
     "utf8",
   );
-  await writeFile(
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(root, "packages", "app", "package.json"),
     JSON.stringify(
       {
@@ -91,8 +93,8 @@ async function createWorkspaceRepo(prefix: string): Promise<string> {
     ) + "\n",
     "utf8",
   );
-  await writeFile(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 1;\n", "utf8");
-  await writeFile(path.join(root, "packages", "app", "src", "index.ts"), "export const app = 1;\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(root, "packages", "core", "src", "index.ts"), "export const core = 1;\n");
+  await (async (p, c) => await Bun.write(p, c))(path.join(root, "packages", "app", "src", "index.ts"), "export const app = 1;\n");
 
   runGit(root, ["init"]);
   runGit(root, ["config", "user.email", "tests@rainy.dev"]);

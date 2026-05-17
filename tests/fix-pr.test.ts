@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { $ } from "bun";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -7,7 +7,7 @@ import { applyFixPr } from "../src/core/fix-pr.js";
 import type { CheckResult, RunOptions } from "../src/types/index.js";
 
 test("applyFixPr supports dry-run branch preparation", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-fix-pr-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-fix-pr-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   await run("git", ["init"], dir);
 
   const options: RunOptions = {
@@ -96,7 +96,7 @@ test("applyFixPr supports dry-run branch preparation", async () => {
 });
 
 test("applyFixPr skips updates marked as autofix false", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-fix-pr-no-autofix-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-fix-pr-no-autofix-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   await run("git", ["init"], dir);
 
   const options: RunOptions = {

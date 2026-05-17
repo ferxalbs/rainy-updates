@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { $ } from "bun";
 import os from "node:os";
 import path from "node:path";
 import { runExceptionsService } from "../src/services/exceptions.js";
 
 test("exceptions service can add and list active entries", async () => {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "rainy-exceptions-"));
+  const cwd = await (async () => { const d = path.join(os.tmpdir(), "rainy-exceptions-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const filePath = path.join(cwd, ".rainy", "exceptions.json");
 
   const add = await runExceptionsService({
@@ -52,7 +52,7 @@ test("exceptions service can add and list active entries", async () => {
 });
 
 test("exceptions validate strict mode reports overly long accepted risk", async () => {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "rainy-exceptions-strict-"));
+  const cwd = await (async () => { const d = path.join(os.tmpdir(), "rainy-exceptions-strict-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const filePath = path.join(cwd, ".rainy", "exceptions.json");
 
   await runExceptionsService({

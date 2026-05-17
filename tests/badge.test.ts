@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, mkdir } from "node:fs/promises";
+import { $ } from "bun";
+// mkdir was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { parseBadgeArgs } from "../src/commands/badge/parser.js";
 import { runBadgeService } from "../src/services/badge.js";
@@ -28,7 +30,7 @@ test("parseBadgeArgs supports init options", () => {
 });
 
 test("runBadgeService builds endpoint and snippet", async () => {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "rainy-badge-url-"));
+  const cwd = await (async () => { const d = path.join(os.tmpdir(), "rainy-badge-url-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const result = await runBadgeService({
     cwd,
     action: "url",
@@ -50,9 +52,9 @@ test("runBadgeService builds endpoint and snippet", async () => {
 });
 
 test("runBadgeService init writes workflow and snippet and updates README", async () => {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "rainy-badge-init-"));
-  await mkdir(path.join(cwd, ".github", "workflows"), { recursive: true });
-  await Bun.write(path.join(cwd, "README.md"), "# Demo\n");
+  const cwd = await (async () => { const d = path.join(os.tmpdir(), "rainy-badge-init-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await $`mkdir -p ${path.join(cwd, ".github", "workflows")}`;
+  await (async (p, c) => await Bun.write(p, c))(path.join(cwd, "README.md"), "# Demo\n");
 
   const result = await runBadgeService({
     cwd,

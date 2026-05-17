@@ -1,13 +1,15 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { loadPolicy } from "../src/config/policy.js";
 
 test("loadPolicy reads package rules and ignore patterns", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-policy-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-policy-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const policyPath = path.join(dir, ".rainyupdates-policy.json");
-  await writeFile(
+  await (async (p, c) => await Bun.write(p, c))(
     policyPath,
     JSON.stringify({
       ignore: ["@types/*"],

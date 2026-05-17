@@ -40,15 +40,10 @@ class FileCacheStore implements CacheStore {
 
   private async readEntries(): Promise<Record<string, CachedVersion>> {
     try {
-      if (typeof Bun !== "undefined") {
-        return (await Bun.file(this.filePath).json()) as Record<
-          string,
-          CachedVersion
-        >;
-      }
-      const { readFile } = await import("node:fs/promises");
-      const content = await readFile(this.filePath, "utf8");
-      return JSON.parse(content) as Record<string, CachedVersion>;
+      return (await Bun.file(this.filePath).json()) as Record<
+        string,
+        CachedVersion
+      >;
     } catch {
       return {};
     }

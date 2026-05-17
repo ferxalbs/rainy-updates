@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { $ } from "bun";
 import path from "node:path";
 import { getCacheDir } from "../../utils/runtime-paths.js";
 
@@ -22,7 +22,7 @@ class ChangelogCache {
     if (this.db) return;
     try {
       if (typeof Bun !== "undefined") {
-        await mkdir(path.dirname(this.dbPath), { recursive: true });
+        await $`mkdir -p ${path.dirname(this.dbPath)}`;
         const mod = await import("bun:sqlite");
         this.db = new mod.Database(this.dbPath, { create: true });
         this.db.exec(`

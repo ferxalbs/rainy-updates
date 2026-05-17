@@ -1,5 +1,5 @@
+import { $ } from "bun";
 import path from "node:path";
-import { mkdir } from "node:fs/promises";
 import type {
   ExceptionEntry,
   ExceptionsOptions,
@@ -173,7 +173,7 @@ async function readExceptionStore(filePath: string): Promise<ExceptionStore> {
 }
 
 async function writeExceptionStore(filePath: string, store: ExceptionStore): Promise<void> {
-  await mkdir(path.dirname(filePath), { recursive: true });
+  await $`mkdir -p ${path.dirname(filePath)}`;
   await Bun.write(filePath, `${JSON.stringify(store, null, 2)}\n`);
 }
 

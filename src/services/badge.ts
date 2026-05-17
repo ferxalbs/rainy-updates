@@ -1,5 +1,5 @@
+import { $ } from "bun";
 import path from "node:path";
-import { mkdir } from "node:fs/promises";
 import type { BadgeOptions, BadgeResult } from "../types/index.js";
 import { writeFileAtomic } from "../utils/io.js";
 import { stableStringify } from "../utils/stable-json.js";
@@ -51,7 +51,7 @@ export async function runBadgeService(options: BadgeOptions): Promise<BadgeResul
       result.warnings.push(`Workflow already exists: ${path.relative(options.cwd, workflowPath)}`);
     }
 
-    await mkdir(path.dirname(snippetPath), { recursive: true });
+    await $`mkdir -p ${path.dirname(snippetPath)}`;
     const snippetContent = renderReadmeSnippet(endpointUrl, markdownSnippet);
     await writeFileAtomic(snippetPath, snippetContent);
     result.snippetCreated = true;

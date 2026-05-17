@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import {
   buildAddInvocation,
@@ -10,8 +12,8 @@ import {
 } from "../src/pm/detect.js";
 
 test("detectPackageManagerDetails prefers packageManager field over lockfile", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-pm-field-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-pm-field-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify(
       {
@@ -24,7 +26,7 @@ test("detectPackageManagerDetails prefers packageManager field over lockfile", a
     ),
     "utf8",
   );
-  await writeFile(path.join(dir, "package-lock.json"), "{}\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "package-lock.json"), "{}\n");
 
   const detected = await detectPackageManagerDetails(dir);
   expect(detected.manager).toBe("pnpm");
@@ -33,8 +35,8 @@ test("detectPackageManagerDetails prefers packageManager field over lockfile", a
 });
 
 test("buildInstallInvocation uses immutable installs for Yarn Berry", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-pm-yarn-berry-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-pm-yarn-berry-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify(
       {

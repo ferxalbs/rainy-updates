@@ -190,12 +190,7 @@ export function buildTestCommand(profile: PackageManagerProfile): string {
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
-    if (typeof Bun !== "undefined") {
-      return await Bun.file(filePath).exists();
-    }
-    const { access } = await import("node:fs/promises");
-    await access(filePath);
-    return true;
+    return await Bun.file(filePath).exists();
   } catch {
     return false;
   }
@@ -205,14 +200,7 @@ async function readPackageManagerField(cwd: string): Promise<string | null> {
   const packageJsonPath = path.join(cwd, "package.json");
 
   try {
-    let manifest: PackageManifest;
-    if (typeof Bun !== "undefined") {
-      manifest = (await Bun.file(packageJsonPath).json()) as PackageManifest;
-    } else {
-      const { readFile } = await import("node:fs/promises");
-      const content = await readFile(packageJsonPath, "utf8");
-      manifest = JSON.parse(content) as PackageManifest;
-    }
+    const manifest = (await Bun.file(packageJsonPath).json()) as PackageManifest;
     return typeof manifest.packageManager === "string"
       ? manifest.packageManager
       : null;

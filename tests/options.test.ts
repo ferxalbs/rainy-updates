@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// mkdir, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { parseCliArgs } from "../src/core/options.js";
 
@@ -192,7 +194,7 @@ test("parseCliArgs honors no-pr-report over report defaults", async () => {
 });
 
 test("parseCliArgs resolves output paths from final cwd", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-options-cwd-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-options-cwd-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const parsed = await parseCliArgs(["--json-file", "out/result.json", "--cwd", dir]);
   expect(parsed.command).toBe("check");
   if (parsed.command === "check") {
@@ -419,9 +421,9 @@ test("parseCliArgs supports ga command", async () => {
 });
 
 test("parseCliArgs resolves MCP cwd from config when client does not pass --cwd", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "rainy-mcp-cwd-config-"));
-  await mkdir(path.join(root, "workspace"), { recursive: true });
-  await writeFile(
+  const root = await (async () => { const d = path.join(os.tmpdir(), "rainy-mcp-cwd-config-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await $`mkdir -p ${path.join(root, "workspace")}`;
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(root, ".rainyupdatesrc.json"),
     JSON.stringify({ mcp: { cwd: "./workspace" } }, null, 2),
     "utf8",

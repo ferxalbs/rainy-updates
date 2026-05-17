@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { warmCache } from "../src/core/warm-cache.js";
 
 test("warmCache reports misses in offline mode", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-warm-cache-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-warm-cache-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify({ name: "sample", dependencies: { lodash: "^4.17.0" } }),
     "utf8",

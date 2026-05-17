@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { $ } from "bun";
 import path from "node:path";
 import {
   buildInstallInvocation,
@@ -86,7 +86,7 @@ async function initGitHubWorkflow(
         ? strictWorkflowTemplate(scheduleBlock, packageManager)
         : enterpriseWorkflowTemplate(scheduleBlock, packageManager);
 
-  await mkdir(path.dirname(workflowPath), { recursive: true });
+  await $`mkdir -p ${path.dirname(workflowPath)}`;
   await Bun.write(workflowPath, workflow);
 
   return { path: workflowPath, created: true, writtenFiles: [workflowPath] };
@@ -108,7 +108,7 @@ async function initLocalAutomation(
     return { path: primaryPath, created: false, writtenFiles: [] };
   }
 
-  await mkdir(outDir, { recursive: true });
+  await $`mkdir -p ${outDir}`;
   const writtenFiles: string[] = [];
 
   await Bun.write(runnerPath, localRunnerScript(cwd, options.mode));

@@ -1,19 +1,21 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { runGa } from "../src/commands/ga/runner.js";
 
 test("runGa reports readiness details for a basic npm project", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-ga-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-ga-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify({ name: "ga-fixture", version: "1.0.0" }, null, 2),
     "utf8",
   );
-  await writeFile(path.join(dir, "package-lock.json"), "{}", "utf8");
-  await writeFile(path.join(dir, "README.md"), "# fixture\n", "utf8");
-  await writeFile(path.join(dir, "CHANGELOG.md"), "# changelog\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "package-lock.json"), "{}");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "README.md"), "# fixture\n");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "CHANGELOG.md"), "# changelog\n");
 
   const result = await runGa({ cwd: dir, workspace: false });
 
@@ -33,8 +35,8 @@ test("runGa reports readiness details for a basic npm project", async () => {
 });
 
 test("runGa detects package manager from packageManager field", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-ga-pm-field-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-ga-pm-field-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify(
       {
@@ -47,8 +49,8 @@ test("runGa detects package manager from packageManager field", async () => {
     ),
     "utf8",
   );
-  await writeFile(path.join(dir, "README.md"), "# fixture\n", "utf8");
-  await writeFile(path.join(dir, "CHANGELOG.md"), "# changelog\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "README.md"), "# fixture\n");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "CHANGELOG.md"), "# changelog\n");
 
   const result = await runGa({ cwd: dir, workspace: false });
 
@@ -64,8 +66,8 @@ test("runGa detects package manager from packageManager field", async () => {
 });
 
 test("runGa recognizes Makefile-backed automation entrypoints", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-ga-make-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-ga-make-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify(
       {
@@ -82,9 +84,9 @@ test("runGa recognizes Makefile-backed automation entrypoints", async () => {
     ),
     "utf8",
   );
-  await writeFile(path.join(dir, "Makefile"), "check:\n\tbun run check\n", "utf8");
-  await writeFile(path.join(dir, "README.md"), "# fixture\n", "utf8");
-  await writeFile(path.join(dir, "CHANGELOG.md"), "# changelog\n", "utf8");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "Makefile"), "check:\n\tbun run check\n");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "README.md"), "# fixture\n");
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "CHANGELOG.md"), "# changelog\n");
 
   const result = await runGa({ cwd: dir, workspace: false });
 

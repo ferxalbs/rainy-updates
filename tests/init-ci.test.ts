@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// readFile, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { initCiWorkflow } from "../src/core/init-ci.js";
 
 test("initCiWorkflow creates strict workflow file", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-init-ci-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const result = await initCiWorkflow(dir, false, {
     mode: "strict",
     schedule: "weekly",
@@ -13,7 +15,7 @@ test("initCiWorkflow creates strict workflow file", async () => {
   });
   expect(result.created).toBe(true);
 
-  const content = await readFile(result.path, "utf8");
+  const content = await Bun.file(result.path).text();
   expect(content.includes("Rainy Updates")).toBe(true);
   expect(content.includes("Warm cache")).toBe(true);
   expect(content.includes("Upload SARIF")).toBe(true);
@@ -26,27 +28,27 @@ test("initCiWorkflow creates strict workflow file", async () => {
 });
 
 test("initCiWorkflow uses pnpm install when pnpm lockfile exists", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-pnpm-"));
-  await writeFile(path.join(dir, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n", "utf8");
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-init-ci-pnpm-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(path.join(dir, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
 
   const result = await initCiWorkflow(dir, true, {
     mode: "minimal",
     schedule: "off",
     target: "github",
   });
-  const content = await readFile(result.path, "utf8");
+  const content = await Bun.file(result.path).text();
   expect(content.includes("pnpm install --frozen-lockfile")).toBe(true);
   expect(content.includes("workflow_dispatch")).toBe(true);
 });
 
 test("initCiWorkflow creates enterprise workflow matrix", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-enterprise-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-init-ci-enterprise-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const result = await initCiWorkflow(dir, true, {
     mode: "enterprise",
     schedule: "weekly",
     target: "github",
   });
-  const content = await readFile(result.path, "utf8");
+  const content = await Bun.file(result.path).text();
 
   expect(content.includes("Rainy Updates Enterprise")).toBe(true);
   expect(content.includes("retention-days: 14")).toBe(true);
@@ -61,8 +63,8 @@ test("initCiWorkflow creates enterprise workflow matrix", async () => {
 });
 
 test("initCiWorkflow supports Yarn Berry installs via Corepack", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-yarn-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-init-ci-yarn-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify(
       {
@@ -81,7 +83,7 @@ test("initCiWorkflow supports Yarn Berry installs via Corepack", async () => {
     schedule: "off",
     target: "github",
   });
-  const content = await readFile(result.path, "utf8");
+  const content = await Bun.file(result.path).text();
 
   expect(content.includes("Enable Corepack")).toBe(true);
   expect(content.includes("yarn install --immutable")).toBe(true);
@@ -89,7 +91,7 @@ test("initCiWorkflow supports Yarn Berry installs via Corepack", async () => {
 });
 
 test("initCiWorkflow can generate local cron automation template", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-cron-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-init-ci-cron-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const result = await initCiWorkflow(dir, true, {
     mode: "strict",
     schedule: "daily",
@@ -98,13 +100,13 @@ test("initCiWorkflow can generate local cron automation template", async () => {
   expect(result.path.endsWith("rainy-updates.cron")).toBe(true);
   expect(result.writtenFiles.some((file) => file.endsWith("rainy-updates-runner.sh"))).toBe(true);
 
-  const content = await readFile(result.path, "utf8");
+  const content = await Bun.file(result.path).text();
   expect(content.includes("crontab")).toBe(true);
   expect(content.includes("0 8 * * *")).toBe(true);
 });
 
 test("initCiWorkflow can bootstrap badge assets when withBadge is enabled", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-init-ci-badge-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-init-ci-badge-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const result = await initCiWorkflow(dir, true, {
     mode: "minimal",
     schedule: "off",

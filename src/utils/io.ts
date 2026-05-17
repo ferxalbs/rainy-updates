@@ -1,4 +1,4 @@
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { $ } from "bun";
 import path from "node:path";
 
 export async function writeFileAtomic(
@@ -11,11 +11,7 @@ export async function writeFileAtomic(
     `.tmp-${path.basename(filePath)}-${crypto.randomUUID()}`,
   );
 
-  await mkdir(dir, { recursive: true });
-  if (typeof Bun !== "undefined") {
-    await Bun.write(tempFile, content);
-  } else {
-    await writeFile(tempFile, content);
-  }
-  await rename(tempFile, filePath);
+  await $`mkdir -p ${dir}`;
+  await Bun.write(tempFile, content);
+  await $`mv ${tempFile} ${filePath}`;
 }

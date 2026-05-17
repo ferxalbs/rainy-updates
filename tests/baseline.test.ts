@@ -1,14 +1,16 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// readFile, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { diffBaseline, saveBaseline } from "../src/core/baseline.js";
 
 test("baseline save and diff detects changed dependency ranges", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-baseline-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-baseline-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const packageJsonPath = path.join(dir, "package.json");
 
-  await writeFile(
+  await (async (p, c) => await Bun.write(p, c))(
     packageJsonPath,
     JSON.stringify({ name: "demo", dependencies: { react: "^18.2.0" } }, null, 2),
     "utf8",
@@ -24,9 +26,9 @@ test("baseline save and diff detects changed dependency ranges", async () => {
   });
 
   expect(saved.entries).toBe(1);
-  expect((await readFile(baselinePath, "utf8")).includes('"version": 1')).toBe(true);
+  expect((await Bun.file(baselinePath).text()).includes('"version": 1')).toBe(true);
 
-  await writeFile(
+  await (async (p, c) => await Bun.write(p, c))(
     packageJsonPath,
     JSON.stringify({ name: "demo", dependencies: { react: "^19.0.0" } }, null, 2),
     "utf8",

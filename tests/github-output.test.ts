@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { $ } from "bun";
+// readFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { renderGitHubAnnotations, writeGitHubOutput } from "../src/output/github.js";
 import type { CheckResult } from "../src/types/index.js";
 
 test("writeGitHubOutput writes key-value outputs", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-gh-output-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-gh-output-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const filePath = path.join(dir, "github-output.txt");
 
   const result: CheckResult = {
@@ -69,7 +71,7 @@ test("writeGitHubOutput writes key-value outputs", async () => {
   };
 
   await writeGitHubOutput(filePath, result);
-  const content = await readFile(filePath, "utf8");
+  const content = await Bun.file(filePath).text();
   expect(content.includes("updates_found=2")).toBe(true);
   expect(content.includes("errors_count=1")).toBe(true);
   expect(content.includes("warnings_count=1")).toBe(true);

@@ -1,5 +1,5 @@
+import { $ } from "bun";
 import path from "node:path";
-import { mkdir } from "node:fs/promises";
 import { loadConfig } from "../config/loader.js";
 import { createDecisionPlan, writeDecisionPlan } from "../core/decision-plan.js";
 import { runAuditService } from "./audit.js";
@@ -26,7 +26,7 @@ export async function runWatchService(
 ): Promise<WatchResult> {
   const pidFile = options.pidFile ?? path.join(options.cwd, ".rainy", "watch.pid");
   const stateFile = options.stateFile ?? path.join(options.cwd, ".rainy", "watch-state.json");
-  await mkdir(path.dirname(pidFile), { recursive: true });
+  await $`mkdir -p ${path.dirname(pidFile)}`;
 
   if (options.action === "stop") {
     return stopWatch(pidFile, stateFile);

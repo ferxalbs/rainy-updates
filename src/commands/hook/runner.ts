@@ -1,4 +1,4 @@
-import { chmod, mkdir, unlink } from "node:fs/promises";
+import { $ } from "bun";
 import path from "node:path";
 import { writeStdout } from "../../utils/runtime.js";
 import type { HookOptions, HookResult } from "../../types/index.js";
@@ -32,7 +32,7 @@ export async function runHook(options: HookOptions): Promise<HookResult> {
   };
 
   if (options.action === "install") {
-    await mkdir(hookDir, { recursive: true });
+    await $`mkdir -p ${hookDir}`;
 
     for (const hook of HOOKS) {
       const hookPath = path.join(hookDir, hook.name);
@@ -53,7 +53,7 @@ export async function runHook(options: HookOptions): Promise<HookResult> {
       const hookPath = path.join(hookDir, hook.name);
       const existing = await readHookState(hookPath);
       if (existing.status === "managed") {
-        await unlink(hookPath).catch(() => undefined);
+        await $`rm -f ${hookPath}`.catch(() => undefined);
         result.removed.push(hook.name);
       } else if (existing.status === "foreign") {
         result.warnings.push(`Left ${hook.name} untouched: existing hook is not Rainy-managed.`);
@@ -132,7 +132,7 @@ ${command}
 }
 
 async function makeExecutable(filePath: string): Promise<void> {
-  await chmod(filePath, 0o755);
+  await $`chmod +x ${filePath}`;
 }
 
 async function runGit(

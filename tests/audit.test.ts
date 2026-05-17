@@ -1,6 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// mkdir, mkdtemp, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 
 describe("audit parser", () => {
@@ -256,8 +258,8 @@ describe("audit fetcher", () => {
 
 describe("audit targets", () => {
   it("resolves versions from package-lock.json for complex manifest ranges", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "rainy-audit-npm-lock-"));
-    await writeFile(
+    const root = await (async () => { const d = path.join(os.tmpdir(), "rainy-audit-npm-lock-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+    await (async (p, c) => await Bun.write(p, c))(
       path.join(root, "package-lock.json"),
       JSON.stringify(
         {
@@ -303,10 +305,10 @@ describe("audit targets", () => {
   });
 
   it("resolves versions from pnpm-lock.yaml importers", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "rainy-audit-pnpm-lock-"));
+    const root = await (async () => { const d = path.join(os.tmpdir(), "rainy-audit-pnpm-lock-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
     const pkgDir = path.join(root, "packages", "web");
-    await mkdir(pkgDir, { recursive: true });
-    await writeFile(
+    await $`mkdir -p ${pkgDir}`;
+    await (async (p, c) => await Bun.write(p, c))(
       path.join(root, "pnpm-lock.yaml"),
       [
         "lockfileVersion: '9.0'",
@@ -349,10 +351,10 @@ describe("audit targets", () => {
   });
 
   it("resolves versions from bun.lock workspaces", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "rainy-audit-bun-lock-"));
+    const root = await (async () => { const d = path.join(os.tmpdir(), "rainy-audit-bun-lock-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
     const pkgDir = path.join(root, "apps", "web");
-    await mkdir(pkgDir, { recursive: true });
-    await writeFile(
+    await $`mkdir -p ${pkgDir}`;
+    await (async (p, c) => await Bun.write(p, c))(
       path.join(root, "bun.lock"),
       [
         "{",

@@ -1,13 +1,15 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// mkdir, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import type { ReviewItem } from "../src/types/index.js";
 import { applyReachabilitySignalsToReviewItems } from "../src/services/reachability.js";
 
 test("applyReachabilitySignalsToReviewItems marks imported advisory package as reachable", async () => {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "rainy-reachability-"));
-  await writeFile(
+  const cwd = await (async () => { const d = path.join(os.tmpdir(), "rainy-reachability-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(cwd, "package.json"),
     JSON.stringify({
       name: "reachability-fixture",
@@ -18,8 +20,8 @@ test("applyReachabilitySignalsToReviewItems marks imported advisory package as r
     }),
     "utf8",
   );
-  await mkdir(path.join(cwd, "src"), { recursive: true });
-  await writeFile(path.join(cwd, "src", "index.ts"), "import _ from 'lodash';\nconsole.log(_);\n", "utf8");
+  await $`mkdir -p ${path.join(cwd, "src")}`;
+  await (async (p, c) => await Bun.write(p, c))(path.join(cwd, "src", "index.ts"), "import _ from 'lodash';\nconsole.log(_);\n");
 
   const reviewItems: ReviewItem[] = [
     {

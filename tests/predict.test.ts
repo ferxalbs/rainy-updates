@@ -1,14 +1,16 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { $ } from "bun";
+// mkdir, mkdtemp was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { renderPredictResult, runPredictService } from "../src/services/predict.js";
 
 test("predict analyzes decision plan scope", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-predict-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-predict-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const planPath = path.join(dir, ".artifacts", "decision-plan.json");
-  await mkdir(path.dirname(planPath), { recursive: true });
-  await Bun.write(
+  await $`mkdir -p ${path.dirname(planPath)}`;
+  await (async (p, c) => await Bun.write(p, c))(
     planPath,
     JSON.stringify(
       {

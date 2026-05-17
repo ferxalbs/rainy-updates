@@ -1,14 +1,14 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { $ } from "bun";
 import os from "node:os";
 import path from "node:path";
 
 test("generate-distribution-manifests emits Homebrew and Scoop metadata", async () => {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), "rainy-distribution-"));
+  const tempDir = await (async () => { const d = path.join(os.tmpdir(), "rainy-distribution-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const assetsDir = path.join(tempDir, "assets");
   const outputDir = path.join(tempDir, "out");
 
-  await mkdir(assetsDir, { recursive: true });
+  await $`mkdir -p ${assetsDir}`;
 
   const fixtures: Array<[string, string]> = [
     ["rup-v0.6.2-macos-arm64.tar.gz.sha256", "a".repeat(64)],
@@ -20,7 +20,7 @@ test("generate-distribution-manifests emits Homebrew and Scoop metadata", async 
 
   await Promise.all(
     fixtures.map(([fileName, hash]) =>
-      writeFile(path.join(assetsDir, fileName), `${hash}  ${fileName}\n`, "utf8"),
+      Bun.write(path.join(assetsDir, fileName), `${hash}  ${fileName}\n`),
     ),
   );
 
@@ -47,8 +47,8 @@ test("generate-distribution-manifests emits Homebrew and Scoop metadata", async 
   const exitCode = await proc.exited;
   expect(exitCode).toBe(0);
 
-  const formula = await readFile(path.join(outputDir, "homebrew", "rup.rb"), "utf8");
-  const scoop = await readFile(path.join(outputDir, "scoop", "rup.json"), "utf8");
+  const formula = await Bun.file(path.join(outputDir, "homebrew", "rup.rb")).text();
+  const scoop = await Bun.file(path.join(outputDir, "scoop", "rup.json")).text();
 
   expect(formula).toContain('version "0.6.2"');
   expect(formula).toContain("rup-v0.6.2-macos-arm64.tar.gz");

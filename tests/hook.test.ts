@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// readFile, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { parseCliArgs } from "../src/core/options.js";
 import { runHook } from "../src/commands/hook/runner.js";
@@ -14,8 +16,8 @@ test("parseCliArgs supports hook command", async () => {
 });
 
 test("runHook installs, inspects, and uninstalls managed hooks", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-hook-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-hook-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify({ name: "hook-fixture", version: "1.0.0" }, null, 2) + "\n",
     "utf8",
@@ -28,8 +30,8 @@ test("runHook installs, inspects, and uninstalls managed hooks", async () => {
   const installResult = await runHook({ cwd: dir, action: "install" });
   expect(installResult.installed).toEqual(["pre-commit", "pre-push"]);
 
-  const preCommit = await readFile(path.join(dir, ".git", "hooks", "pre-commit"), "utf8");
-  const prePush = await readFile(path.join(dir, ".git", "hooks", "pre-push"), "utf8");
+  const preCommit = await Bun.file(path.join(dir, ".git", "hooks", "pre-commit")).text();
+  const prePush = await Bun.file(path.join(dir, ".git", "hooks", "pre-push")).text();
   expect(preCommit.includes("rainy-updates managed hook")).toBe(true);
   expect(preCommit.includes("unused --workspace --staged")).toBe(true);
   expect(prePush.includes("audit --workspace --affected")).toBe(true);

@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// readFile, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { runVerification } from "../src/core/verification.js";
 import { runCi } from "../src/core/ci.js";
@@ -8,7 +10,7 @@ import { writeDecisionPlan } from "../src/core/decision-plan.js";
 import type { DecisionPlan, CheckOptions } from "../src/types/index.js";
 
 test("runVerification writes a passing test report", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-verify-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-verify-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const reportFile = path.join(dir, ".artifacts", "verify.json");
 
   const result = await runVerification({
@@ -22,7 +24,7 @@ test("runVerification writes a passing test report", async () => {
   expect(result.passed).toBe(true);
   expect(result.checks[0]?.name).toBe("test");
 
-  const report = JSON.parse(await readFile(reportFile, "utf8")) as {
+  const report = JSON.parse(await Bun.file(reportFile).text()) as {
     passed: boolean;
     checks: Array<{ passed: boolean }>;
   };
@@ -31,8 +33,8 @@ test("runVerification writes a passing test report", async () => {
 });
 
 test("runCi upgrade gate replays a decision plan and writes verification metadata", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-ci-upgrade-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-ci-upgrade-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify(
       {
@@ -126,7 +128,7 @@ test("runCi upgrade gate replays a decision plan and writes verification metadat
   } satisfies CheckOptions);
 
   const manifest = JSON.parse(
-    await readFile(path.join(dir, "package.json"), "utf8"),
+    await Bun.file(path.join(dir, "package.json")).text(),
   ) as { dependencies: Record<string, string> };
   expect(result.summary.decisionPlan).toBe(planFile);
   expect(result.summary.verificationState).toBe("passed");

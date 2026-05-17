@@ -18,12 +18,7 @@ export function getPackageJsonPath(cwd: string): string {
 
 export async function readManifest(cwd: string): Promise<PackageManifest> {
   const filePath = getPackageJsonPath(cwd);
-  if (typeof Bun !== "undefined") {
-    return (await Bun.file(filePath).json()) as PackageManifest;
-  }
-  const { readFile } = await import("node:fs/promises");
-  const content = await readFile(filePath, "utf8");
-  return JSON.parse(content) as PackageManifest;
+  return (await Bun.file(filePath).json()) as PackageManifest;
 }
 
 export async function writeManifest(
@@ -32,12 +27,7 @@ export async function writeManifest(
 ): Promise<void> {
   const filePath = getPackageJsonPath(cwd);
   const content = JSON.stringify(manifest, null, 2) + "\n";
-  if (typeof Bun !== "undefined") {
-    await Bun.write(filePath, content);
-  } else {
-    const { writeFile } = await import("node:fs/promises");
-    await writeFile(filePath, content);
-  }
+  await Bun.write(filePath, content);
 }
 
 export function collectDependencies(

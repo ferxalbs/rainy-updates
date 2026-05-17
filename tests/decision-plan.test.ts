@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// readFile, writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import {
   createDecisionPlan,
@@ -29,7 +31,7 @@ test("decision plan captures selected updates and focus", async () => {
   expect(plan.items[1]?.selected).toBe(false);
   expect(selectedUpdatesFromPlan(plan)).toHaveLength(1);
 
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-plan-"));
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-plan-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const filePath = path.join(dir, "decision-plan.json");
   await writeDecisionPlan(filePath, plan);
 
@@ -46,8 +48,8 @@ test("filterReviewItemsByFocus narrows the review queue", () => {
 });
 
 test("upgrade applies selected updates from a decision plan", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "rainy-upgrade-plan-"));
-  await writeFile(
+  const dir = await (async () => { const d = path.join(os.tmpdir(), "rainy-upgrade-plan-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(dir, "package.json"),
     JSON.stringify(
       {
@@ -127,7 +129,7 @@ test("upgrade applies selected updates from a decision plan", async () => {
   });
 
   const manifest = JSON.parse(
-    await readFile(path.join(dir, "package.json"), "utf8"),
+    await Bun.file(path.join(dir, "package.json")).text(),
   ) as { dependencies: Record<string, string> };
   expect(result.changed).toBe(true);
   expect(result.summary.decisionPlan).toBe(planFile);

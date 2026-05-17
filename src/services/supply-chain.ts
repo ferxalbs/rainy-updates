@@ -1,12 +1,10 @@
 import path from "node:path";
-import { readdir } from "node:fs/promises";
 import type {
   PolicyAction,
   RiskLevel,
   SupplyChainFinding,
   SupplyChainOptions,
   SupplyChainResult,
-  SupplyChainScope,
 } from "../types/index.js";
 
 const SKIP_SEGMENTS = new Set(["node_modules", "dist", ".git", ".artifacts"]);

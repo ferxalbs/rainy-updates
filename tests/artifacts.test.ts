@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { $ } from "bun";
+// readFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { createRunId, writeArtifactManifest } from "../src/core/artifacts.js";
 import type { CheckResult, CheckOptions } from "../src/types/index.js";
@@ -138,7 +140,7 @@ function createResult(cwd: string): CheckResult {
 }
 
 test("createRunId is deterministic for the same command and result", async () => {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "rainy-run-id-"));
+  const cwd = await (async () => { const d = path.join(os.tmpdir(), "rainy-run-id-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const options = createOptions(cwd);
   const result = createResult(cwd);
 
@@ -150,7 +152,7 @@ test("createRunId is deterministic for the same command and result", async () =>
 });
 
 test("writeArtifactManifest writes a manifest with the expected output paths", async () => {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "rainy-artifacts-"));
+  const cwd = await (async () => { const d = path.join(os.tmpdir(), "rainy-artifacts-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
   const options = createOptions(cwd);
   const result = createResult(cwd);
   result.summary.runId = createRunId("ci", options, result);
@@ -161,7 +163,7 @@ test("writeArtifactManifest writes a manifest with the expected output paths", a
   expect(manifest?.runId).toBe(result.summary.runId);
   expect(manifest?.artifactManifestPath.endsWith(`${result.summary.runId}.json`)).toBe(true);
 
-  const content = await readFile(manifest!.artifactManifestPath, "utf8");
+  const content = await Bun.file(manifest!.artifactManifestPath).text();
   const parsed = JSON.parse(content) as { outputs: Record<string, string>; command: string };
   expect(parsed.command).toBe("ci");
   expect(parsed.outputs.jsonFile).toBe(options.jsonFile!);

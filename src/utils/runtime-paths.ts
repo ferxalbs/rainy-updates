@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { $ } from "bun";
 import path from "node:path";
 import { getRuntimeCwd, readEnv } from "./runtime.js";
 
@@ -30,12 +30,10 @@ export async function createTempDir(prefix: string): Promise<string> {
   for (let attempt = 0; attempt < 16; attempt += 1) {
     const candidate = path.join(baseDir, `${prefix}${crypto.randomUUID()}`);
     try {
-      await mkdir(candidate, { recursive: false });
+      await $`mkdir ${candidate}`.quiet();
       return candidate;
     } catch (error) {
-      if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
-        throw error;
-      }
+      // Continue to next attempt if mkdir fails (e.g. directory exists)
     }
   }
 

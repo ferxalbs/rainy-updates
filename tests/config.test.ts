@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { $ } from "bun";
+// writeFile was here;
 import os from "node:os";
+import { $ } from "bun";
 import path from "node:path";
 import { loadConfig } from "../src/config/loader.js";
 
 test("loadConfig reads .rainyupdatesrc", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "rainy-updates-config-"));
-  await writeFile(path.join(root, ".rainyupdatesrc"), JSON.stringify({ target: "minor", workspace: true }), "utf8");
+  const root = await (async () => { const d = path.join(os.tmpdir(), "rainy-updates-config-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(path.join(root, ".rainyupdatesrc"), JSON.stringify({ target: "minor", workspace: true }));
 
   const config = await loadConfig(root);
   expect(config.target).toBe("minor");
@@ -14,8 +16,8 @@ test("loadConfig reads .rainyupdatesrc", async () => {
 });
 
 test("loadConfig validates MCP and webhook config", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "rainy-updates-config-"));
-  await writeFile(
+  const root = await (async () => { const d = path.join(os.tmpdir(), "rainy-updates-config-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(root, ".rainyupdatesrc.json"),
     JSON.stringify({
       mcp: { cwd: "./workspace", transport: "stdio", toolTimeoutMs: 5000 },
@@ -31,8 +33,8 @@ test("loadConfig validates MCP and webhook config", async () => {
 });
 
 test("loadConfig rejects invalid config schema", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "rainy-updates-config-"));
-  await writeFile(
+  const root = await (async () => { const d = path.join(os.tmpdir(), "rainy-updates-config-" + crypto.randomUUID()); await $`mkdir -p ${d}`; return d; })();
+  await (async (p, c) => await Bun.write(p, c))(
     path.join(root, ".rainyupdatesrc"),
     JSON.stringify({ webhooks: [{ event: "not-real", url: "bad-url" }] }),
     "utf8",
